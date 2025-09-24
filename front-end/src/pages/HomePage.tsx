@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import type { PageProps } from '../App'
 
 const experienceHighlights = [
@@ -77,13 +78,32 @@ const wildlife = [
   },
 ]
 
-const testimonial = {
-  quote:
-    'Uma experiência transformadora! A Trilha da Cachoeira superou todas as expectativas. Os guias são extremamente conhecedores e apaixonados pela natureza.',
-  name: 'Marina Silva',
-  location: 'São Paulo, SP',
-  trail: 'Trilha da Cachoeira',
-}
+const testimonials = [
+  {
+    quote:
+      'Organização impecável e guias muito atenciosos. A trilha do mirante rendeu memórias incríveis ao pôr do sol!',
+    name: 'Clara Mendonça',
+    trail: 'Trilha do Mirante',
+  },
+  {
+    quote:
+      'Foi emocionante observar a vida selvagem de tão perto. Voltarei para explorar outras trilhas em breve!',
+    name: 'Rafael Albuquerque',
+    trail: 'Trilha Ecológica',
+  },
+  {
+    quote:
+      'Equipe super preparada, equipamentos de qualidade e cenários de tirar o fôlego. Experiência inesquecível.',
+    name: 'Larissa Souza',
+    trail: 'Trilha da Cachoeira',
+  },
+  {
+    quote:
+      'Perfeito para sair da rotina e se conectar com a natureza. Cada parada tinha uma história fascinante!',
+    name: 'Eduardo Campos',
+    trail: 'Trilha do Mirante',
+  },
+]
 
 const stats = [
   { value: '4.9', label: 'Avaliação média' },
@@ -92,6 +112,16 @@ const stats = [
 ]
 
 function HomePage({ navigation, onNavigate }: PageProps) {
+  const [activeTestimonial, setActiveTestimonial] = useState(0)
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setActiveTestimonial((current) => (current + 1) % testimonials.length)
+    }, 4000)
+
+    return () => window.clearInterval(interval)
+  }, [testimonials.length])
+
   return (
     <div className="home-page" id="home">
       <header className="hero">
@@ -117,13 +147,16 @@ function HomePage({ navigation, onNavigate }: PageProps) {
       </header>
 
       <main>
-        <section className="about" id="about">
-          <div className="about-content">
+        <section className="home-section home-about" id="about">
+          <div className="home-about__content">
             <span className="section-tag">Quem Somos</span>
             <h2>
+              Quem <span>Somos</span>
+            </h2>
+            <p>
               Somos uma empresa familiar apaixonada pela preservação da mata atlântica. Há mais de 15 anos, conduzimos
               visitantes através dos caminhos mais selvagens e preservados com respeito e cuidado pela natureza.
-            </h2>
+            </p>
             <div className="highlights">
               {experienceHighlights.map((item) => (
                 <div key={item.title} className="highlight-card">
@@ -142,18 +175,19 @@ function HomePage({ navigation, onNavigate }: PageProps) {
               <p>Trilhas realizadas com sucesso</p>
             </div>
           </div>
-          <div className="about-media">
+          <div className="home-about__media">
             <div className="about-image" role="img" aria-label="Exploradores caminhando nas dunas" />
           </div>
         </section>
 
-        <section className="trails" id="booking">
+        <section className="home-section home-trails" id="booking">
           <div className="section-header">
             <span className="section-tag">Nossas Trilhas</span>
-            <h2>
+            <h2>Nossas Trilhas</h2>
+            <p>
               Três experiências únicas para conectar-se com a natureza, cada uma oferecendo uma perspectiva diferente da
               nossa floresta.
-            </h2>
+            </p>
           </div>
           <div className="trail-grid">
             {trails.map((trail) => (
@@ -182,13 +216,16 @@ function HomePage({ navigation, onNavigate }: PageProps) {
           </div>
         </section>
 
-        <section className="wildlife" id="wildlife">
+        <section className="home-section home-wildlife" id="wildlife">
           <div className="section-header">
             <span className="section-tag">Vida Selvagem</span>
             <h2>
+              Habitantes da <span>Floresta</span>
+            </h2>
+            <p>
               Conheça alguns dos moradores mais carismáticos da nossa mata. Cada trilha é uma oportunidade de avistar
               essas criaturas em seu habitat natural.
-            </h2>
+            </p>
           </div>
           <div className="wildlife-grid">
             {wildlife.map((animal) => (
@@ -203,24 +240,49 @@ function HomePage({ navigation, onNavigate }: PageProps) {
           </button>
         </section>
 
-        <section className="testimonials" id="testimonials">
+        <section className="home-section home-testimonials" id="testimonials">
           <div className="section-header">
-            <span className="section-tag">O que dizem nossos Aventureiros</span>
+            <span className="section-tag">O que dizem nossos aventureiros</span>
             <h2>Experiências reais de quem viveu a magia das nossas trilhas</h2>
           </div>
-          <div className="testimonial-card">
-            <span className="quote-icon" aria-hidden="true">
-              “
-            </span>
-            <p className="quote">{testimonial.quote}</p>
-            <div className="testimonial-meta">
-              <h3>{testimonial.name}</h3>
-              <span>{testimonial.location}</span>
-              <span className="trail">{testimonial.trail}</span>
-            </div>
-            <div className="rating" aria-label="Avaliação 5 de 5">
-              {'★★★★★'}
-            </div>
+          <div className="testimonial-slider" role="region" aria-live="polite">
+            {testimonials.map((item, index) => (
+              <article
+                key={item.name}
+                className={`testimonial-card${index === activeTestimonial ? ' is-active' : ''}`}
+                aria-hidden={index !== activeTestimonial}
+                id={`testimonial-${index}`}
+              >
+                <span className="quote-icon" aria-hidden="true">
+                  “
+                </span>
+                <p className="quote">{item.quote}</p>
+                <div className="testimonial-meta">
+                  <h3>{item.name}</h3>
+                  <span>Natal, RN</span>
+                  <span className="trail">{item.trail}</span>
+                </div>
+                <div className="rating" aria-label="Avaliação 5 de 5">
+                  {'★★★★★'}
+                </div>
+              </article>
+            ))}
+          </div>
+          <div className="testimonial-dots" role="tablist" aria-label="Navegação de depoimentos">
+            {testimonials.map((item, index) => (
+              <button
+                key={item.name}
+                type="button"
+                role="tab"
+                aria-selected={index === activeTestimonial}
+                aria-controls={`testimonial-${index}`}
+                className={`testimonial-dot${index === activeTestimonial ? ' is-active' : ''}`}
+                onClick={() => setActiveTestimonial(index)}
+                tabIndex={index === activeTestimonial ? 0 : -1}
+              >
+                <span className="sr-only">Depoimento de {item.name}</span>
+              </button>
+            ))}
           </div>
           <div className="stats">
             {stats.map((stat) => (

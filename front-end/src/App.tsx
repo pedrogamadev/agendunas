@@ -1,5 +1,5 @@
 import './App.css'
-import type { ReactNode } from 'react'
+import type { JSX, ReactNode } from 'react'
 import { useEffect, useMemo, useState } from 'react'
 import BookingPage from './pages/BookingPage'
 import FaunaFloraPage from './pages/FaunaFloraPage'
