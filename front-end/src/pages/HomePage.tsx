@@ -1,6 +1,13 @@
 import { useEffect, useState } from 'react'
 import type { PageProps } from '../App'
 
+const heroImages = [
+  'https://semeia.org.br/wp-content/uploads/2025/07/IMG_20250619_081831285_HDR-edited-scaled.jpg',
+  'https://portaln10.com.br/wp-content/uploads/2025/03/Parque-das-Dunas-em-Natal-se-destaca-entre-os-mais-visitados-do-Brasil-scaled.jpg',
+  'https://semeia.org.br/wp-content/uploads/2025/07/IMG_20250619_095111763_HDR-edited-scaled.jpg',
+  'https://diariodorn.com.br/wp-content/uploads/2024/05/titulo.png',
+]
+
 const experienceHighlights = [
   {
     title: 'Paixão',
@@ -113,6 +120,7 @@ const stats = [
 
 function HomePage({ navigation, onNavigate }: PageProps) {
   const [activeTestimonial, setActiveTestimonial] = useState(0)
+  const [activeHeroImage, setActiveHeroImage] = useState(0)
 
   useEffect(() => {
     const interval = window.setInterval(() => {
@@ -122,9 +130,27 @@ function HomePage({ navigation, onNavigate }: PageProps) {
     return () => window.clearInterval(interval)
   }, [testimonials.length])
 
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setActiveHeroImage((current) => (current + 1) % heroImages.length)
+    }, 4000)
+
+    return () => window.clearInterval(interval)
+  }, [heroImages.length])
+
   return (
     <div className="home-page" id="home">
       <header className="hero">
+        <div className="hero-background" aria-hidden="true">
+          {heroImages.map((image, index) => (
+            <div
+              key={image}
+              className={`hero-background__image ${index === activeHeroImage ? 'is-active' : ''}`}
+              style={{ backgroundImage: `url(${image})` }}
+            />
+          ))}
+        </div>
+        <div className="hero-overlay" aria-hidden="true" />
         {navigation}
         <div className="hero-content">
           <span className="hero-tag">Conecte-se com a natureza</span>

@@ -80,15 +80,8 @@ function App() {
           navigate('/')
         }}
       >
-        <span className="brand-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path
-              d="M12 2C7.03 6.5 4.5 10.73 4.5 14.67c0 4.43 3.36 7.33 7.5 7.33s7.5-2.9 7.5-7.33C19.5 10.73 16.97 6.5 12 2z"
-              fill="currentColor"
-            />
-          </svg>
-        </span>
-        AgenDunas
+        <img className="brand-logo" src="/agendunaslogo.png" alt="Logo AgenDunas" />
+        <span className="brand-text">AgenDunas</span>
       </a>
       <div className="nav-links">
         {routes.map((link) => (
