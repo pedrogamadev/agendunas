@@ -86,7 +86,7 @@ function BookingPage({ navigation }: PageProps) {
               <div className="map-frame">
                 <iframe
                   title={booking.sidebar.mapTitle}
-                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d57470.49387760395!2d-35.250735867600305!3d-5.829495663855279!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x7b2fff2656f056b%3A0x5b7be096d7dfdd4!2sParque%20das%20Dunas!5e0!3m2!1spt-BR!2sbr!4v1701100000000!5m2!1spt-BR!2sbr"
+                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3592.026426769827!2d-35.19756052547422!3d-5.810629257306963!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x7b2ffe742b9133f%3A0xec2b60cecae02a3c!2sParque%20das%20Dunas%20-%20Bosque%20dos%20Namorados!5e1!3m2!1spt-BR!2sbr!4v1759068531397!5m2!1spt-BR!2sbr"
                   loading="lazy"
                   allowFullScreen
                   referrerPolicy="no-referrer-when-downgrade"
