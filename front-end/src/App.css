@@ -129,7 +129,8 @@ section {
 }
 
 .brand-text {
-  color: inherit;
+  color: #ffffff;
+  text-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
 }
 
 .nav-links {
@@ -446,6 +447,11 @@ section {
 .guide-avatar {
   position: relative;
   flex-shrink: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  display: inline-flex;
 }
 
 .guide-avatar img {
@@ -454,6 +460,11 @@ section {
   object-fit: cover;
   border-radius: 28px;
   box-shadow: 0 18px 40px rgba(44, 210, 130, 0.25);
+}
+
+.guide-avatar:focus-visible {
+  outline: 2px solid rgba(44, 210, 130, 0.8);
+  outline-offset: 4px;
 }
 
 .guide-rating {
@@ -557,6 +568,174 @@ section {
 .guide-cta {
   align-self: flex-start;
   margin-top: 0.5rem;
+}
+
+.guide-modal {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+.guide-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(5, 16, 12, 0.7);
+  backdrop-filter: blur(6px);
+}
+
+.guide-modal__dialog {
+  position: relative;
+  z-index: 1;
+  width: min(860px, calc(100% - 2.5rem));
+  border-radius: clamp(1.8rem, 4vw, 2.5rem);
+  background: linear-gradient(145deg, rgba(249, 255, 252, 0.98), rgba(227, 248, 239, 0.95));
+  box-shadow: 0 45px 120px rgba(8, 44, 30, 0.45);
+  padding: clamp(1.5rem, 4vw, 2rem);
+}
+
+.guide-modal__close {
+  position: absolute;
+  top: clamp(0.75rem, 2vw, 1.2rem);
+  right: clamp(0.75rem, 2vw, 1.2rem);
+  border: none;
+  background: rgba(6, 33, 24, 0.08);
+  color: rgba(6, 33, 24, 0.75);
+  font-size: clamp(1.4rem, 4vw, 1.8rem);
+  font-weight: 600;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: background 0.3s ease, transform 0.3s ease;
+}
+
+.guide-modal__close:hover,
+.guide-modal__close:focus-visible {
+  background: rgba(6, 33, 24, 0.18);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.guide-modal__content {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: clamp(1.5rem, 4vw, 2.5rem);
+  align-items: stretch;
+}
+
+.guide-modal__media {
+  position: relative;
+  border-radius: clamp(1.5rem, 4vw, 2rem);
+  overflow: hidden;
+  background: rgba(12, 52, 33, 0.08);
+  display: flex;
+  align-items: flex-end;
+  min-height: 280px;
+}
+
+.guide-modal__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.guide-modal__stats {
+  position: absolute;
+  left: clamp(1rem, 3vw, 1.5rem);
+  bottom: clamp(1rem, 3vw, 1.5rem);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.guide-modal__rating,
+.guide-modal__trails {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.45rem 0.85rem;
+  border-radius: 999px;
+  font-weight: 700;
+  color: #ffffff;
+  box-shadow: 0 18px 40px rgba(35, 140, 98, 0.28);
+}
+
+.guide-modal__rating {
+  background: linear-gradient(135deg, #34f49b, #23c4ff);
+}
+
+.guide-modal__trails {
+  background: rgba(8, 38, 27, 0.75);
+  font-size: 0.9rem;
+}
+
+.guide-modal__details {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.guide-modal__label {
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(12, 52, 33, 0.6);
+  font-weight: 600;
+}
+
+.guide-modal__details h2 {
+  margin: 0;
+  font-size: clamp(1.8rem, 4vw, 2.2rem);
+  color: var(--fern-900);
+}
+
+.guide-modal__speciality {
+  margin: 0;
+  font-weight: 600;
+  color: var(--brand-green-dark);
+  font-size: 1.05rem;
+}
+
+.guide-modal__description {
+  margin: 0;
+  color: rgba(17, 57, 40, 0.76);
+  line-height: 1.6;
+}
+
+.guide-modal__meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.75rem;
+  margin: 0;
+}
+
+.guide-modal__meta div {
+  background: rgba(224, 247, 237, 0.9);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem 1rem;
+  box-shadow: inset 0 0 0 1px rgba(44, 210, 130, 0.2);
+}
+
+.guide-modal__meta dt {
+  margin: 0 0 0.35rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(23, 96, 64, 0.65);
+}
+
+.guide-modal__meta dd {
+  margin: 0;
+  font-weight: 600;
+  color: var(--fern-900);
+}
+
+.guide-modal .guide-cta {
+  align-self: flex-start;
 }
 
 .section-tag {
@@ -670,7 +849,7 @@ section {
   min-height: 340px;
   border-radius: clamp(2rem, 6vw, 3rem);
   background-image: linear-gradient(135deg, rgba(15, 58, 37, 0.2), rgba(29, 118, 79, 0.1)),
-    url('https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&w=1400&q=80');
+    url('/images/guias/quem-somos-atualizado.png');
   background-size: cover;
   background-position: center;
   box-shadow: 0 30px 60px rgba(17, 74, 54, 0.2);
@@ -838,6 +1017,11 @@ section {
   position: relative;
   width: min(760px, 100%);
   min-height: 260px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 clamp(0.5rem, 3vw, 1.5rem);
 }
 
 .testimonial-card {
@@ -850,16 +1034,18 @@ section {
   gap: 1.25rem;
   opacity: 0;
   pointer-events: none;
-  transform: translateY(10px);
+  transform: translate(-50%, 10px);
   transition: opacity 0.5s ease, transform 0.5s ease;
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 50%;
+  width: min(720px, calc(100% - clamp(1rem, 6vw, 3rem)));
 }
 
 .testimonial-card.is-active {
   opacity: 1;
   pointer-events: auto;
-  transform: translateY(0);
+  transform: translate(-50%, 0);
 }
 
 .quote-icon {
@@ -1326,6 +1512,27 @@ section {
     justify-content: center;
     flex-wrap: wrap;
   }
+
+  .guide-modal__dialog {
+    padding: clamp(1.25rem, 5vw, 1.75rem);
+  }
+
+  .guide-modal__content {
+    grid-template-columns: 1fr;
+  }
+
+  .guide-modal__media {
+    min-height: 220px;
+  }
+
+  .guide-modal__stats {
+    flex-direction: row;
+    gap: 0.75rem;
+  }
+
+  .guide-modal__trails {
+    font-size: 0.85rem;
+  }
 }
 
 @media (max-width: 540px) {
@@ -1351,6 +1558,14 @@ section {
   .btn.ghost {
     flex: 1 1 100%;
     justify-content: center;
+  }
+
+  .testimonial-slider {
+    padding: 0;
+  }
+
+  .testimonial-card {
+    width: calc(100% - 1rem);
   }
 
   .fauna-controls {

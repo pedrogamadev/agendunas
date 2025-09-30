@@ -19,6 +19,10 @@ function HomePage({ navigation, onNavigate }: PageProps) {
   const trails = home.trails.items
   const wildlife = home.wildlife.items
   const stats = home.stats
+  const aboutTitleText = `${home.about.title.prefix}${home.about.title.highlight}${home.about.title.suffix ?? ''}`
+  const normalizedAboutTitle = aboutTitleText.replace(/\s+/g, ' ').trim().toLowerCase()
+  const normalizedAboutTag = (home.about.tag ?? '').replace(/\s+/g, ' ').trim().toLowerCase()
+  const shouldShowAboutTag = Boolean(normalizedAboutTag) && normalizedAboutTag !== normalizedAboutTitle
 
   useEffect(() => {
     const interval = window.setInterval(() => {
@@ -72,7 +76,7 @@ function HomePage({ navigation, onNavigate }: PageProps) {
       <main>
         <section className="home-section home-about" id="about">
           <div className="home-about__content">
-            <span className="section-tag">{home.about.tag}</span>
+            {shouldShowAboutTag && <span className="section-tag">{home.about.tag}</span>}
             <h2>
               {home.about.title.prefix}
               <span>{home.about.title.highlight}</span>

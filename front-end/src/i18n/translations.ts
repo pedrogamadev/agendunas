@@ -77,6 +77,9 @@ type GuideTranslation = {
     curiosities: string[]
   }[]
   meta: {
+    openProfileLabel: string
+    closeProfileLabel: string
+    featuredGuideLabel: string
     trailsLabel: string
     experienceLabel: string
     languagesLabel: string
@@ -402,6 +405,9 @@ const translations: Record<Language, TranslationContent> = {
         },
       ],
       meta: {
+        openProfileLabel: 'Ver detalhes do guia {name}',
+        closeProfileLabel: 'Fechar detalhes do guia',
+        featuredGuideLabel: 'Guia destaque',
         trailsLabel: 'trilhas guiadas',
         experienceLabel: 'Tempo de atuação',
         languagesLabel: 'Idiomas',
@@ -725,7 +731,7 @@ const translations: Record<Language, TranslationContent> = {
         {
           id: 'davi-brito',
           name: 'Davi Brito',
-          photo: withBasePath('images/guias/davi-brito.jpg'),
+          photo: withBasePath('images/guias/davi.jpg'),
           speciality: 'Resilience & Bahian Cuisine',
           description:
             'Salvador native who blends perseverance and hospitality, guiding experiences seasoned with the iconic flavours of Bahia.',
@@ -743,7 +749,7 @@ const translations: Record<Language, TranslationContent> = {
         {
           id: 'matheus-brasileiro',
           name: 'Matheus Brasileiro',
-          photo: withBasePath('images/guias/matheus-brasileiro.jpg'),
+          photo: withBasePath('images/guias/matue.jpg'),
           speciality: 'Natural Herbs & Music on the Trail',
           description:
             'Guide who unveils Northeastern biodiversity, teaching traditional plant uses accompanied by original musical compositions.',
@@ -761,7 +767,7 @@ const translations: Record<Language, TranslationContent> = {
         {
           id: 'carrara-luis',
           name: 'Carrara Luis',
-          photo: withBasePath('images/guias/carrara-luis.jpg'),
+          photo: withBasePath('images/guias/agostinho.jpg'),
           speciality: 'Urban Logistics & Route Optimisation',
           description:
             'Shortcut master who turns daily hustle into tours filled with humour, strategy, and streetwise tips.',
@@ -778,6 +784,9 @@ const translations: Record<Language, TranslationContent> = {
         },
       ],
       meta: {
+        openProfileLabel: 'View full profile for {name}',
+        closeProfileLabel: 'Close guide details',
+        featuredGuideLabel: 'Featured guide',
         trailsLabel: 'guided hikes',
         experienceLabel: 'Experience',
         languagesLabel: 'Languages',
