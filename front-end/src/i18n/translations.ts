@@ -190,6 +190,8 @@ type TranslationContent = {
   faunaFlora: FaunaFloraTranslation
 }
 
+const withBasePath = (path: string) => `${import.meta.env.BASE_URL}${path.replace(/^\//, '')}`
+
 const translations: Record<Language, TranslationContent> = {
   pt: {
     navigation: {
@@ -347,7 +349,7 @@ const translations: Record<Language, TranslationContent> = {
         {
           id: 'davi-brito',
           name: 'Davi Brito',
-          photo: '/images/guias/davi-brito.jpg',
+          photo: withBasePath('images/guias/davi.jpg'),
           speciality: 'Resiliência & Culinária Baiana',
           description:
             'Soteropolitano que une superação e afeto em cada história, guiando experiências regadas aos sabores marcantes da Bahia.',
@@ -365,7 +367,7 @@ const translations: Record<Language, TranslationContent> = {
         {
           id: 'matheus-brasileiro',
           name: 'Matheus Brasileiro',
-          photo: '/images/guias/matheus-brasileiro.jpg',
+          photo: withBasePath('images/guias/matue.jpg'),
           speciality: 'Ervas naturais e músicas na trilha',
           description:
             'Guia que revela a biodiversidade do Nordeste explicando usos tradicionais das plantas ao som de composições autorais.',
@@ -383,7 +385,7 @@ const translations: Record<Language, TranslationContent> = {
         {
           id: 'carrara-luis',
           name: 'Carrara Luis',
-          photo: '/images/guias/carrara-luis.jpg',
+          photo: withBasePath('images/guias/agostinho.jpg'),
           speciality: 'Logística Urbana & Otimização de Rotas',
           description:
             'Mestre dos atalhos urbanos, transforma o corre diário em tours cheios de humor, estratégia e oportunidades.',
@@ -723,7 +725,7 @@ const translations: Record<Language, TranslationContent> = {
         {
           id: 'davi-brito',
           name: 'Davi Brito',
-          photo: '/images/guias/davi.jpg',
+          photo: withBasePath('images/guias/davi-brito.jpg'),
           speciality: 'Resilience & Bahian Cuisine',
           description:
             'Salvador native who blends perseverance and hospitality, guiding experiences seasoned with the iconic flavours of Bahia.',
@@ -741,7 +743,7 @@ const translations: Record<Language, TranslationContent> = {
         {
           id: 'matheus-brasileiro',
           name: 'Matheus Brasileiro',
-          photo: '/images/guias/matheus-brasileiro.jpg',
+          photo: withBasePath('images/guias/matheus-brasileiro.jpg'),
           speciality: 'Natural Herbs & Music on the Trail',
           description:
             'Guide who unveils Northeastern biodiversity, teaching traditional plant uses accompanied by original musical compositions.',
@@ -759,7 +761,7 @@ const translations: Record<Language, TranslationContent> = {
         {
           id: 'carrara-luis',
           name: 'Carrara Luis',
-          photo: '/images/guias/carrara-luis.jpg',
+          photo: withBasePath('images/guias/carrara-luis.jpg'),
           speciality: 'Urban Logistics & Route Optimisation',
           description:
             'Shortcut master who turns daily hustle into tours filled with humour, strategy, and streetwise tips.',
