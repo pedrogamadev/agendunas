@@ -2,7 +2,7 @@ import { useEffect, useState, type CSSProperties } from 'react'
 import type { PageProps } from '../App'
 import { useTranslation } from '../i18n/TranslationProvider'
 
-function GuidesPage({ navigation }: PageProps) {
+function GuidesPage({ navigation, onNavigate }: PageProps) {
   const { content } = useTranslation()
   const guidesContent = content.guides
   type Guide = (typeof guidesContent.guides)[number]
@@ -32,6 +32,11 @@ function GuidesPage({ navigation }: PageProps) {
 
   const handleCloseGuide = () => {
     setSelectedGuide(null)
+  }
+
+  const handleRequestGuide = (guide: Guide) => {
+    setSelectedGuide(null)
+    onNavigate('/agendamento', { search: `guide=${guide.id}` })
   }
 
   const getShortDescription = (description: string) => {
@@ -108,7 +113,11 @@ function GuidesPage({ navigation }: PageProps) {
                 ))}
               </ul>
 
-              <button type="button" className="btn solid guide-cta">
+              <button
+                type="button"
+                className="btn solid guide-cta"
+                onClick={() => handleRequestGuide(guide)}
+              >
                 {guidesContent.meta.cta}
               </button>
             </article>
@@ -160,7 +169,11 @@ function GuidesPage({ navigation }: PageProps) {
                     <dd>{selectedGuide.languages.join(' · ')}</dd>
                   </div>
                 </dl>
-                <button type="button" className="btn solid guide-cta">
+                <button
+                  type="button"
+                  className="btn solid guide-cta"
+                  onClick={() => handleRequestGuide(selectedGuide)}
+                >
                   {guidesContent.meta.cta}
                 </button>
               </div>

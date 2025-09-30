@@ -390,12 +390,12 @@ section {
 }
 
 .hero h1 span {
-  color: var(--brand-green);
-  text-shadow: 0 10px 35px rgba(44, 210, 130, 0.3);
+  color: #ffffff;
+  text-shadow: 0 12px 40px rgba(10, 35, 25, 0.45);
 }
 
 .hero p {
-  color: var(--text-muted);
+  color: rgba(245, 255, 250, 0.85);
   font-size: clamp(1rem, 2.2vw, 1.1rem);
   margin-bottom: 2rem;
 }
@@ -1313,6 +1313,84 @@ section {
 .booking-sidebar h2,
 .booking-sidebar h3 {
   margin-top: 0;
+}
+
+.selected-guide-card {
+  padding: clamp(1.5rem, 3vw, 2rem);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  border: 1px solid rgba(47, 162, 104, 0.14);
+}
+
+.selected-guide-card h3 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.selected-guide-card__header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.selected-guide-card__header img {
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  object-fit: cover;
+  box-shadow: 0 10px 25px rgba(20, 52, 40, 0.15);
+}
+
+.selected-guide-card__info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.selected-guide-card__info strong {
+  font-size: 1.05rem;
+}
+
+.selected-guide-card__info span {
+  color: rgba(20, 52, 40, 0.65);
+  font-size: 0.9rem;
+}
+
+.selected-guide-card__trail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.9rem 1rem;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(120deg, rgba(44, 210, 130, 0.08), rgba(20, 84, 58, 0.08));
+  border: 1px solid rgba(47, 162, 104, 0.2);
+}
+
+.selected-guide-card__trail-label {
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(20, 52, 40, 0.6);
+}
+
+.selected-guide-card__trail-details {
+  color: rgba(20, 52, 40, 0.65);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.selected-guide-card__note {
+  margin: 0;
+  font-size: 0.85rem;
+  color: rgba(20, 52, 40, 0.6);
+}
+
+.selected-guide-card__empty {
+  margin: 0;
+  color: rgba(20, 52, 40, 0.65);
+  font-size: 0.9rem;
+  line-height: 1.4;
 }
 
 .booking-map,

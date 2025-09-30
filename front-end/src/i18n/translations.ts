@@ -76,6 +76,7 @@ type GuideTranslation = {
     certifications: string[]
     languages: string[]
     curiosities: string[]
+    featuredTrailId: string
   }[]
   meta: {
     openProfileLabel: string
@@ -97,6 +98,12 @@ type BookingTranslation = {
     title: HighlightedTitle
     description: string
     photo: string
+  }
+  guideSummary: {
+    title: string
+    trailLabel: string
+    changeMessage: string
+    emptyMessage: string
   }
   form: {
     title: string
@@ -237,6 +244,7 @@ const translations: Record<Language, TranslationContent> = {
           { title: 'Paixão', description: 'Amor genuíno pela natureza', icon: '🌿' },
           { title: 'Experiência', description: '15+ anos de aventura', icon: '🧭' },
           { title: 'Segurança', description: 'Protocolos rigorosos', icon: '🛡️' },
+          { title: 'Comunidade', description: 'Conexão com moradores locais', icon: '🤝' },
         ],
         mediaAriaLabel: 'Exploradores caminhando nas dunas',
       },
@@ -365,15 +373,16 @@ const translations: Record<Language, TranslationContent> = {
           rating: 4.9,
           certifications: ['Culinária Baiana Profissional', 'Comunicação Empática'],
           languages: ['Português'],
-          curiosities: [
-            'Conhece Salvador como poucos após anos como motorista de aplicativo',
-            'Responsável por banquetes que aproximaram comunidades inteiras',
-            'Especialista em menus afetivos baianos servidos nas trilhas',
-          ],
-        },
-        {
-          id: 'matheus-brasileiro',
-          name: 'Matheus Brasileiro',
+        curiosities: [
+          'Conhece Salvador como poucos após anos como motorista de aplicativo',
+          'Responsável por banquetes que aproximaram comunidades inteiras',
+          'Especialista em menus afetivos baianos servidos nas trilhas',
+        ],
+        featuredTrailId: 'cachoeira',
+      },
+      {
+        id: 'matheus-brasileiro',
+        name: 'Matheus Brasileiro',
           photo: withBasePath('images/guias/matue.jpg'),
           speciality: 'Ervas naturais e músicas na trilha',
           description:
@@ -383,15 +392,16 @@ const translations: Record<Language, TranslationContent> = {
           rating: 4.8,
           certifications: ['Fitoterapia Aplicada', 'Cultivo Sustentável'],
           languages: ['Português', 'Inglês'],
-          curiosities: [
-            'Mantém um acervo vivo de espécies medicinais regionais',
-            'Fundador de projetos de conscientização sobre uso responsável de plantas',
-            'Criador de métodos inovadores de extração de essências naturais',
-          ],
-        },
-        {
-          id: 'carrara-luis',
-          name: 'Carrara Luis',
+        curiosities: [
+          'Mantém um acervo vivo de espécies medicinais regionais',
+          'Fundador de projetos de conscientização sobre uso responsável de plantas',
+          'Criador de métodos inovadores de extração de essências naturais',
+        ],
+        featuredTrailId: 'ecologica',
+      },
+      {
+        id: 'carrara-luis',
+        name: 'Carrara Luis',
           photo: withBasePath('images/guias/agostinho.jpg'),
           speciality: 'Logística Urbana & Otimização de Rotas',
           description:
@@ -401,12 +411,13 @@ const translations: Record<Language, TranslationContent> = {
           rating: 5,
           certifications: ['Condução Defensiva Avançada', 'Negociação Rápida'],
           languages: ['Português'],
-          curiosities: [
-            'Foi proprietário da lendária “Carrara Táxis”',
-            'Conhece as principais “panelas” e bastidores da cidade grande',
-            'Sempre encontra atalhos criativos para driblar o trânsito',
-          ],
-        },
+        curiosities: [
+          'Foi proprietário da lendária “Carrara Táxis”',
+          'Conhece as principais “panelas” e bastidores da cidade grande',
+          'Sempre encontra atalhos criativos para driblar o trânsito',
+        ],
+        featuredTrailId: 'mirante',
+      },
       ],
       meta: {
         openProfileLabel: 'Ver detalhes do guia {name}',
@@ -428,6 +439,12 @@ const translations: Record<Language, TranslationContent> = {
         description:
           'Reserve sua trilha e prepare-se para uma experiência única na natureza. Preencha o formulário abaixo e nossa equipe entrará em contato para confirmar todos os detalhes.',
         photo: withBasePath('images/capas/agendamento-capa.png'),
+      },
+      guideSummary: {
+        title: 'Guia selecionado',
+        trailLabel: 'Trilha conduzida',
+        changeMessage: 'Para alterar, volte à página de guias e escolha outro profissional.',
+        emptyMessage: 'Escolha seu guia favorito na página de guias para vê-lo aqui.',
       },
       form: {
         title: 'Formulário de Agendamento',
@@ -729,6 +746,7 @@ const translations: Record<Language, TranslationContent> = {
           { title: 'Passion', description: 'Genuine love for nature', icon: '🌿' },
           { title: 'Experience', description: '15+ years of adventures', icon: '🧭' },
           { title: 'Safety', description: 'Strict safety protocols', icon: '🛡️' },
+          { title: 'Community', description: 'Strong ties with local residents', icon: '🤝' },
         ],
         mediaAriaLabel: 'Explorers hiking across the dunes',
       },
@@ -857,15 +875,16 @@ const translations: Record<Language, TranslationContent> = {
           rating: 4.9,
           certifications: ['Professional Bahian Cuisine', 'Empathetic Communication'],
           languages: ['Portuguese'],
-          curiosities: [
-            'Knows Salvador like few others after years as a ride-share driver',
-            'Creates banquets that bring whole communities together',
-            'Specialises in comfort menus served along the trails',
-          ],
-        },
-        {
-          id: 'matheus-brasileiro',
-          name: 'Matheus Brasileiro',
+        curiosities: [
+          'Knows Salvador like few others after years as a ride-share driver',
+          'Creates banquets that bring whole communities together',
+          'Specialises in comfort menus served along the trails',
+        ],
+        featuredTrailId: 'cachoeira',
+      },
+      {
+        id: 'matheus-brasileiro',
+        name: 'Matheus Brasileiro',
           photo: withBasePath('images/guias/matue.jpg'),
           speciality: 'Natural Herbs & Music on the Trail',
           description:
@@ -875,15 +894,16 @@ const translations: Record<Language, TranslationContent> = {
           rating: 4.8,
           certifications: ['Applied Phytotherapy', 'Sustainable Cultivation'],
           languages: ['Portuguese', 'English'],
-          curiosities: [
-            'Maintains a living collection of regional medicinal species',
-            'Founded initiatives that raise awareness about responsible plant use',
-            'Developed innovative methods to extract natural essences',
-          ],
-        },
-        {
-          id: 'carrara-luis',
-          name: 'Carrara Luis',
+        curiosities: [
+          'Maintains a living collection of regional medicinal species',
+          'Founded initiatives that raise awareness about responsible plant use',
+          'Developed innovative methods to extract natural essences',
+        ],
+        featuredTrailId: 'ecologica',
+      },
+      {
+        id: 'carrara-luis',
+        name: 'Carrara Luis',
           photo: withBasePath('images/guias/agostinho.jpg'),
           speciality: 'Urban Logistics & Route Optimisation',
           description:
@@ -893,12 +913,13 @@ const translations: Record<Language, TranslationContent> = {
           rating: 5,
           certifications: ['Advanced Defensive Driving', 'Rapid Negotiation'],
           languages: ['Portuguese'],
-          curiosities: [
-            'Former owner of the iconic “Carrara Taxis” fleet',
-            'Knows every insider circle across the city',
-            'Always finds creative shortcuts to outsmart traffic',
-          ],
-        },
+        curiosities: [
+          'Former owner of the iconic “Carrara Taxis” fleet',
+          'Knows every insider circle across the city',
+          'Always finds creative shortcuts to outsmart traffic',
+        ],
+        featuredTrailId: 'mirante',
+      },
       ],
       meta: {
         openProfileLabel: 'View full profile for {name}',
@@ -920,6 +941,12 @@ const translations: Record<Language, TranslationContent> = {
         description:
           'Reserve your trail and get ready for a unique nature experience. Fill in the form and our team will reach out to confirm every detail.',
         photo: withBasePath('images/capas/agendamento-capa.png'),
+      },
+      guideSummary: {
+        title: 'Selected guide',
+        trailLabel: 'Lead trail',
+        changeMessage: 'To change, return to the guides page and pick another expert.',
+        emptyMessage: 'Choose your favourite guide on the guides page to see them here.',
       },
       form: {
         title: 'Booking Form',

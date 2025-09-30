@@ -15,9 +15,14 @@ type RouteConfig = {
   component: RouteComponent
 }
 
+type NavigateOptions = {
+  search?: string
+}
+
 type PageProps = {
   navigation: ReactNode
-  onNavigate: (path: string) => void
+  onNavigate: (path: string, options?: NavigateOptions) => void
+  searchParams: URLSearchParams
 }
 
 const routes: RouteConfig[] = [
@@ -28,16 +33,20 @@ const routes: RouteConfig[] = [
 ]
 
 const normalizePath = (value: string) => {
-  if (value === '/') {
+  const [pathname] = value.split('?')
+  if (pathname === '/') {
     return '/'
   }
 
-  const trimmed = value.replace(/\/+$/, '')
+  const trimmed = pathname.replace(/\/+$/, '')
   return trimmed.length > 0 ? trimmed : '/'
 }
 
 function App() {
-  const [currentPath, setCurrentPath] = useState(() => normalizePath(window.location.pathname))
+  const [location, setLocation] = useState(() => ({
+    path: normalizePath(window.location.pathname),
+    search: window.location.search ?? '',
+  }))
   const [isScrolled, setIsScrolled] = useState(() => window.scrollY > 16)
   const [navHeight, setNavHeight] = useState(0)
   const navRef = useRef<HTMLElement | null>(null)
@@ -45,7 +54,10 @@ function App() {
 
   useEffect(() => {
     const handlePopState = () => {
-      setCurrentPath(normalizePath(window.location.pathname))
+      setLocation({
+        path: normalizePath(window.location.pathname),
+        search: window.location.search ?? '',
+      })
     }
 
     window.addEventListener('popstate', handlePopState)
@@ -85,27 +97,40 @@ function App() {
     return () => window.removeEventListener('resize', updateHeight)
   }, [])
 
-  const navigate = (path: string) => {
+  const navigate = (path: string, options?: NavigateOptions) => {
     const nextPath = normalizePath(path)
-    if (nextPath === currentPath) {
+    const rawSearch = options?.search ?? ''
+    const normalizedSearch = rawSearch
+      ? rawSearch.startsWith('?')
+        ? rawSearch
+        : `?${rawSearch}`
+      : ''
+
+    if (nextPath === location.path && normalizedSearch === location.search) {
       return
     }
 
-    window.history.pushState({}, '', nextPath)
-    setCurrentPath(nextPath)
+    const fullPath = `${nextPath}${normalizedSearch}`
+    window.history.pushState({}, '', fullPath)
+    setLocation({ path: nextPath, search: normalizedSearch })
     window.scrollTo({ top: 0, behavior: 'auto' })
   }
 
   useEffect(() => {
-    if (!routes.some((route) => route.path === currentPath)) {
+    if (!routes.some((route) => route.path === location.path)) {
       navigate('/')
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPath])
+  }, [location.path])
 
   const activeRoute = useMemo(
-    () => routes.find((route) => route.path === currentPath) ?? routes[0],
-    [currentPath],
+    () => routes.find((route) => route.path === location.path) ?? routes[0],
+    [location.path],
+  )
+
+  const searchParams = useMemo(
+    () => new URLSearchParams(location.search),
+    [location.search],
   )
 
   const navigation = (
@@ -175,7 +200,7 @@ function App() {
 
   return (
     <div className={`app route-${activeRoute.path.replace('/', '') || 'home'}`}>
-      <Page navigation={navigation} onNavigate={navigate} />
+      <Page navigation={navigation} onNavigate={navigate} searchParams={searchParams} />
       <footer className="footer">
         <p>{content.footer.text.replace('{year}', new Date().getFullYear().toString())}</p>
       </footer>

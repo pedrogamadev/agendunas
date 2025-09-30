@@ -2,9 +2,16 @@ import type { CSSProperties } from 'react'
 import type { PageProps } from '../App'
 import { useTranslation } from '../i18n/TranslationProvider'
 
-function BookingPage({ navigation }: PageProps) {
+function BookingPage({ navigation, searchParams }: PageProps) {
   const { content } = useTranslation()
   const booking = content.booking
+  const guideId = searchParams.get('guide')
+  const selectedGuide = guideId
+    ? content.guides.guides.find((guide) => guide.id === guideId)
+    : undefined
+  const selectedTrail = selectedGuide
+    ? booking.trails.find((trail) => trail.id === selectedGuide.featuredTrailId)
+    : undefined
   const heroStyle = {
     '--hero-background-image': `url(${booking.hero.photo})`,
   } as CSSProperties
@@ -43,7 +50,7 @@ function BookingPage({ navigation }: PageProps) {
               </label>
               <label className="input-field">
                 <span>{booking.form.trail}</span>
-                <select name="trail" required defaultValue="">
+                <select name="trail" required defaultValue={selectedTrail?.id ?? ''}>
                   <option value="" disabled>
                     {booking.form.selectPlaceholder}
                   </option>
@@ -85,6 +92,34 @@ function BookingPage({ navigation }: PageProps) {
           </form>
 
           <aside className="booking-sidebar">
+            <div className="selected-guide-card">
+              <h3>{booking.guideSummary.title}</h3>
+              {selectedGuide ? (
+                <>
+                  <div className="selected-guide-card__header">
+                    <img
+                      src={selectedGuide.photo}
+                      alt={content.guides.meta.photoAltTemplate.replace('{name}', selectedGuide.name)}
+                      loading="lazy"
+                    />
+                    <div className="selected-guide-card__info">
+                      <strong>{selectedGuide.name}</strong>
+                      <span>{selectedGuide.speciality}</span>
+                    </div>
+                  </div>
+                  {selectedTrail && (
+                    <div className="selected-guide-card__trail">
+                      <span className="selected-guide-card__trail-label">{booking.guideSummary.trailLabel}</span>
+                      <strong>{selectedTrail.label}</strong>
+                      <span className="selected-guide-card__trail-details">{selectedTrail.description}</span>
+                    </div>
+                  )}
+                  <p className="selected-guide-card__note">{booking.guideSummary.changeMessage}</p>
+                </>
+              ) : (
+                <p className="selected-guide-card__empty">{booking.guideSummary.emptyMessage}</p>
+              )}
+            </div>
             <div className="booking-map">
               <h2>{booking.sidebar.locationTitle}</h2>
               <div className="map-frame">
