@@ -3,40 +3,40 @@ import { parse } from 'node:url'
 
 const guides = [
   {
-    id: 'joao-mendes',
-    name: 'João Mendes',
-    speciality: 'Fauna e Trilhas Técnicas',
-    experienceYears: 12,
+    id: 'davi-brito',
+    name: 'Davi Brito',
+    speciality: 'Resiliência & Culinária Baiana',
+    experienceYears: 5,
     rating: 4.9,
-    trailsGuided: 850,
-    certifications: ['Primeiros Socorros', 'Guia de Turismo', 'Condutor Ambiental'],
-    languages: ['Português', 'Inglês', 'Espanhol'],
+    trailsGuided: 420,
+    certifications: ['Culinária Baiana Profissional', 'Atendimento ao Cliente'],
+    languages: ['Português'],
     biography:
-      'Biólogo apaixonado pela mata atlântica, lidera expedições técnicas com foco em observação de fauna e conservação.',
+      'Autêntico soteropolitano que transforma desafios em histórias de superação servidas com os sabores da Bahia.',
   },
   {
-    id: 'maria-fernanda',
-    name: 'Maria Fernanda',
-    speciality: 'Flora e Plantas Medicinais',
-    experienceYears: 9,
+    id: 'matheus-brasileiro',
+    name: 'Matheus Brasileiro',
+    speciality: 'Ervas naturais e músicas na trilha',
+    experienceYears: 10,
     rating: 4.8,
-    trailsGuided: 650,
-    certifications: ['Educação Ambiental', 'Primeiros Socorros'],
-    languages: ['Português', 'Francês'],
-    biography:
-      'Botânica que conduz trilhas interpretativas com foco em usos tradicionais da flora e práticas de preservação.',
-  },
-  {
-    id: 'carlos-rodrigues',
-    name: 'Carlos Rodrigues',
-    speciality: 'Montanhismo e Histórias Locais',
-    experienceYears: 15,
-    rating: 5,
-    trailsGuided: 1200,
-    certifications: ['Resgate em Altura', 'Primeiros Socorros', 'Turismo de Aventura'],
+    trailsGuided: 720,
+    certifications: ['Fitoterapia Aplicada', 'Cultivo Sustentável'],
     languages: ['Português', 'Inglês'],
     biography:
-      'Condutor especializado em travessias longas e registros fotográficos da cultura local, com foco em segurança.',
+      'Pesquisador dedicado às propriedades das plantas medicinais, conduz trilhas interpretativas com trilha sonora autoral.',
+  },
+  {
+    id: 'carrara-luis',
+    name: 'Carrara Luis',
+    speciality: 'Logística Urbana & Otimização de Rotas',
+    experienceYears: 20,
+    rating: 5,
+    trailsGuided: 1300,
+    certifications: ['Condução Defensiva Avançada', 'Negociação Estratégica'],
+    languages: ['Português'],
+    biography:
+      'Especialista em transformar o caos urbano em oportunidade, conduzindo tours cheios de histórias e atalhos improváveis.',
   },
 ]
 
