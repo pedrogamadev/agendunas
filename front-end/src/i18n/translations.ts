@@ -723,7 +723,7 @@ const translations: Record<Language, TranslationContent> = {
         {
           id: 'davi-brito',
           name: 'Davi Brito',
-          photo: '/images/guias/davi_guia.png',
+          photo: '/images/guias/davi.jpg',
           speciality: 'Resilience & Bahian Cuisine',
           description:
             'Salvador native who blends perseverance and hospitality, guiding experiences seasoned with the iconic flavours of Bahia.',
