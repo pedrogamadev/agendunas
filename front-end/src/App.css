@@ -22,6 +22,7 @@
   --radius-md: 20px;
   --radius-sm: 16px;
   --shadow-soft: 0 20px 50px rgba(26, 117, 85, 0.15);
+  --nav-height: clamp(4.5rem, 10vw, 6rem);
 }
 
 .app {
@@ -102,14 +103,81 @@ section {
 }
 
 .top-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: clamp(1rem, 4vw, 2.5rem);
-  padding-bottom: clamp(2rem, 4vw, 3rem);
-  position: relative;
-  z-index: 2;
-  color: var(--text-dark);
+  padding: 0 clamp(1.5rem, 6vw, 6rem);
+  min-height: var(--nav-height);
+  background: transparent;
+  box-shadow: none;
+  color: #ffffff;
+  backdrop-filter: none;
+  transition: background 0.4s ease, box-shadow 0.4s ease, color 0.3s ease, backdrop-filter 0.3s ease;
+}
+
+.top-nav__spacer {
+  width: 100%;
+  height: var(--nav-height);
+  pointer-events: none;
+}
+
+.top-nav--scrolled {
+  background: rgba(0, 0, 0, 0.94);
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.45);
+  color: rgba(245, 255, 250, 0.92);
+  backdrop-filter: blur(12px);
+}
+
+.top-nav:not(.top-nav--scrolled) .nav-links {
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.top-nav:not(.top-nav--scrolled) .brand {
+  color: #ffffff;
+}
+
+.top-nav--scrolled .brand {
+  color: rgba(245, 255, 250, 0.92);
+}
+
+.top-nav--scrolled .brand-text {
+  color: #f5fff8;
+  text-shadow: 0 0 0 rgba(0, 0, 0, 0);
+}
+
+.top-nav--scrolled .nav-links {
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+.top-nav--scrolled .nav-link {
+  color: rgba(243, 255, 248, 0.82);
+}
+
+.top-nav--scrolled .nav-link:hover,
+.top-nav--scrolled .nav-link:focus-visible {
+  color: #ffffff;
+}
+
+.top-nav--scrolled .translation-toggle {
+  background: rgba(255, 255, 255, 0.14);
+  color: rgba(245, 255, 250, 0.92);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+}
+
+.top-nav--scrolled .translation-toggle:hover,
+.top-nav--scrolled .translation-toggle:focus-visible {
+  background: rgba(255, 255, 255, 0.28);
+  color: #060a12;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
 }
 
 .brand {
@@ -202,7 +270,7 @@ section {
 .nav-link {
   padding: 0.55rem 1.35rem;
   border-radius: 999px;
-  color: rgba(20, 52, 40, 0.65);
+  color: rgba(255, 255, 255, 0.75);
   font-size: 0.95rem;
   font-weight: 500;
   transition: background 0.3s ease, color 0.3s ease, transform 0.3s ease;
@@ -210,7 +278,7 @@ section {
 
 .nav-link:hover,
 .nav-link:focus-visible {
-  color: var(--fern-700);
+  color: #ffffff;
   transform: translateY(-1px);
 }
 
