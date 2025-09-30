@@ -48,6 +48,7 @@ function App() {
     search: window.location.search ?? '',
   }))
   const [isScrolled, setIsScrolled] = useState(() => window.scrollY > 16)
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [navHeight, setNavHeight] = useState(0)
   const navRef = useRef<HTMLElement | null>(null)
   const { content, toggleLanguage } = useTranslation()
@@ -97,6 +98,56 @@ function App() {
     return () => window.removeEventListener('resize', updateHeight)
   }, [])
 
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(min-width: 960px)')
+    const handleChange = () => {
+      if (mediaQuery.matches) {
+        setIsMenuOpen(false)
+      }
+    }
+
+    handleChange()
+    mediaQuery.addEventListener('change', handleChange)
+    return () => mediaQuery.removeEventListener('change', handleChange)
+  }, [])
+
+  useEffect(() => {
+    setIsMenuOpen(false)
+  }, [location.path, location.search])
+
+  useEffect(() => {
+    if (!isMenuOpen) {
+      return undefined
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsMenuOpen(false)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isMenuOpen])
+
+  useEffect(() => {
+    if (typeof document === 'undefined') {
+      return undefined
+    }
+
+    if (!isMenuOpen) {
+      return undefined
+    }
+
+    const { body } = document
+    const previousOverflow = body.style.overflow
+    body.style.overflow = 'hidden'
+
+    return () => {
+      body.style.overflow = previousOverflow
+    }
+  }, [isMenuOpen])
+
   const navigate = (path: string, options?: NavigateOptions) => {
     const nextPath = normalizePath(path)
     const rawSearch = options?.search ?? ''
@@ -135,18 +186,37 @@ function App() {
 
   const navigation = (
     <>
-      <nav ref={navRef} className={`top-nav${isScrolled ? ' top-nav--scrolled' : ''}`}>
-          <a
-            className="brand"
-            href="/"
-            onClick={(event) => {
-              event.preventDefault()
-              navigate('/')
-            }}
-          >
-            <img className="brand-logo" src="/agendunaslogo.png" alt="Logo AgenDunas" />
-            <span className="brand-text">AgenDunas</span>
-          </a>
+      <nav
+        ref={navRef}
+        className={`top-nav${isScrolled ? ' top-nav--scrolled' : ''}${isMenuOpen ? ' top-nav--open' : ''}`}
+      >
+        <a
+          className="brand"
+          href="/"
+          onClick={(event) => {
+            event.preventDefault()
+            setIsMenuOpen(false)
+            navigate('/')
+          }}
+        >
+          <img className="brand-logo" src="/agendunaslogo.png" alt="Logo AgenDunas" />
+          <span className="brand-text">AgenDunas</span>
+        </a>
+        <button
+          type="button"
+          className={`top-nav__mobile-toggle${isMenuOpen ? ' is-active' : ''}`}
+          aria-expanded={isMenuOpen}
+          aria-controls="primary-navigation"
+          onClick={() => setIsMenuOpen((current) => !current)}
+        >
+          <span className="sr-only">
+            {isMenuOpen
+              ? content.navigation.menuToggle.closeLabel
+              : content.navigation.menuToggle.openLabel}
+          </span>
+          <span aria-hidden="true" className="top-nav__mobile-icon" />
+        </button>
+        <div className={`top-nav__content${isMenuOpen ? ' is-open' : ''}`} id="primary-navigation">
           <div className="nav-links">
             {routes.map((link) => (
               <a
@@ -154,6 +224,7 @@ function App() {
                 href={link.path}
                 onClick={(event) => {
                   event.preventDefault()
+                  setIsMenuOpen(false)
                   navigate(link.path)
                 }}
                 className={`nav-link ${activeRoute.path === link.path ? 'active' : ''}`}
@@ -168,7 +239,10 @@ function App() {
               className="translation-toggle"
               title={content.navigation.translationToggle.tooltip}
               aria-label={content.navigation.translationToggle.ariaLabel}
-              onClick={toggleLanguage}
+              onClick={() => {
+                toggleLanguage()
+                setIsMenuOpen(false)
+              }}
             >
               <svg
                 className="translation-toggle__icon"
@@ -177,7 +251,7 @@ function App() {
                 aria-hidden="true"
               >
                 <path
-                  d="M12 3a9 9 0 1 0 9 9 9.01 9.01 0 0 0-9-9Zm6.93 8H16.1a14.45 14.45 0 0 0-1.2-5 7.52 7.52 0 0 1 4.03 5ZM12 4.5A12.8 12.8 0 0 1 13.75 11h-3.5A12.8 12.8 0 0 1 12 4.5ZM4.07 11a7.52 7.52 0 0 1 4-5 14.45 14.45 0 0 0-1.2 5Zm0 2h2.85a14.45 14.45 0 0 0 1.2 5 7.52 7.52 0 0 1-4.05-5Zm7.93 6.5A12.8 12.8 0 0 1 10.25 13h3.5A12.8 12.8 0 0 1 12 19.5Zm3.9-1.5a14.45 14.45 0 0 0 1.2-5h2.83a7.52 7.52 0 0 1-4.03 5Z"
+                  d="M12 3a9 9 0 1 0 9 9 9.01 9.01 0 0 0-9-9Zm6.93 8H16.1a14.45 14.45 0 0 0-1.2-5 7.52 7.52 0 0 1 4.03 5ZM12 4.5 A12.8 12.8 0 0 1 13.75 11h-3.5A12.8 12.8 0 0 1 12 4.5ZM4.07 11a7.52 7.52 0 0 1 4-5 14.45 14.45 0 0 0-1.2 5Zm0 2h2.85a14.45 14.45 0 0 0 1.2 5 7.52 7.52 0 0 1-4.05-5Zm7.93 6.5A12.8 12.8 0 0 1 10.25 13h3.5A12.8 12.8 0 0 1 12 19.5Zm3.9-1.5a14.45 14.45 0 0 0 1.2-5h2.83a7.52 7.52 0 0 1-4.03 5Z"
                   fill="currentColor"
                 />
                 <path
@@ -187,15 +261,27 @@ function App() {
               </svg>
               <span className="translation-toggle__label">{content.navigation.translationToggle.label}</span>
             </button>
-            <button type="button" className="btn primary" onClick={() => navigate('/agendamento')}>
+            <button
+              type="button"
+              className="btn primary"
+              onClick={() => {
+                setIsMenuOpen(false)
+                navigate('/agendamento')
+              }}
+            >
               {content.navigation.scheduleButton}
             </button>
           </div>
+        </div>
       </nav>
-        <div className="top-nav__spacer" aria-hidden="true" style={{ height: navHeight || undefined }} />
+      <div
+        className={`top-nav__backdrop${isMenuOpen ? ' is-visible' : ''}`}
+        aria-hidden="true"
+        onClick={() => setIsMenuOpen(false)}
+      />
+      <div className="top-nav__spacer" aria-hidden="true" style={{ height: navHeight || undefined }} />
     </>
   )
-
   const Page = activeRoute.component
 
   return (

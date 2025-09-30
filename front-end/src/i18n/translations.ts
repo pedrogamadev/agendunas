@@ -188,6 +188,10 @@ type NavigationTranslation = {
     tooltip: string
     ariaLabel: string
   }
+  menuToggle: {
+    openLabel: string
+    closeLabel: string
+  }
 }
 
 type FooterTranslation = {
@@ -219,6 +223,10 @@ const translations: Record<Language, TranslationContent> = {
         label: 'PT',
         tooltip: 'Ver site em inglês',
         ariaLabel: 'Alterar idioma para inglês',
+      },
+      menuToggle: {
+        openLabel: 'Abrir menu de navegação',
+        closeLabel: 'Fechar menu de navegação',
       },
     },
     footer: {
@@ -721,6 +729,10 @@ const translations: Record<Language, TranslationContent> = {
         label: 'EN',
         tooltip: 'View site in Portuguese',
         ariaLabel: 'Switch language to Portuguese',
+      },
+      menuToggle: {
+        openLabel: 'Open navigation menu',
+        closeLabel: 'Close navigation menu',
       },
     },
     footer: {
