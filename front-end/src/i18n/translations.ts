@@ -62,6 +62,7 @@ type GuideTranslation = {
     tag: string
     title: string
     description: string
+    photo: string
   }
   guides: {
     id: string
@@ -95,6 +96,7 @@ type BookingTranslation = {
     tag: string
     title: HighlightedTitle
     description: string
+    photo: string
   }
   form: {
     title: string
@@ -147,6 +149,7 @@ type FaunaFloraTranslation = {
     description: string
     searchPlaceholder: string
     filterGroupLabel: string
+    photo: string
   }
   filters: { id: 'all' | 'fauna' | 'flora'; label: string }[]
   gallery: {
@@ -347,6 +350,7 @@ const translations: Record<Language, TranslationContent> = {
         title: 'Nossos Guias',
         description:
           'Conheça os especialistas que transformarão sua aventura inesquecível. Cada guia traz uma paixão única pela natureza e anos de experiência nas trilhas da mata atlântica.',
+        photo: withBasePath('images/capas/guias-capa.png'),
       },
       guides: [
         {
@@ -423,6 +427,7 @@ const translations: Record<Language, TranslationContent> = {
         title: { prefix: 'Agende sua ', highlight: 'Aventura' },
         description:
           'Reserve sua trilha e prepare-se para uma experiência única na natureza. Preencha o formulário abaixo e nossa equipe entrará em contato para confirmar todos os detalhes.',
+        photo: withBasePath('images/capas/agendamento-capa.png'),
       },
       form: {
         title: 'Formulário de Agendamento',
@@ -500,6 +505,7 @@ const translations: Record<Language, TranslationContent> = {
           'Descubra a rica biodiversidade da mata atlântica. Uma coleção fotográfica dos habitantes mais fascinantes da nossa floresta.',
         searchPlaceholder: 'Buscar por nome comum ou científico...',
         filterGroupLabel: 'Filtros do mural',
+        photo: withBasePath('images/capas/flora-capa.png'),
       },
       filters: [
         { id: 'all', label: 'Todos' },
@@ -726,6 +732,7 @@ const translations: Record<Language, TranslationContent> = {
         title: 'Our Guides',
         description:
           'Meet the experts who will turn your adventure into an unforgettable story. Each guide brings a unique passion for nature and years of experience on the trails of the Atlantic Forest.',
+        photo: withBasePath('images/capas/guias-capa.png'),
       },
       guides: [
         {
@@ -802,6 +809,7 @@ const translations: Record<Language, TranslationContent> = {
         title: { prefix: 'Book your ', highlight: 'Adventure' },
         description:
           'Reserve your trail and get ready for a unique nature experience. Fill in the form and our team will reach out to confirm every detail.',
+        photo: withBasePath('images/capas/agendamento-capa.png'),
       },
       form: {
         title: 'Booking Form',
@@ -879,6 +887,7 @@ const translations: Record<Language, TranslationContent> = {
           'Discover the rich biodiversity of the Atlantic Forest. A photographic collection of the most fascinating inhabitants of our trails.',
         searchPlaceholder: 'Search by common or scientific name...',
         filterGroupLabel: 'Showcase filters',
+        photo: withBasePath('images/capas/flora-capa.png'),
       },
       filters: [
         { id: 'all', label: 'All' },

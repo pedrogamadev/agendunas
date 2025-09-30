@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type CSSProperties } from 'react'
 import type { PageProps } from '../App'
 import { useTranslation } from '../i18n/TranslationProvider'
 
@@ -8,6 +8,9 @@ function FaunaFloraPage({ navigation }: PageProps) {
   const galleryItems = faunaFlora.gallery
   const [selectedFilter, setSelectedFilter] = useState<string>('all')
   const [query, setQuery] = useState('')
+  const heroStyle = {
+    '--hero-background-image': `url(${faunaFlora.hero.photo})`,
+  } as CSSProperties
 
   const visibleItems = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase()
@@ -25,7 +28,7 @@ function FaunaFloraPage({ navigation }: PageProps) {
 
   return (
     <div className="fauna-page">
-      <header className="page-hero fauna-hero">
+      <header className="page-hero fauna-hero" style={heroStyle}>
         {navigation}
         <div className="page-hero-content">
           <span className="section-tag">{faunaFlora.hero.tag}</span>

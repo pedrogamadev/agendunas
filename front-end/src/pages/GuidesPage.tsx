@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import type { PageProps } from '../App'
 import { useTranslation } from '../i18n/TranslationProvider'
 
@@ -7,6 +7,10 @@ function GuidesPage({ navigation }: PageProps) {
   const guidesContent = content.guides
   type Guide = (typeof guidesContent.guides)[number]
   const [selectedGuide, setSelectedGuide] = useState<Guide | null>(null)
+
+  const heroStyle = {
+    '--hero-background-image': `url(${guidesContent.header.photo})`,
+  } as CSSProperties
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -38,7 +42,7 @@ function GuidesPage({ navigation }: PageProps) {
 
   return (
     <div className="guides-page">
-      <header className="page-hero guides-hero">
+      <header className="page-hero guides-hero" style={heroStyle}>
         {navigation}
         <div className="page-hero-content">
           <span className="section-tag">{guidesContent.header.tag}</span>

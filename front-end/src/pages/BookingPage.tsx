@@ -1,13 +1,17 @@
+import type { CSSProperties } from 'react'
 import type { PageProps } from '../App'
 import { useTranslation } from '../i18n/TranslationProvider'
 
 function BookingPage({ navigation }: PageProps) {
   const { content } = useTranslation()
   const booking = content.booking
+  const heroStyle = {
+    '--hero-background-image': `url(${booking.hero.photo})`,
+  } as CSSProperties
 
   return (
     <div className="booking-page">
-      <header className="page-hero booking-hero">
+      <header className="page-hero booking-hero" style={heroStyle}>
         {navigation}
         <div className="page-hero-content">
           <span className="section-tag">{booking.hero.tag}</span>
