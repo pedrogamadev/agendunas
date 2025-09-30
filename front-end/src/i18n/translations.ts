@@ -355,7 +355,7 @@ const translations: Record<Language, TranslationContent> = {
       guides: [
         {
           id: 'davi-brito',
-          name: 'Davi Brito',
+          name: 'David Calab',
           photo: withBasePath('images/guias/davi.jpg'),
           speciality: 'Resiliência & Culinária Baiana',
           description:
