@@ -1525,6 +1525,85 @@ section {
   color: rgba(24, 70, 52, 0.7);
 }
 
+.weather-card {
+  padding: clamp(1.5rem, 3vw, 2rem);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.weather-card__subtitle {
+  margin: 0;
+  color: rgba(24, 70, 52, 0.65);
+  font-size: 0.9rem;
+}
+
+.weather-card__placeholder,
+.weather-card__error,
+.weather-card__date,
+.weather-card__condition {
+  margin: 0;
+}
+
+.weather-card__placeholder {
+  color: rgba(24, 70, 52, 0.6);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.weather-card__error {
+  color: #c65353;
+  font-weight: 600;
+}
+
+.weather-card__details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.weather-card__date {
+  font-size: 0.95rem;
+  color: rgba(24, 70, 52, 0.65);
+  font-weight: 500;
+}
+
+.weather-card__condition {
+  color: rgba(20, 52, 40, 0.85);
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.weather-card__metrics {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.weather-card__metrics > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.weather-card__metrics span {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: rgba(24, 70, 52, 0.55);
+}
+
+.weather-card__metrics strong {
+  font-size: 0.95rem;
+  color: rgba(20, 52, 40, 0.85);
+}
+
+.weather-card__source {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: rgba(24, 70, 52, 0.45);
+}
+
 .contact-card ul,
 .info-card ul {
   list-style: none;

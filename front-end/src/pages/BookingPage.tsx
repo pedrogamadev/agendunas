@@ -1,9 +1,47 @@
-import type { CSSProperties } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type CSSProperties,
+} from 'react'
 import type { PageProps } from '../App'
 import { useTranslation } from '../i18n/TranslationProvider'
 
+type WeatherConditionKey =
+  | 'clear'
+  | 'mostlyClear'
+  | 'partlyCloudy'
+  | 'overcast'
+  | 'fog'
+  | 'drizzle'
+  | 'freezingDrizzle'
+  | 'rainLight'
+  | 'rainHeavy'
+  | 'freezingRain'
+  | 'snow'
+  | 'thunderstorm'
+  | 'unknown'
+
+type WeatherSummary = {
+  date: string
+  maxTemperature: number
+  minTemperature: number
+  precipitationProbability: number | null
+  condition: WeatherConditionKey
+}
+
+type WeatherState =
+  | { status: 'idle' }
+  | { status: 'loading' }
+  | { status: 'error' }
+  | { status: 'empty' }
+  | { status: 'success'; summary: WeatherSummary }
+
 function BookingPage({ navigation, searchParams }: PageProps) {
-  const { content } = useTranslation()
+  const { content, language } = useTranslation()
   const booking = content.booking
   const guideId = searchParams.get('guide')
   const selectedGuide = guideId
@@ -12,9 +50,151 @@ function BookingPage({ navigation, searchParams }: PageProps) {
   const selectedTrail = selectedGuide
     ? booking.trails.find((trail) => trail.id === selectedGuide.featuredTrailId)
     : undefined
+  const [selectedDate, setSelectedDate] = useState('')
+  const [weatherState, setWeatherState] = useState<WeatherState>({ status: 'idle' })
+  const abortControllerRef = useRef<AbortController | null>(null)
   const heroStyle = {
     '--hero-background-image': `url(${booking.hero.photo})`,
   } as CSSProperties
+
+  const dateFormatter = useMemo(() => {
+    const locale = language === 'pt' ? 'pt-BR' : 'en-US'
+    return new Intl.DateTimeFormat(locale, {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+    })
+  }, [language])
+
+  const formatForecastDate = useCallback(
+    (value: string) => {
+      const date = new Date(`${value}T00:00:00`)
+      if (Number.isNaN(date.getTime())) {
+        return value
+      }
+
+      const formatted = dateFormatter.format(date)
+      return formatted.charAt(0).toUpperCase() + formatted.slice(1)
+    },
+    [dateFormatter],
+  )
+
+  const getConditionKey = useCallback((code: number): WeatherConditionKey => {
+    if (code === 0) return 'clear'
+    if (code === 1) return 'mostlyClear'
+    if (code === 2) return 'partlyCloudy'
+    if (code === 3) return 'overcast'
+    if (code === 45 || code === 48) return 'fog'
+    if (code === 51 || code === 53 || code === 55) return 'drizzle'
+    if (code === 56 || code === 57) return 'freezingDrizzle'
+    if (code === 61 || code === 63 || code === 80 || code === 81) return 'rainLight'
+    if (code === 65 || code === 82) return 'rainHeavy'
+    if (code === 66 || code === 67) return 'freezingRain'
+    if (code === 71 || code === 73 || code === 75 || code === 77 || code === 85 || code === 86)
+      return 'snow'
+    if (code === 95 || code === 96 || code === 99) return 'thunderstorm'
+    return 'unknown'
+  }, [])
+
+  const fetchWeather = useCallback(
+    async (date: string) => {
+      if (!date) {
+        setWeatherState({ status: 'idle' })
+        return
+      }
+
+      abortControllerRef.current?.abort()
+      const controller = new AbortController()
+      abortControllerRef.current = controller
+
+      setWeatherState({ status: 'loading' })
+
+      try {
+        const params = new URLSearchParams({
+          latitude: '-5.81063',
+          longitude: '-35.19756',
+          daily: 'weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max',
+          timezone: 'America/Recife',
+          start_date: date,
+          end_date: date,
+        })
+
+        const response = await fetch(`https://api.open-meteo.com/v1/forecast?${params.toString()}`, {
+          signal: controller.signal,
+        })
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch weather')
+        }
+
+        const data = await response.json()
+        const daily = data?.daily
+
+        if (!daily || !Array.isArray(daily.time) || daily.time.length === 0) {
+          setWeatherState({ status: 'empty' })
+          abortControllerRef.current = null
+          return
+        }
+
+        const index = daily.time.findIndex((time: string) => time === date)
+
+        if (index === -1) {
+          setWeatherState({ status: 'empty' })
+          abortControllerRef.current = null
+          return
+        }
+
+        const weatherCode = Number(daily.weathercode?.[index])
+        const maxTemperature = Number(daily.temperature_2m_max?.[index])
+        const minTemperature = Number(daily.temperature_2m_min?.[index])
+        const precipitationRaw = daily.precipitation_probability_max?.[index]
+        const precipitationProbability =
+          typeof precipitationRaw === 'number'
+            ? Math.max(0, Math.min(100, Math.round(precipitationRaw)))
+            : null
+
+        if (Number.isNaN(maxTemperature) || Number.isNaN(minTemperature) || Number.isNaN(weatherCode)) {
+          setWeatherState({ status: 'empty' })
+          abortControllerRef.current = null
+          return
+        }
+
+        const summary: WeatherSummary = {
+          date,
+          maxTemperature,
+          minTemperature,
+          precipitationProbability,
+          condition: getConditionKey(weatherCode),
+        }
+
+        setWeatherState({ status: 'success', summary })
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          return
+        }
+
+        setWeatherState({ status: 'error' })
+      } finally {
+        abortControllerRef.current = null
+      }
+    },
+    [getConditionKey],
+  )
+
+  const handleDateChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      const value = event.target.value
+      setSelectedDate(value)
+      fetchWeather(value)
+    },
+    [fetchWeather],
+  )
+
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort()
+    }
+  }, [])
 
   return (
     <div className="booking-page">
@@ -64,7 +244,7 @@ function BookingPage({ navigation, searchParams }: PageProps) {
               </label>
               <label className="input-field">
                 <span>{booking.form.date}</span>
-                <input type="date" name="date" required />
+                <input type="date" name="date" value={selectedDate} onChange={handleDateChange} required />
               </label>
               <label className="input-field">
                 <span>{booking.form.time}</span>
@@ -135,6 +315,50 @@ function BookingPage({ navigation, searchParams }: PageProps) {
                 <strong>{booking.sidebar.address}</strong>
                 <span>{booking.sidebar.addressComplement}</span>
               </address>
+            </div>
+
+            <div className="weather-card">
+              <h3>{booking.weather.title}</h3>
+              <p className="weather-card__subtitle">{booking.weather.subtitle}</p>
+              {selectedDate === '' ? (
+                <p className="weather-card__placeholder">{booking.weather.selectDatePrompt}</p>
+              ) : weatherState.status === 'loading' ? (
+                <p className="weather-card__placeholder">{booking.weather.loading}</p>
+              ) : weatherState.status === 'error' ? (
+                <p className="weather-card__error">{booking.weather.error}</p>
+              ) : weatherState.status === 'empty' ? (
+                <p className="weather-card__placeholder">{booking.weather.empty}</p>
+              ) : weatherState.status === 'success' ? (
+                <div className="weather-card__details">
+                  <p className="weather-card__date">
+                    {booking.weather.forecastFor.replace(
+                      '{date}',
+                      formatForecastDate(weatherState.summary.date),
+                    )}
+                  </p>
+                  <p className="weather-card__condition">
+                    {booking.weather.conditions[weatherState.summary.condition]}
+                  </p>
+                  <div className="weather-card__metrics">
+                    <div>
+                      <span>{booking.weather.temperatureLabel}</span>
+                      <strong>
+                        {booking.weather.maxLabel} {Math.round(weatherState.summary.maxTemperature)}°C ·{' '}
+                        {booking.weather.minLabel} {Math.round(weatherState.summary.minTemperature)}°C
+                      </strong>
+                    </div>
+                    <div>
+                      <span>{booking.weather.precipitationLabel}</span>
+                      <strong>
+                        {typeof weatherState.summary.precipitationProbability === 'number'
+                          ? `${weatherState.summary.precipitationProbability}%`
+                          : booking.weather.precipitationFallback}
+                      </strong>
+                    </div>
+                  </div>
+                  <span className="weather-card__source">{booking.weather.sourceLabel}</span>
+                </div>
+              ) : null}
             </div>
 
             <div className="contact-card">

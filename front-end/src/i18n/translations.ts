@@ -6,6 +6,21 @@ type HighlightedTitle = {
   suffix?: string
 }
 
+type WeatherConditionKey =
+  | 'clear'
+  | 'mostlyClear'
+  | 'partlyCloudy'
+  | 'overcast'
+  | 'fog'
+  | 'drizzle'
+  | 'freezingDrizzle'
+  | 'rainLight'
+  | 'rainHeavy'
+  | 'freezingRain'
+  | 'snow'
+  | 'thunderstorm'
+  | 'unknown'
+
 type HomeTranslation = {
   hero: {
     tag: string
@@ -146,6 +161,22 @@ type BookingTranslation = {
     scheduleValue: string
     infoTitle: string
     infoItems: string[]
+  }
+  weather: {
+    title: string
+    subtitle: string
+    selectDatePrompt: string
+    loading: string
+    error: string
+    empty: string
+    forecastFor: string
+    temperatureLabel: string
+    maxLabel: string
+    minLabel: string
+    precipitationLabel: string
+    precipitationFallback: string
+    sourceLabel: string
+    conditions: Record<WeatherConditionKey, string>
   }
 }
 
@@ -503,8 +534,8 @@ const translations: Record<Language, TranslationContent> = {
       sidebar: {
         locationTitle: 'Nossa Localização',
         mapTitle: 'Mapa Parque das Dunas',
-        address: 'Estrada da Serra, km 15 · Verde, MG',
-        addressComplement: 'Entrada Principal · Portão 1',
+        address: 'Av. Alm. Alexandrino de Alencar, s/n · Tirol, Natal - RN',
+        addressComplement: 'Parque das Dunas · Bosque dos Namorados',
         contactTitle: 'Informações de Contato',
         phone: 'Telefone',
         phoneValue: '(31) 3456-7890',
@@ -520,6 +551,37 @@ const translations: Record<Language, TranslationContent> = {
           'Chegue com 20 minutos de antecedência para o briefing de segurança obrigatório.',
           'Recomendações: roupas leves, calçado fechado, repelente e garrafa d’água reutilizável.',
         ],
+      },
+      weather: {
+        title: 'Condições Climáticas',
+        subtitle: 'Previsão para Parque das Dunas - Bosque dos Namorados',
+        selectDatePrompt: 'Escolha uma data no formulário para conferir a previsão.',
+        loading: 'Carregando previsão...',
+        error: 'Não foi possível carregar a previsão do tempo. Tente novamente mais tarde.',
+        empty:
+          'Não encontramos previsão para este dia. Escolha outra data ou verifique mais perto da visita.',
+        forecastFor: 'Previsão para {date}',
+        temperatureLabel: 'Temperatura',
+        maxLabel: 'Máx.',
+        minLabel: 'Mín.',
+        precipitationLabel: 'Probabilidade de chuva',
+        precipitationFallback: 'Sem dados',
+        sourceLabel: 'Fonte: Open-Meteo (atualizado diariamente)',
+        conditions: {
+          clear: 'Céu limpo',
+          mostlyClear: 'Predomínio de sol',
+          partlyCloudy: 'Parcialmente nublado',
+          overcast: 'Céu encoberto',
+          fog: 'Nevoeiro',
+          drizzle: 'Garoa',
+          freezingDrizzle: 'Garoa congelante',
+          rainLight: 'Chuva fraca a moderada',
+          rainHeavy: 'Chuva forte',
+          freezingRain: 'Chuva congelante',
+          snow: 'Neve ou granizo leve',
+          thunderstorm: 'Tempestade com raios',
+          unknown: 'Condição climática indisponível',
+        },
       },
     },
     faunaFlora: {
@@ -1009,8 +1071,8 @@ const translations: Record<Language, TranslationContent> = {
       sidebar: {
         locationTitle: 'Our Location',
         mapTitle: 'Parque das Dunas Map',
-        address: 'Estrada da Serra, km 15 · Verde, MG',
-        addressComplement: 'Main Entrance · Gate 1',
+        address: 'Av. Alm. Alexandrino de Alencar, s/n · Tirol, Natal - RN',
+        addressComplement: 'Parque das Dunas · Bosque dos Namorados',
         contactTitle: 'Contact Information',
         phone: 'Phone',
         phoneValue: '(31) 3456-7890',
@@ -1026,6 +1088,37 @@ const translations: Record<Language, TranslationContent> = {
           'Arrive 20 minutes early for the mandatory safety briefing.',
           'Recommendations: light clothing, closed shoes, repellent, and a reusable water bottle.',
         ],
+      },
+      weather: {
+        title: 'Weather Outlook',
+        subtitle: 'Forecast for Parque das Dunas - Bosque dos Namorados',
+        selectDatePrompt: 'Pick a date in the form to see the forecast.',
+        loading: 'Loading forecast...',
+        error: 'We could not load the weather forecast. Please try again later.',
+        empty:
+          'No forecast available for this day. Choose another date or check closer to your visit.',
+        forecastFor: 'Forecast for {date}',
+        temperatureLabel: 'Temperature',
+        maxLabel: 'High',
+        minLabel: 'Low',
+        precipitationLabel: 'Chance of rain',
+        precipitationFallback: 'No data',
+        sourceLabel: 'Source: Open-Meteo (updated daily)',
+        conditions: {
+          clear: 'Clear sky',
+          mostlyClear: 'Mostly sunny',
+          partlyCloudy: 'Partly cloudy',
+          overcast: 'Overcast',
+          fog: 'Fog',
+          drizzle: 'Drizzle',
+          freezingDrizzle: 'Freezing drizzle',
+          rainLight: 'Light to moderate rain',
+          rainHeavy: 'Heavy rain',
+          freezingRain: 'Freezing rain',
+          snow: 'Snow or sleet',
+          thunderstorm: 'Thunderstorm',
+          unknown: 'Weather information unavailable',
+        },
       },
     },
     faunaFlora: {

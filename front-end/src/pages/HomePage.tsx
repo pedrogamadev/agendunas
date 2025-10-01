@@ -25,12 +25,16 @@ function HomePage({ navigation, onNavigate }: PageProps) {
   const shouldShowAboutTag = Boolean(normalizedAboutTag) && normalizedAboutTag !== normalizedAboutTitle
 
   useEffect(() => {
+    if (testimonials.length === 0) {
+      return undefined
+    }
+
     const interval = window.setInterval(() => {
       setActiveTestimonial((current) => (current + 1) % testimonials.length)
     }, 4000)
 
     return () => window.clearInterval(interval)
-  }, [testimonials.length])
+  }, [testimonials])
 
   useEffect(() => {
     const interval = window.setInterval(() => {
@@ -38,7 +42,7 @@ function HomePage({ navigation, onNavigate }: PageProps) {
     }, 4000)
 
     return () => window.clearInterval(interval)
-  }, [heroImages.length])
+  }, [])
 
   return (
     <div className="home-page" id="home">
