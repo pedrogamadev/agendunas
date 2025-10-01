@@ -178,6 +178,14 @@ type BookingTranslation = {
     sourceLabel: string
     conditions: Record<WeatherConditionKey, string>
   }
+  rainWarningModal: {
+    tag: string
+    title: string
+    description: string
+    highlight: string
+    changeDate: string
+    proceed: string
+  }
 }
 
 type FaunaFloraTranslation = {
@@ -582,6 +590,15 @@ const translations: Record<Language, TranslationContent> = {
           thunderstorm: 'Tempestade com raios',
           unknown: 'Condição climática indisponível',
         },
+      },
+      rainWarningModal: {
+        tag: 'Atenção ao clima',
+        title: 'Chuva prevista para esta data',
+        description:
+          'A previsão indica {percentage} de chance de chuva em {date}. Deseja escolher outra data ou continuar mesmo assim?',
+        highlight: 'Probabilidade de chuva de {percentage}.',
+        changeDate: 'Trocar data',
+        proceed: 'Prosseguir mesmo assim',
       },
     },
     faunaFlora: {
@@ -1119,6 +1136,15 @@ const translations: Record<Language, TranslationContent> = {
           thunderstorm: 'Thunderstorm',
           unknown: 'Weather information unavailable',
         },
+      },
+      rainWarningModal: {
+        tag: 'Weather alert',
+        title: 'High chance of rain',
+        description:
+          'The forecast shows a {percentage} chance of rain on {date}. Would you like to pick another day or continue anyway?',
+        highlight: 'Rain probability: {percentage}.',
+        changeDate: 'Choose another date',
+        proceed: 'Continue anyway',
       },
     },
     faunaFlora: {

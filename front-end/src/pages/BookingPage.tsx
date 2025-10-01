@@ -6,6 +6,7 @@ import {
   useState,
   type ChangeEvent,
   type CSSProperties,
+  type FormEvent,
 } from 'react'
 import type { PageProps } from '../App'
 import { useTranslation } from '../i18n/TranslationProvider'
@@ -52,7 +53,10 @@ function BookingPage({ navigation, searchParams }: PageProps) {
     : undefined
   const [selectedDate, setSelectedDate] = useState('')
   const [weatherState, setWeatherState] = useState<WeatherState>({ status: 'idle' })
+  const [showRainWarning, setShowRainWarning] = useState(false)
   const abortControllerRef = useRef<AbortController | null>(null)
+  const allowRainySubmitRef = useRef(false)
+  const formRef = useRef<HTMLFormElement | null>(null)
   const heroStyle = {
     '--hero-background-image': `url(${booking.hero.photo})`,
   } as CSSProperties
@@ -186,9 +190,52 @@ function BookingPage({ navigation, searchParams }: PageProps) {
       const value = event.target.value
       setSelectedDate(value)
       fetchWeather(value)
+      setShowRainWarning(false)
     },
     [fetchWeather],
   )
+
+  const isHighRainProbability =
+    weatherState.status === 'success' &&
+    typeof weatherState.summary.precipitationProbability === 'number' &&
+    weatherState.summary.precipitationProbability > 10
+
+  const rainWarningDescription = useMemo(() => {
+    if (!isHighRainProbability) {
+      return booking.rainWarningModal.description
+    }
+
+    const formattedDate = formatForecastDate(weatherState.summary.date)
+    const probability = `${weatherState.summary.precipitationProbability}%`
+
+    return booking.rainWarningModal.description
+      .replace('{date}', formattedDate)
+      .replace('{percentage}', probability)
+  }, [booking.rainWarningModal.description, formatForecastDate, isHighRainProbability, weatherState])
+
+  const handleSubmit = useCallback(
+    (event: FormEvent<HTMLFormElement>) => {
+      if (isHighRainProbability && !allowRainySubmitRef.current) {
+        event.preventDefault()
+        setShowRainWarning(true)
+        return
+      }
+
+      allowRainySubmitRef.current = false
+    },
+    [isHighRainProbability],
+  )
+
+  const handleCloseRainWarning = useCallback(() => {
+    setShowRainWarning(false)
+    allowRainySubmitRef.current = false
+  }, [])
+
+  const handleProceedWithRain = useCallback(() => {
+    setShowRainWarning(false)
+    allowRainySubmitRef.current = true
+    formRef.current?.requestSubmit()
+  }, [])
 
   useEffect(() => {
     return () => {
@@ -213,7 +260,7 @@ function BookingPage({ navigation, searchParams }: PageProps) {
 
       <main className="page-main booking-main">
         <section className="booking-layout">
-          <form className="booking-form">
+          <form ref={formRef} className="booking-form" onSubmit={handleSubmit}>
             <h2>{booking.form.title}</h2>
             <div className="booking-grid">
               <label className="input-field">
@@ -394,6 +441,45 @@ function BookingPage({ navigation, searchParams }: PageProps) {
           </aside>
         </section>
       </main>
+
+      {showRainWarning && (
+        <div className="rain-warning-modal" role="presentation">
+          <div
+            className="rain-warning-modal__backdrop"
+            aria-hidden="true"
+            onClick={handleCloseRainWarning}
+          />
+          <div
+            className="rain-warning-modal__dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="rain-warning-title"
+            aria-describedby="rain-warning-description"
+          >
+            <div className="rain-warning-modal__content">
+              <span className="rain-warning-modal__tag">{booking.rainWarningModal.tag}</span>
+              <h3 id="rain-warning-title">{booking.rainWarningModal.title}</h3>
+              <p id="rain-warning-description">{rainWarningDescription}</p>
+              {isHighRainProbability && (
+                <p className="rain-warning-modal__highlight">
+                  {booking.rainWarningModal.highlight.replace(
+                    '{percentage}',
+                    `${weatherState.summary.precipitationProbability}%`,
+                  )}
+                </p>
+              )}
+              <div className="rain-warning-modal__actions">
+                <button type="button" className="btn ghost" onClick={handleCloseRainWarning}>
+                  {booking.rainWarningModal.changeDate}
+                </button>
+                <button type="button" className="btn solid" onClick={handleProceedWithRain}>
+                  {booking.rainWarningModal.proceed}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

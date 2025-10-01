@@ -896,6 +896,80 @@ section {
   box-shadow: inset 0 0 0 1px rgba(44, 210, 130, 0.2);
 }
 
+.rain-warning-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: clamp(1.5rem, 4vw, 3rem);
+}
+
+.rain-warning-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(5, 24, 17, 0.45);
+  backdrop-filter: blur(4px);
+}
+
+.rain-warning-modal__dialog {
+  position: relative;
+  width: min(480px, 100%);
+  background: linear-gradient(160deg, #ffffff 0%, #e6f6ff 100%);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 28px 60px rgba(10, 40, 28, 0.28);
+  padding: clamp(1.75rem, 4vw, 2.5rem);
+  border: 1px solid rgba(35, 140, 98, 0.15);
+}
+
+.rain-warning-modal__content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.rain-warning-modal__tag {
+  display: inline-flex;
+  align-self: flex-start;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: rgba(255, 163, 26, 0.15);
+  color: #b45a00;
+  box-shadow: inset 0 0 0 1px rgba(255, 163, 26, 0.25);
+}
+
+.rain-warning-modal__content h3 {
+  margin: 0;
+  font-size: clamp(1.35rem, 3vw, 1.75rem);
+  color: var(--fern-900);
+}
+
+.rain-warning-modal__content p {
+  margin: 0;
+  color: rgba(12, 52, 33, 0.78);
+  line-height: 1.6;
+}
+
+.rain-warning-modal__highlight {
+  font-weight: 700;
+  color: var(--brand-green-dark);
+}
+
+.rain-warning-modal__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+.rain-warning-modal__actions .btn {
+  min-width: 160px;
+}
+
 .guide-modal__meta dt {
   margin: 0 0 0.35rem;
   font-size: 0.75rem;
