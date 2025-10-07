@@ -38,6 +38,23 @@ type HomeTranslation = {
     highlights: { title: string; description: string; icon: string }[]
     mediaAriaLabel: string
   }
+  events: {
+    tag: string
+    title: HighlightedTitle
+    description: string
+    items: {
+      name: string
+      description: string
+      schedule: string
+      location: string
+      image: string
+    }[]
+    scheduleLabel: string
+    locationLabel: string
+    cta: string
+    footerDescription: string
+    footerCta: string
+  }
   trails: {
     tag: string
     title: string
@@ -294,6 +311,51 @@ const translations: Record<Language, TranslationContent> = {
           { title: 'Comunidade', description: 'Conexão com moradores locais', icon: '🤝' },
         ],
         mediaAriaLabel: 'Exploradores caminhando nas dunas',
+      },
+      events: {
+        tag: 'Experiências no Parque',
+        title: { prefix: 'Agenda de ', highlight: 'Eventos', suffix: ' imperdíveis' },
+        description:
+          'Escolha vivências já tradicionais no Parque das Dunas para oferecer aos visitantes e mantenha uma programação diversa durante todo o ano.',
+        items: [
+          {
+            name: 'Som da Mata',
+            description:
+              'Concertos dominicais com artistas potiguares que celebram a cultura local em meio à mata atlântica.',
+            schedule: 'Domingos, 16h',
+            location: 'Anfiteatro Pau-brasil',
+            image: '/images/eventos/canto.png',
+          },
+          {
+            name: 'Bosque Sensorial',
+            description:
+              'Vivência guiada que estimula todos os sentidos com aromas, texturas e sons característicos do ecossistema.',
+            schedule: 'Quartas e sextas, 9h e 15h',
+            location: 'Bosque Sensorial',
+            image: '/images/eventos/sensorial.png',
+          },
+          {
+            name: 'Vem Brincar no Parque',
+            description:
+              'Oficinas lúdicas e circuito de atividades para crianças explorarem educação ambiental de forma divertida.',
+            schedule: 'Sábados, 9h às 12h',
+            location: 'Parque da Criança',
+            image: '/images/eventos/parque.png',
+          },
+          {
+            name: 'Visitas Escolares',
+            description:
+              'Trilhas interpretativas personalizadas com educadores ambientais para turmas de escolas públicas e privadas.',
+            schedule: 'Agendamento de terça a sexta',
+            location: 'Centro de Visitantes',
+            image: '/images/eventos/escolar.jpg',
+          },
+        ],
+        scheduleLabel: 'Horário',
+        locationLabel: 'Local',
+        cta: 'Detalhes e inscrições',
+        footerDescription: 'Quer ver tudo que está por vir? Confira o calendário completo no aplicativo.',
+        footerCta: 'Ver calendário completo',
       },
       trails: {
         tag: 'Nossas Trilhas',
@@ -840,6 +902,51 @@ const translations: Record<Language, TranslationContent> = {
           { title: 'Community', description: 'Strong ties with local residents', icon: '🤝' },
         ],
         mediaAriaLabel: 'Explorers hiking across the dunes',
+      },
+      events: {
+        tag: 'Park Experiences',
+        title: { prefix: 'Signature ', highlight: 'Events', suffix: ' to host' },
+        description:
+          'Curate beloved activities from Parque das Dunas so visitors always find something inspiring on the agenda.',
+        items: [
+          {
+            name: 'Som da Mata Concerts',
+            description:
+              'Sunday performances featuring Rio Grande do Norte musicians celebrating local culture surrounded by native forest.',
+            schedule: 'Sundays, 4:00 PM',
+            location: 'Pau-brasil Amphitheater',
+            image: '/images/eventos/som-da-mata.svg',
+          },
+          {
+            name: 'Sensory Grove Tour',
+            description:
+              'Guided immersion that awakens touch, smell, and hearing with native species and interpretive storytelling.',
+            schedule: 'Wednesdays & Fridays, 9:00 AM and 3:00 PM',
+            location: 'Bosque Sensorial',
+            image: '/images/eventos/bosque-sensorial.svg',
+          },
+          {
+            name: 'Play in the Park',
+            description:
+              'Hands-on workshops and playful circuits that help kids learn about environmental care while having fun outdoors.',
+            schedule: 'Saturdays, 9:00 AM–12:00 PM',
+            location: 'Children’s Park',
+            image: '/images/eventos/vem-brincar-no-parque.svg',
+          },
+          {
+            name: 'School Visits',
+            description:
+              'Tailored interpretive walks with environmental educators for public and private school groups.',
+            schedule: 'Bookings Tuesday to Friday',
+            location: 'Visitor Center',
+            image: '/images/eventos/visitas-escolares.svg',
+          },
+        ],
+        scheduleLabel: 'Time',
+        locationLabel: 'Location',
+        cta: 'See details & register',
+        footerDescription: 'Want to plan ahead? Open the full calendar in the app.',
+        footerCta: 'Open full calendar',
       },
       trails: {
         tag: 'Our Trails',

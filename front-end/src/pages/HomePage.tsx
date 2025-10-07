@@ -16,6 +16,7 @@ function HomePage({ navigation, onNavigate }: PageProps) {
   const [activeHeroImage, setActiveHeroImage] = useState(0)
   const testimonials = home.testimonials.items
   const highlights = home.about.highlights
+  const events = home.events.items
   const trails = home.trails.items
   const wildlife = home.wildlife.items
   const stats = home.stats
@@ -139,6 +140,48 @@ function HomePage({ navigation, onNavigate }: PageProps) {
                 </div>
               </article>
             ))}
+          </div>
+        </section>
+
+        <section className="home-section home-events" id="events">
+          <div className="section-header">
+            <span className="section-tag">{home.events.tag}</span>
+            <h2>
+              {home.events.title.prefix}
+              <span>{home.events.title.highlight}</span>
+              {home.events.title.suffix ?? ''}
+            </h2>
+            <p>{home.events.description}</p>
+          </div>
+          <div className="events-grid">
+            {events.map((event) => (
+              <article key={event.name} className="event-card">
+                <div className="event-image" style={{ backgroundImage: `url(${event.image})` }} />
+                <div className="event-body">
+                  <h3>{event.name}</h3>
+                  <p>{event.description}</p>
+                  <dl className="event-meta">
+                    <div className="event-meta__item">
+                      <dt>{home.events.scheduleLabel}</dt>
+                      <dd>{event.schedule}</dd>
+                    </div>
+                    <div className="event-meta__item">
+                      <dt>{home.events.locationLabel}</dt>
+                      <dd>{event.location}</dd>
+                    </div>
+                  </dl>
+                  <button type="button" className="btn link" onClick={() => onNavigate('/agendamento')}>
+                    {home.events.cta}
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+          <div className="events-footer">
+            <p>{home.events.footerDescription}</p>
+            <button type="button" className="btn ghost" onClick={() => onNavigate('/agendamento')}>
+              {home.events.footerCta}
+            </button>
           </div>
         </section>
 
