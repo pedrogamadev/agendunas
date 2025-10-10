@@ -113,3 +113,14 @@ Centenas de visitantes por mês, abrangendo turistas e moradores locais que freq
 
 ## 18. Lista de presença dos alunos no código
 Pedro Humberto Gama De Medeiros - 01741824
+
+
+## 19. Tasks solicitadas por Pedro Humberto
+1- Analisar linhas de ônibus que passam em frente ao bosque dos namorados. (07/10/2025)
+Realizado por x, no dia x
+
+2- Analisar eventos recorrentes no parque das dunas para instanciar no sistema (07/10/2025)
+Realizado por x, no dia x
+
+3- Criar "termo de serviço" para reserva.(08/10/2025)
+Realizado por x, no dia x
