@@ -113,6 +113,7 @@ Centenas de visitantes por mês, abrangendo turistas e moradores locais que freq
 
 ## 18. Lista de presença dos alunos no código
 Pedro Humberto Gama De Medeiros - 01741824
+Vinicius de Freitas e Silva - 01707712
 
 
 ## 19. Tasks solicitadas por Pedro Humberto
