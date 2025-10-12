@@ -112,7 +112,7 @@ Centenas de visitantes por mês, abrangendo turistas e moradores locais que freq
 |  | Vinícius de Freitas e Silva | Gerente do Projeto | — | — |
 
 ## 18. Lista de presença dos alunos no código
-Pedro Humberto Gama De Medeiros - 01741824
+Pedro Humberto Gama De Medeiros - 01741824 </br>
 Vinicius de Freitas e Silva - 01707712
 
 
