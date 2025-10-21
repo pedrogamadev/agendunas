@@ -1,6 +1,7 @@
 # AgenDunas Front-end
 
-Interface inicial do projeto AgenDunas, focada na página "Home" para o sistema de agendamento de trilhas no Parque das Dunas (Natal/RN).
+Interface inicial do projeto AgenDunas para o sistema de agendamento de trilhas no Parque das Dunas (Natal/RN). O front-end já inclui
+as páginas Home, Guias, Agendamento e Fauna & Flora, acessíveis a partir da barra de navegação principal.
 
 ## Tecnologias
 
@@ -19,4 +20,9 @@ npm run lint
 
 ## Estrutura
 
-O projeto está organizado em seções principais (Hero, Quem Somos, Trilhas, Vida Selvagem e Depoimentos), com dados estáticos que futuramente serão alimentados pelo back-end.
+- **Home:** destaca o parque, apresenta as trilhas disponíveis e depoimentos.
+- **Guias:** lista de guias com descrições e idiomas atendidos.
+- **Agendamento:** fluxo inicial para escolha de trilha e seleção de datas.
+- **Fauna & Flora:** informações educativas sobre espécies encontradas no parque.
+
+Todo o conteúdo está estruturado em componentes React e utiliza dados estáticos que futuramente serão alimentados pelo back-end.
