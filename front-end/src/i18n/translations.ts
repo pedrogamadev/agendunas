@@ -220,6 +220,7 @@ type NavigationTranslation = {
     guides: string
     booking: string
     faunaFlora: string
+    admin: string
   }
   scheduleButton: string
   translationToggle: {
@@ -256,6 +257,7 @@ const translations: Record<Language, TranslationContent> = {
         guides: 'Guias',
         booking: 'Agendamento',
         faunaFlora: 'Fauna & Flora',
+        admin: 'Admin',
       },
       scheduleButton: 'Agendar Trilha',
       translationToggle: {
@@ -802,6 +804,7 @@ const translations: Record<Language, TranslationContent> = {
         guides: 'Guides',
         booking: 'Booking',
         faunaFlora: 'Wildlife & Flora',
+        admin: 'Admin',
       },
       scheduleButton: 'Book a Trail',
       translationToggle: {

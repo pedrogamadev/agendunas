@@ -2,6 +2,7 @@ import './App.css'
 import type { JSX, ReactNode } from 'react'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from './i18n/TranslationProvider'
+import AdminPage from './pages/AdminPage'
 import BookingPage from './pages/BookingPage'
 import FaunaFloraPage from './pages/FaunaFloraPage'
 import GuidesPage from './pages/GuidesPage'
@@ -11,7 +12,7 @@ type RouteComponent = (props: PageProps) => JSX.Element
 
 type RouteConfig = {
   path: string
-  labelKey: 'home' | 'guides' | 'booking' | 'faunaFlora'
+  labelKey: 'home' | 'guides' | 'booking' | 'faunaFlora' | 'admin'
   component: RouteComponent
 }
 
@@ -30,6 +31,7 @@ const routes: RouteConfig[] = [
   { path: '/guias', labelKey: 'guides', component: GuidesPage },
   { path: '/agendamento', labelKey: 'booking', component: BookingPage },
   { path: '/fauna-e-flora', labelKey: 'faunaFlora', component: FaunaFloraPage },
+  { path: '/admin', labelKey: 'admin', component: AdminPage },
 ]
 
 const normalizePath = (value: string) => {

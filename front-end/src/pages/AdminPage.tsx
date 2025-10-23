@@ -1,0 +1,1152 @@
+import { useMemo, useState } from 'react'
+import type { ReactNode } from 'react'
+import AdminLayout, { type AdminSection } from '../components/admin/AdminLayout'
+import MetricCard, { type MetricCardProps } from '../components/admin/MetricCard'
+import AdminTable, {
+  type AdminTableAction,
+  type AdminTableColumn,
+  type AdminTableRow,
+} from '../components/admin/AdminTable'
+import './AdminPage.css'
+
+type SectionKey =
+  | 'dashboard'
+  | 'agendamentos'
+  | 'participantes'
+  | 'eventos'
+  | 'trilhas'
+  | 'guias'
+  | 'calendario'
+  | 'relatorios'
+  | 'configuracoes'
+
+type SectionConfig = {
+  title: string
+  description?: string
+  actions?: ReactNode
+  content: ReactNode
+}
+
+const createIcon = (children: ReactNode) => (
+  <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+    {children}
+  </svg>
+)
+
+const sidebarSections = [
+  {
+    id: 'dashboard',
+    label: 'Dashboard',
+    icon: createIcon(
+      <>
+        <rect x="4" y="12" width="3.5" height="8" rx="1" fill="currentColor" />
+        <rect x="10.25" y="4" width="3.5" height="16" rx="1" fill="currentColor" />
+        <rect x="16.5" y="8" width="3.5" height="12" rx="1" fill="currentColor" />
+      </>,
+    ),
+  },
+  {
+    id: 'agendamentos',
+    label: 'Agendamentos',
+    icon: createIcon(
+      <>
+        <rect x="4" y="5" width="16" height="15" rx="2" fill="currentColor" opacity="0.72" />
+        <rect x="4" y="9" width="16" height="11" rx="2" fill="currentColor" />
+        <rect x="7" y="2" width="2" height="4" rx="1" fill="currentColor" />
+        <rect x="15" y="2" width="2" height="4" rx="1" fill="currentColor" />
+      </>,
+    ),
+  },
+  {
+    id: 'participantes',
+    label: 'Participantes',
+    icon: createIcon(
+      <>
+        <circle cx="12" cy="9" r="4" fill="currentColor" />
+        <path
+          d="M5 20c.6-3.6 3.6-6 7-6s6.4 2.4 7 6"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+        />
+      </>,
+    ),
+  },
+  {
+    id: 'eventos',
+    label: 'Eventos',
+    icon: createIcon(
+      <path
+        d="m12 3.5 2 3.9 4.3.6-3.1 3 0.7 4.3L12 13.8 8.1 15.3l0.7-4.3-3.1-3 4.3-.6Z"
+        fill="currentColor"
+      />,
+    ),
+  },
+  {
+    id: 'trilhas',
+    label: 'Trilhas',
+    icon: createIcon(
+      <path
+        d="M6 20c1.5-3.5 3.5-5.3 6-5.3s4.5 1.8 6 5.3h-2.3c-1.2-2.4-2.4-3.6-3.7-3.6s-2.5 1.2-3.7 3.6Zm3.5-9.1a2.5 2.5 0 1 1 5 0 2.5 2.5 0 0 1-5 0Zm5-6.4-1 3.2-3 .4 2.4 2.1-.6 3 2.7-1.6 2.7 1.6-.6-3 2.4-2.1-3-.4Z"
+        fill="currentColor"
+      />,
+    ),
+  },
+  {
+    id: 'guias',
+    label: 'Guias',
+    icon: createIcon(
+      <>
+        <path
+          d="M5 18c.4-2.8 2.8-4.8 5.8-4.8 3.2 0 5.7 2.2 6.2 5.4"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+        />
+        <path d="M12 5.5a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7Z" fill="currentColor" />
+      </>,
+    ),
+  },
+  {
+    id: 'calendario',
+    label: 'Calendário',
+    icon: createIcon(
+      <>
+        <rect x="4" y="6" width="16" height="14" rx="3" fill="currentColor" opacity="0.68" />
+        <path d="M4 10h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        <rect x="8" y="2" width="2" height="4" rx="1" fill="currentColor" />
+        <rect x="14" y="2" width="2" height="4" rx="1" fill="currentColor" />
+      </>,
+    ),
+  },
+  {
+    id: 'relatorios',
+    label: 'Relatórios',
+    icon: createIcon(
+      <>
+        <path
+          d="M6 18V8.5a2.5 2.5 0 0 1 5 0V18Zm7 0v-6a2.5 2.5 0 1 1 5 0v6Z"
+          fill="currentColor"
+        />
+        <path d="M5 20h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      </>,
+    ),
+  },
+  {
+    id: 'configuracoes',
+    label: 'Configurações',
+    icon: createIcon(
+      <path
+        d="m12 7 1-2.8 2 .8 1.8-1.3 1.4 1.4-1.3 1.8.8 2L21 10l-.3 2-2.2.3-.8 2 1.3 1.8-1.4 1.4-1.8-1.3-2 .8L13 21l-2-.3-.3-2.2-2-.8-1.8 1.3-1.4-1.4 1.3-1.8-.8-2L3 12l.3-2L5.5 9l.8-2L5 5.2 6.4 3.8 8.2 5l2-.8ZM12 9.5A2.5 2.5 0 1 0 14.5 12 2.5 2.5 0 0 0 12 9.5Z"
+        fill="currentColor"
+      />,
+    ),
+  },
+] satisfies Array<AdminSection & { id: SectionKey }>
+
+const sectionKeys = sidebarSections.map((section) => section.id)
+
+const isSectionKey = (value: string): value is SectionKey =>
+  (sectionKeys as string[]).includes(value)
+
+const tableActions: AdminTableAction[] = [
+  {
+    id: 'view',
+    label: 'Ver detalhes',
+    icon: createIcon(<path d="M12 6c4 0 7.5 2.6 9 6-1.5 3.4-5 6-9 6s-7.5-2.6-9-6c1.5-3.4 5-6 9-6Zm0 10a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" fill="currentColor" />),
+  },
+  {
+    id: 'edit',
+    label: 'Editar',
+    icon: createIcon(
+      <path d="m6 15.5 8.9-8.9 2.5 2.5-8.9 8.9H6Zm9.6-10.2 1.8-1.8 2.1 2.1-1.8 1.8Z" fill="currentColor" />,
+    ),
+  },
+  {
+    id: 'confirm',
+    label: 'Confirmar',
+    icon: createIcon(
+      <path d="m10.2 16.6-3.8-3.8 1.4-1.4 2.4 2.4 5.6-5.6 1.4 1.4Z" fill="currentColor" />,
+    ),
+  },
+  {
+    id: 'cancel',
+    label: 'Cancelar',
+    tone: 'danger',
+    icon: createIcon(
+      <path d="m7.4 7.4 9.2 9.2-1.4 1.4-9.2-9.2Zm9.2 0-9.2 9.2 1.4 1.4 9.2-9.2Z" fill="currentColor" />,
+    ),
+  },
+]
+
+const bookingColumns: AdminTableColumn[] = [
+  { id: 'protocol', label: 'Protocolo' },
+  { id: 'name', label: 'Nome' },
+  { id: 'trail', label: 'Trilha' },
+  { id: 'date', label: 'Data' },
+  { id: 'time', label: 'Horário' },
+  { id: 'participants', label: 'Participantes', align: 'center' },
+  { id: 'guide', label: 'Guia' },
+]
+
+const participantColumns: AdminTableColumn[] = [
+  { id: 'name', label: 'Nome' },
+  { id: 'contact', label: 'Contato' },
+  { id: 'trail', label: 'Trilha' },
+  { id: 'datetime', label: 'Data & Horário' },
+  { id: 'status', label: 'Status', align: 'center' },
+]
+
+const bookingRows: AdminTableRow[] = [
+  {
+    id: 'acd-2025-0001',
+    cells: {
+      protocol: 'ACD-2025-0001',
+      name: 'Maria Silva',
+      trail: 'Trilha Perobinha',
+      date: '22/10/2025',
+      time: '08:00',
+      participants: '15',
+      guide: 'Carlos Mendes',
+    },
+    status: { label: 'Confirmado', tone: 'success' },
+    actions: tableActions,
+  },
+  {
+    id: 'acd-2025-0002',
+    cells: {
+      protocol: 'ACD-2025-0002',
+      name: 'João Oliveira',
+      trail: 'Trilha do Acarajé',
+      date: '22/10/2025',
+      time: '09:30',
+      participants: '20',
+      guide: 'Ana Paula Santos',
+    },
+    status: { label: 'Pendente', tone: 'warning' },
+    actions: tableActions,
+  },
+  {
+    id: 'acd-2025-0003',
+    cells: {
+      protocol: 'ACD-2025-0003',
+      name: 'Fernando Costa',
+      trail: 'Trilha do Aroeira',
+      date: '23/10/2025',
+      time: '07:00',
+      participants: '12',
+      guide: 'Roberto Silva',
+    },
+    status: { label: 'Remarcado', tone: 'info' },
+    actions: tableActions,
+  },
+  {
+    id: 'acd-2025-0004',
+    cells: {
+      protocol: 'ACD-2025-0004',
+      name: 'Luciana Alves',
+      trail: 'Trilha Ubaú-doce',
+      date: '23/10/2025',
+      time: '10:30',
+      participants: '18',
+      guide: 'Ana Paula Santos',
+    },
+    status: { label: 'Cancelado', tone: 'danger' },
+    actions: tableActions,
+  },
+]
+
+const participantRows: AdminTableRow[] = [
+  {
+    id: 'participant-1',
+    cells: {
+      name: 'Maria Silva',
+      contact: '(84) 9987-5542',
+      trail: 'Trilha Perobinha',
+      datetime: '22/10/2025 • 08:00',
+      status: 'Confirmado',
+    },
+    status: { label: 'Check-in pendente', tone: 'warning' },
+    actions: [
+      {
+        id: 'checkin',
+        label: 'Confirmar check-in',
+        icon: createIcon(
+          <path d="m10.2 16.6-3.8-3.8 1.4-1.4 2.4 2.4 5.6-5.6 1.4 1.4Z" fill="currentColor" />,
+        ),
+        tone: 'primary',
+      },
+    ],
+  },
+  {
+    id: 'participant-2',
+    cells: {
+      name: 'João Oliveira',
+      contact: '(84) 9876-4431',
+      trail: 'Trilha Perobinha',
+      datetime: '22/10/2025 • 08:00',
+      status: 'Confirmado',
+    },
+    status: { label: 'Check-in realizado', tone: 'success' },
+    actions: [
+      {
+        id: 'badge',
+        label: 'Ver detalhes',
+        icon: createIcon(<path d="M12 6c4 0 7.5 2.6 9 6-1.5 3.4-5 6-9 6s-7.5-2.6-9-6c1.5-3.4 5-6 9-6Z" fill="currentColor" />),
+      },
+    ],
+  },
+  {
+    id: 'participant-3',
+    cells: {
+      name: 'Fernanda Costa',
+      contact: '(84) 9090-5521',
+      trail: 'Trilha do Aroeira',
+      datetime: '22/10/2025 • 09:00',
+      status: 'Pendente',
+    },
+    status: { label: 'Aguardando pagamento', tone: 'info' },
+    actions: [
+      {
+        id: 'reminder',
+        label: 'Enviar lembrete',
+        icon: createIcon(
+          <path d="m6 12 6 6 6-6-1.4-1.4L12 15.2 7.4 10.6Z" fill="currentColor" />,
+        ),
+      },
+    ],
+  },
+]
+
+const dashboardMetrics: MetricCardProps[] = [
+  {
+    title: 'Agendamentos Hoje',
+    value: '48',
+    helper: 'Reservas confirmadas para o dia',
+    trend: { value: '+12%', direction: 'up', label: 'vs. ontem' },
+  },
+  {
+    title: 'Confirmados',
+    value: '62',
+    helper: '82% taxa de confirmação',
+    trend: { value: '+5%', direction: 'up', label: 'últimos 7 dias' },
+  },
+  {
+    title: 'Pendentes',
+    value: '14',
+    helper: 'Aguardando confirmação',
+    trend: { value: '-8%', direction: 'down', label: 'na semana' },
+  },
+  {
+    title: 'Cancelados',
+    value: '6',
+    helper: '2 cancelamentos nas últimas 24h',
+    trend: { value: '-3%', direction: 'down', label: 'vs. mês anterior' },
+  },
+]
+
+const todaysTrails = [
+  {
+    id: 'trail-1',
+    name: 'Trilha Perobinha',
+    schedule: '08:00 • Guia: Carlos Mendes',
+    occupancy: 72,
+    capacity: '45 / 60 vagas',
+  },
+  {
+    id: 'trail-2',
+    name: 'Trilha Ubaú-doce',
+    schedule: '10:30 • Guia: Ana Paula Santos',
+    occupancy: 55,
+    capacity: '33 / 60 vagas',
+  },
+  {
+    id: 'trail-3',
+    name: 'Trilha do Aroeira',
+    schedule: '14:00 • Guia: Roberto Silva',
+    occupancy: 91,
+    capacity: '50 / 55 vagas',
+  },
+]
+
+const upcomingEvents = [
+  {
+    id: 'event-1',
+    title: 'Mutirão de Educação Ambiental',
+    date: '23 out • 09:00',
+    description: 'Atividade educativa com trilha sonora de músicos locais.',
+  },
+  {
+    id: 'event-2',
+    title: 'Festival de Trilhas do Parque',
+    date: '24 out • 16:00',
+    description: 'Passeios guiados especiais com guias convidados.',
+  },
+  {
+    id: 'event-3',
+    title: 'Trilha para Foz do Sol',
+    date: '25 out • 17:30',
+    description: 'Expedição ao pôr do sol com observação de aves migratórias.',
+  },
+]
+
+const recentActivity = [
+  { id: 'activity-1', time: '22/10/2025 • 14:35', text: 'Agendamento confirmado do cliente notificado' },
+  { id: 'activity-2', time: '22/10/2025 • 13:20', text: 'Agendamento remarcado para 23/10' },
+  { id: 'activity-3', time: '22/10/2025 • 09:10', text: 'Check-in realizado - Trilha Perobinha' },
+  { id: 'activity-4', time: '21/10/2025 • 18:42', text: 'Novo evento publicado: Observação de Aves' },
+]
+
+const eventCards = [
+  {
+    id: 'event-card-1',
+    title: 'Mutirão de Educação Ambiental',
+    description: 'Atividade educativa com trilha musical e limpeza das trilhas.',
+    tag: 'Publicado',
+    tagTone: 'success',
+    date: '23 out • 09:00',
+    capacity: '30 vagas',
+  },
+  {
+    id: 'event-card-2',
+    title: 'Festival de Trilhas',
+    description: 'Passeios guiados especiais com foco em fauna nativa.',
+    tag: 'Destaque',
+    tagTone: 'info',
+    date: '24 out • 16:00',
+    capacity: '50 vagas',
+  },
+  {
+    id: 'event-card-3',
+    title: 'Observação de Aves - Falcão',
+    description: 'Expedição ao nascer do sol com guias especialistas.',
+    tag: 'Rascunho',
+    tagTone: 'warning',
+    date: '26 out • 05:30',
+    capacity: '15 vagas',
+  },
+]
+
+const trailCards = [
+  {
+    id: 'trail-card-1',
+    name: 'Trilha Perobinha',
+    difficulty: 'Moderada',
+    duration: '2h30',
+    capacity: '60 pessoas',
+    status: 'Ativa',
+    description: 'Percurso sombreado com observação de flora local.',
+  },
+  {
+    id: 'trail-card-2',
+    name: 'Trilha Ubaú-doce',
+    difficulty: 'Intensa',
+    duration: '3h',
+    capacity: '45 pessoas',
+    status: 'Ativa',
+    description: 'Trilha com mirantes e visita a nascentes preservadas.',
+  },
+  {
+    id: 'trail-card-3',
+    name: 'Trilha do Aroeira',
+    difficulty: 'Leve',
+    duration: '1h45',
+    capacity: '55 pessoas',
+    status: 'Pausada',
+    description: 'Caminho com interpretação ambiental para escolas.',
+  },
+]
+
+const guideCards = [
+  {
+    id: 'guide-card-1',
+    name: 'Carlos Mendes',
+    initials: 'CM',
+    phone: '(84) 99783-4567',
+    availability: 'Seg a Sex • 07h - 14h',
+    trails: ['Trilha Perobinha', 'Trilha Ubaú-doce'],
+  },
+  {
+    id: 'guide-card-2',
+    name: 'Ana Paula Santos',
+    initials: 'AS',
+    phone: '(84) 99612-5678',
+    availability: 'Qua a Dom • 08h - 18h',
+    trails: ['Trilha Perobinha', 'Trilha do Aroeira'],
+  },
+  {
+    id: 'guide-card-3',
+    name: 'Roberto Silva',
+    initials: 'RS',
+    phone: '(84) 99845-6720',
+    availability: 'Sáb e Dom • 06h - 14h',
+    trails: ['Trilha do Aroeira', 'Trilha Foz do Sol'],
+  },
+]
+
+const calendarDays = [
+  { date: '01', events: [] },
+  { date: '02', events: [] },
+  { date: '03', events: [] },
+  { date: '04', events: ['Festival de Trilhas'] },
+  { date: '05', events: [] },
+  { date: '06', events: [] },
+  { date: '07', events: ['Agendamento: Perobinha'] },
+  { date: '08', events: [] },
+  { date: '09', events: ['Agendamento: Ubaú-doce'] },
+  { date: '10', events: [] },
+  { date: '11', events: [] },
+  { date: '12', events: [] },
+  { date: '13', events: ['Evento: Observação de Aves'] },
+  { date: '14', events: [] },
+  { date: '15', events: ['Agendamento: Aroeira'] },
+  { date: '16', events: [] },
+  { date: '17', events: [] },
+  { date: '18', events: [] },
+  { date: '19', events: [] },
+  { date: '20', events: [] },
+  { date: '21', events: ['Evento: Educação Ambiental'] },
+  { date: '22', events: ['Agendamento: Perobinha', 'Agendamento: Aroeira'] },
+  { date: '23', events: ['Evento: Educação Ambiental'] },
+  { date: '24', events: ['Festival de Trilhas'] },
+  { date: '25', events: ['Trilha para Foz do Sol'] },
+  { date: '26', events: [] },
+  { date: '27', events: [] },
+  { date: '28', events: ['Mutirão de Limpeza'] },
+  { date: '29', events: [] },
+  { date: '30', events: ['Agendamento: Aroeira'] },
+  { date: '31', events: [] },
+]
+
+const reportMetrics: MetricCardProps[] = [
+  {
+    title: 'Total de Agendamentos',
+    value: '684',
+    helper: '+15% vs. mês anterior',
+    trend: { value: '+15%', direction: 'up', label: 'mês' },
+  },
+  {
+    title: 'Taxa de Confirmação',
+    value: '82%',
+    helper: '+5 pts em relação ao mês anterior',
+    trend: { value: '+5 pts', direction: 'up', label: 'performance' },
+  },
+  {
+    title: 'Taxa de Cancelamento',
+    value: '6%',
+    helper: '-3 pts em relação ao mês anterior',
+    trend: { value: '-3 pts', direction: 'down', label: 'performance' },
+  },
+  {
+    title: 'Eventos Publicados',
+    value: '18',
+    helper: '+2 novos eventos no mês',
+    trend: { value: '+12%', direction: 'up', label: 'crescimento' },
+  },
+]
+
+const lineChartData = [
+  { label: 'Mai', value: 62 },
+  { label: 'Jun', value: 75 },
+  { label: 'Jul', value: 82 },
+  { label: 'Ago', value: 78 },
+  { label: 'Set', value: 88 },
+  { label: 'Out', value: 96 },
+]
+
+const pieChartData = [
+  { label: 'Confirmados', value: 58, tone: '#1aa361' },
+  { label: 'Pendentes', value: 22, tone: '#f2c94c' },
+  { label: 'Cancelados', value: 12, tone: '#eb5757' },
+  { label: 'Remarcados', value: 8, tone: '#2d9cdb' },
+]
+
+const barChartData = [
+  { label: 'Perobinha', value: 32 },
+  { label: 'Ubaú-doce', value: 28 },
+  { label: 'Aroeira', value: 24 },
+  { label: 'Foz do Sol', value: 18 },
+]
+
+type ChartDatum = {
+  label: string
+  value: number
+}
+
+type PieDatum = {
+  label: string
+  value: number
+  tone: string
+}
+
+const ChartCard = ({ title, children }: { title: string; children: ReactNode }) => (
+  <section className="admin-card">
+    <header className="admin-card__header">
+      <h2>{title}</h2>
+    </header>
+    <div className="admin-card__content">{children}</div>
+  </section>
+)
+
+const LineChart = ({ data }: { data: ChartDatum[] }) => {
+  if (data.length === 0) {
+    return null
+  }
+
+  const maxValue = Math.max(...data.map((item) => item.value))
+  const minValue = Math.min(...data.map((item) => item.value))
+  const range = maxValue - minValue || 1
+  const points = data
+    .map((item, index) => {
+      const x = (index / (data.length - 1 || 1)) * 100
+      const y = 100 - ((item.value - minValue) / range) * 100
+      return `${x},${y}`
+    })
+    .join(' ')
+
+  return (
+    <div className="admin-line-chart">
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="adminLineGradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="rgba(44, 210, 130, 0.45)" />
+            <stop offset="100%" stopColor="rgba(44, 210, 130, 0)" />
+          </linearGradient>
+        </defs>
+        <polyline points={points} fill="none" stroke="#1aa361" strokeWidth="3" strokeLinecap="round" />
+        <polygon
+          points={`0,100 ${points} 100,100`}
+          fill="url(#adminLineGradient)"
+          opacity="0.7"
+        />
+      </svg>
+      <div className="admin-chart__labels">
+        {data.map((item) => (
+          <span key={item.label}>{item.label}</span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+const PieChart = ({ data }: { data: PieDatum[] }) => {
+  const total = data.reduce((sum, item) => sum + item.value, 0)
+  let accumulator = 0
+  const gradientStops = data.map((segment) => {
+    const start = total > 0 ? (accumulator / total) * 360 : 0
+    accumulator += segment.value
+    const end = total > 0 ? (accumulator / total) * 360 : 360
+    return `${segment.tone} ${start}deg ${end}deg`
+  })
+
+  const gradient =
+    gradientStops.length > 0
+      ? `conic-gradient(${gradientStops.join(', ')})`
+      : 'conic-gradient(#1aa361 0deg 360deg)'
+
+  return (
+    <div className="admin-pie-chart">
+      <div className="admin-pie-chart__circle" style={{ background: gradient }} aria-hidden="true" />
+      <div className="admin-pie-chart__legend">
+        {data.map((item) => (
+          <span key={item.label}>
+            <span className="admin-pie-chart__dot" style={{ backgroundColor: item.tone }} />
+            {item.label}
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+const BarChart = ({ data }: { data: ChartDatum[] }) => {
+  const maxValue = Math.max(...data.map((item) => item.value), 1)
+  return (
+    <div className="admin-bar-chart">
+      {data.map((item) => (
+        <div key={item.label} className="admin-bar-chart__item">
+          <div
+            className="admin-bar-chart__bar"
+            style={{ height: `${(item.value / maxValue) * 100}%` }}
+            aria-label={`${item.label}: ${item.value}`}
+          />
+          <span>{item.label}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+const buildSection = (key: SectionKey): SectionConfig => {
+  switch (key) {
+    case 'dashboard':
+      return {
+        title: 'Dashboard',
+        description: 'Visão geral da operação do Parque das Dunas',
+        content: (
+          <div className="admin-dashboard">
+            <div className="admin-grid admin-grid--metrics">
+              {dashboardMetrics.map((metric) => (
+                <MetricCard key={metric.title} {...metric} />
+              ))}
+            </div>
+            <div className="admin-grid admin-grid--two">
+              <section className="admin-card">
+                <header className="admin-card__header">
+                  <h2>Trilhas de Hoje</h2>
+                  <span>Ocupação por trilha</span>
+                </header>
+                <div className="admin-card__content">
+                  <ul className="admin-trail-list">
+                    {todaysTrails.map((trail) => (
+                      <li key={trail.id}>
+                        <div className="admin-trail-list__meta">
+                          <strong>{trail.name}</strong>
+                          <span>{trail.schedule}</span>
+                        </div>
+                        <div className="admin-trail-list__capacity">
+                          <span>{trail.capacity}</span>
+                          <span>{trail.occupancy}%</span>
+                        </div>
+                        <div className="admin-progress">
+                          <div className="admin-progress__bar" style={{ width: `${trail.occupancy}%` }} />
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </section>
+              <section className="admin-card">
+                <header className="admin-card__header">
+                  <h2>Clima & Condições</h2>
+                  <span>Atualizado às 07:30</span>
+                </header>
+                <div className="admin-card__content">
+                  <div className="admin-weather">
+                    <div>
+                      <span className="admin-weather__temp">28°C</span>
+                      <span>Ensolarado</span>
+                    </div>
+                    <div className="admin-weather__details">
+                      <span>Umidade: 62%</span>
+                      <span>Ventos: 14 km/h</span>
+                      <span>Índice UV: 6 (Alto)</span>
+                    </div>
+                  </div>
+                  <div className="admin-alert-card">
+                    <strong>Atenção às trilhas costeiras</strong>
+                    <p>Rajadas de vento previstas para o fim da tarde. Monitore a capacidade.</p>
+                  </div>
+                </div>
+              </section>
+            </div>
+            <div className="admin-grid admin-grid--two">
+              <section className="admin-card">
+                <header className="admin-card__header">
+                  <h2>Próximos Eventos</h2>
+                  <span>Planejamento para os próximos dias</span>
+                </header>
+                <div className="admin-card__content">
+                  <ul className="admin-event-list">
+                    {upcomingEvents.map((event) => (
+                      <li key={event.id}>
+                        <div>
+                          <strong>{event.title}</strong>
+                          <span>{event.description}</span>
+                        </div>
+                        <span className="admin-event-list__date">{event.date}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </section>
+              <section className="admin-card">
+                <header className="admin-card__header">
+                  <h2>Atividade Recente</h2>
+                  <span>Interações nas últimas 24h</span>
+                </header>
+                <div className="admin-card__content">
+                  <ul className="admin-activity-list">
+                    {recentActivity.map((item) => (
+                      <li key={item.id}>
+                        <span className="admin-activity-list__time">{item.time}</span>
+                        <p>{item.text}</p>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </section>
+            </div>
+          </div>
+        ),
+      }
+    case 'agendamentos':
+      return {
+        title: 'Agendamentos',
+        description: 'Gerencie reservas de trilhas e controle os status em tempo real',
+        actions: (
+          <>
+            <button type="button" className="admin-secondary-button">Exportar CSV</button>
+            <button type="button" className="admin-primary-button">Novo Agendamento</button>
+          </>
+        ),
+        content: (
+          <div className="admin-section">
+            <div className="admin-filters">
+              <label>
+                Trilha
+                <select defaultValue="todas">
+                  <option value="todas">Todas</option>
+                  <option value="perobinha">Trilha Perobinha</option>
+                  <option value="ubaud">Trilha Ubaú-doce</option>
+                </select>
+              </label>
+              <label>
+                Status
+                <select defaultValue="todos">
+                  <option value="todos">Todos</option>
+                  <option value="confirmado">Confirmados</option>
+                  <option value="pendente">Pendentes</option>
+                  <option value="cancelado">Cancelados</option>
+                </select>
+              </label>
+              <label>
+                Período
+                <input type="date" defaultValue="2025-10-22" />
+              </label>
+            </div>
+            <AdminTable columns={bookingColumns} rows={bookingRows} />
+          </div>
+        ),
+      }
+    case 'participantes':
+      return {
+        title: 'Participantes',
+        description: 'Lista de visitantes com status e check-in',
+        actions: (
+          <button type="button" className="admin-primary-button">
+            Importar Participantes
+          </button>
+        ),
+        content: (
+          <div className="admin-section">
+            <div className="admin-filters">
+              <label>
+                Trilha
+                <select defaultValue="todas">
+                  <option value="todas">Todas</option>
+                  <option value="perobinha">Trilha Perobinha</option>
+                  <option value="aroeira">Trilha do Aroeira</option>
+                </select>
+              </label>
+              <label>
+                Data
+                <input type="date" defaultValue="2025-10-22" />
+              </label>
+              <label>
+                Status
+                <select defaultValue="todos">
+                  <option value="todos">Todos</option>
+                  <option value="confirmado">Confirmado</option>
+                  <option value="pendente">Pendente</option>
+                </select>
+              </label>
+            </div>
+            <AdminTable columns={participantColumns} rows={participantRows} />
+          </div>
+        ),
+      }
+    case 'eventos':
+      return {
+        title: 'Eventos do Parque',
+        description: 'Gerencie e promova eventos e atividades especiais',
+        actions: (
+          <button type="button" className="admin-primary-button">Novo Evento</button>
+        ),
+        content: (
+          <div className="admin-grid admin-grid--three">
+            {eventCards.map((event) => (
+              <article key={event.id} className="admin-event-card">
+                <header>
+                  <span className={`admin-tag admin-tag--${event.tagTone}`}>{event.tag}</span>
+                  <h3>{event.title}</h3>
+                  <p>{event.description}</p>
+                </header>
+                <dl>
+                  <div>
+                    <dt>Data</dt>
+                    <dd>{event.date}</dd>
+                  </div>
+                  <div>
+                    <dt>Capacidade</dt>
+                    <dd>{event.capacity}</dd>
+                  </div>
+                </dl>
+                <div className="admin-event-card__actions">
+                  <button type="button" className="admin-secondary-button">Editar</button>
+                  <button type="button" className="admin-secondary-button">Publicar</button>
+                  <button type="button" className="admin-secondary-button">Promover</button>
+                </div>
+              </article>
+            ))}
+          </div>
+        ),
+      }
+    case 'trilhas':
+      return {
+        title: 'Trilhas',
+        description: 'Acompanhe status e capacidade das trilhas disponíveis',
+        actions: (
+          <button type="button" className="admin-primary-button">Nova Trilha</button>
+        ),
+        content: (
+          <div className="admin-grid admin-grid--two">
+            {trailCards.map((trail) => (
+              <article key={trail.id} className="admin-trail-card">
+                <header>
+                  <div>
+                    <span className="admin-trail-card__name">{trail.name}</span>
+                    <span className={`admin-tag admin-tag--${trail.status === 'Ativa' ? 'success' : 'warning'}`}>
+                      {trail.status}
+                    </span>
+                  </div>
+                  <p>{trail.description}</p>
+                </header>
+                <dl>
+                  <div>
+                    <dt>Duração</dt>
+                    <dd>{trail.duration}</dd>
+                  </div>
+                  <div>
+                    <dt>Capacidade</dt>
+                    <dd>{trail.capacity}</dd>
+                  </div>
+                  <div>
+                    <dt>Dificuldade</dt>
+                    <dd>{trail.difficulty}</dd>
+                  </div>
+                </dl>
+                <div className="admin-trail-card__actions">
+                  <button type="button" className="admin-secondary-button">Editar</button>
+                  <button type="button" className="admin-secondary-button">Duplicar</button>
+                  <button type="button" className="admin-secondary-button">Ver Detalhes</button>
+                </div>
+              </article>
+            ))}
+            <aside className="admin-card admin-trail-guidance">
+              <header className="admin-card__header">
+                <h2>Gestão de Trilhas</h2>
+              </header>
+              <div className="admin-card__content">
+                <ul>
+                  <li>Configure horários, níveis de dificuldade e políticas de segurança.</li>
+                  <li>Defina a ocupação máxima por trilha e receba alertas de lotação.</li>
+                  <li>Monitore manutenção, sinalização e feedback dos visitantes.</li>
+                </ul>
+              </div>
+            </aside>
+          </div>
+        ),
+      }
+    case 'guias':
+      return {
+        title: 'Guias',
+        description: 'Gerencie disponibilidade e especialidades dos guias',
+        actions: (
+          <button type="button" className="admin-primary-button">Novo Guia</button>
+        ),
+        content: (
+          <div className="admin-grid admin-grid--three">
+            {guideCards.map((guide) => (
+              <article key={guide.id} className="admin-guide-card">
+                <header>
+                  <div className="admin-guide-card__avatar" aria-hidden="true">
+                    {guide.initials}
+                  </div>
+                  <div>
+                    <h3>{guide.name}</h3>
+                    <span>{guide.phone}</span>
+                  </div>
+                </header>
+                <div className="admin-guide-card__content">
+                  <strong>Disponibilidade</strong>
+                  <span>{guide.availability}</span>
+                  <strong>Trilhas qualificadas</strong>
+                  <ul>
+                    {guide.trails.map((trail) => (
+                      <li key={trail}>{trail}</li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="admin-guide-card__actions">
+                  <button type="button" className="admin-secondary-button">Editar</button>
+                  <button type="button" className="admin-secondary-button">Disponibilidade</button>
+                </div>
+              </article>
+            ))}
+            <aside className="admin-card admin-guide-note">
+              <header className="admin-card__header">
+                <h2>Gestão de Guias</h2>
+              </header>
+              <div className="admin-card__content">
+                <p>
+                  Configure turnos, folgas automáticas e critérios de escalas. Atualize certificações e históricos
+                  de cada guia em um só lugar.
+                </p>
+              </div>
+            </aside>
+          </div>
+        ),
+      }
+    case 'calendario':
+      return {
+        title: 'Calendário',
+        description: 'Visualize agendamentos e eventos em um calendário unificado',
+        actions: (
+          <>
+            <button type="button" className="admin-secondary-button">Agendamentos</button>
+            <button type="button" className="admin-secondary-button">Eventos</button>
+            <button type="button" className="admin-primary-button">Nova Entrada</button>
+          </>
+        ),
+        content: (
+          <div className="admin-calendar">
+            <header className="admin-calendar__header">
+              <div>
+                <h2>Outubro 2025</h2>
+                <span>Agenda integrada do parque</span>
+              </div>
+              <div className="admin-calendar__controls">
+                <button type="button" className="admin-secondary-button">Mês Anterior</button>
+                <button type="button" className="admin-secondary-button">Próximo Mês</button>
+              </div>
+            </header>
+            <div className="admin-calendar__grid">
+              {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((day) => (
+                <div key={day} className="admin-calendar__weekday">
+                  {day}
+                </div>
+              ))}
+              {calendarDays.map((day) => (
+                <div key={day.date} className={`admin-calendar__day${day.events.length > 0 ? ' has-events' : ''}`}>
+                  <span className="admin-calendar__date">{day.date}</span>
+                  <ul>
+                    {day.events.map((event) => (
+                      <li key={event}>{event}</li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+            <footer className="admin-calendar__legend">
+              <span>
+                <span className="admin-calendar__dot admin-calendar__dot--booking" /> Agendamentos
+              </span>
+              <span>
+                <span className="admin-calendar__dot admin-calendar__dot--event" /> Eventos
+              </span>
+            </footer>
+          </div>
+        ),
+      }
+    case 'relatorios':
+      return {
+        title: 'Relatórios',
+        description: 'Acompanhe indicadores e gere exportações para o time gestor',
+        actions: (
+          <>
+            <button type="button" className="admin-secondary-button">Exportar CSV</button>
+            <button type="button" className="admin-secondary-button">Exportar PDF</button>
+          </>
+        ),
+        content: (
+          <div className="admin-reports">
+            <div className="admin-grid admin-grid--metrics">
+              {reportMetrics.map((metric) => (
+                <MetricCard key={metric.title} {...metric} />
+              ))}
+            </div>
+            <div className="admin-grid admin-grid--two">
+              <ChartCard title="Agendamentos por Período">
+                <LineChart data={lineChartData} />
+              </ChartCard>
+              <ChartCard title="Distribuição por Status">
+                <PieChart data={pieChartData} />
+              </ChartCard>
+            </div>
+            <ChartCard title="Agendamentos por Trilha">
+              <BarChart data={barChartData} />
+            </ChartCard>
+          </div>
+        ),
+      }
+    case 'configuracoes':
+      return {
+        title: 'Configurações',
+        description: 'Personalize comunicações automáticas e regras do parque',
+        content: (
+          <div className="admin-settings">
+            <section className="admin-card">
+              <header className="admin-card__header">
+                <h2>Templates de Mensagens</h2>
+                <span>Configure mensagens enviadas por email e WhatsApp</span>
+              </header>
+              <div className="admin-card__content admin-settings__grid">
+                <div>
+                  <label>
+                    Template de Confirmação
+                    <textarea defaultValue={`Olá {nome},\nSeu agendamento foi confirmado!\nData: {data}\nTrilha: {trilha}\nGuia: {guia}`} />
+                  </label>
+                  <small>Variáveis disponíveis: {'{nome}'}, {'{data}'}, {'{trilha}'}, {'{guia}'}</small>
+                </div>
+                <div>
+                  <label>
+                    Template de Lembrete
+                    <textarea defaultValue={`Olá {nome},\nEstamos te lembrando do passeio amanhã às {hora}.\nAté breve!`} />
+                  </label>
+                  <small>Configure o envio automático 24h antes do agendamento.</small>
+                </div>
+                <div>
+                  <label>
+                    Template de Cancelamento
+                    <textarea defaultValue={`Olá {nome},\nSeu agendamento foi cancelado.\nQualquer dúvida estamos à disposição.`} />
+                  </label>
+                  <small>Utilize tags para informar motivos e políticas de reembolso.</small>
+                </div>
+              </div>
+            </section>
+          </div>
+        ),
+      }
+    default:
+      return {
+        title: 'Dashboard',
+        content: null,
+      }
+  }
+}
+
+function AdminPage() {
+  const [activeSection, setActiveSection] = useState<SectionKey>('dashboard')
+
+  const section = useMemo(() => buildSection(activeSection), [activeSection])
+
+  return (
+    <AdminLayout
+      sections={sidebarSections}
+      activeSection={activeSection}
+      onSelectSection={(id) => {
+        if (isSectionKey(id)) {
+          setActiveSection(id)
+        }
+      }}
+      header={{ title: section.title, description: section.description, actions: section.actions }}
+    >
+      {section.content}
+    </AdminLayout>
+  )
+}
+
+export default AdminPage
