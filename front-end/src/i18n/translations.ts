@@ -107,6 +107,12 @@ type GuideTranslation = {
   gridAriaLabel: string
 }
 
+type BookingTermsSection = {
+  heading?: string
+  paragraphs: string[]
+  list?: string[]
+}
+
 type BookingTranslation = {
   hero: {
     tag: string
@@ -138,6 +144,15 @@ type BookingTranslation = {
     submit: string
     disclaimer: string
     helpText: string
+  }
+  terms: {
+    checkboxLabel: string
+    openModal: string
+    modalTitle: string
+    modalIntro?: string
+    acceptLabel: string
+    closeLabel: string
+    sections: BookingTermsSection[]
   }
   trails: {
     id: string
@@ -514,6 +529,93 @@ const translations: Record<Language, TranslationContent> = {
         disclaimer:
           'Nossa equipe retornará em até 24h com a confirmação e instruções completas para sua experiência.',
         helpText: 'As trilhas disponíveis podem ser atualizadas pelos administradores a qualquer momento.',
+      },
+      terms: {
+        checkboxLabel:
+          'Li e concordo com o Termo de Serviço e Consentimento para Tratamento de Dados Pessoais.',
+        openModal: 'Ler o termo completo',
+        modalTitle: 'Termo de Serviço e Consentimento para Tratamento de Dados Pessoais',
+        modalIntro:
+          'Leia atentamente o Termo de Serviço antes de prosseguir com sua reserva. A aceitação é necessária para a continuidade do agendamento.',
+        acceptLabel: 'Li e concordo',
+        closeLabel: 'Fechar',
+        sections: [
+          {
+            paragraphs: [
+              'Pelo presente instrumento, pessoa jurídica de direito privado, doravante denominada Agendunas e, de outro lado, titular dos dados doravante denominado IDEMA, têm entre si justo e contratado o que segue:',
+            ],
+          },
+          {
+            heading: '1. Objeto',
+            paragraphs: [
+              '1.1. Este Termo tem como finalidade regular o uso dos serviços disponibilizados pela Controladora por meio do site/portal/aplicativo da Agendunas, bem como obter o consentimento do Titular para o tratamento dos seus dados pessoais necessários à prestação do serviço.',
+              '1.2. O Titular declara estar ciente de que, para que o serviço funcione corretamente (cadastro, agendamento, notificações, suporte etc.), será necessário o fornecimento de determinados dados pessoais.',
+            ],
+          },
+          {
+            heading: '2. Dados Pessoais Coletados e Finalidade',
+            paragraphs: [
+              '2.1. A Controladora poderá coletar, dentre outros, os seguintes dados pessoais do Titular: nome completo, e-mail, telefone, dados de identificação (CPF/RG ou equivalente), e outros que se façam necessários para cadastro e uso do serviço.',
+              '2.2. As finalidades do tratamento de dados incluem: (I) cadastro e identificação do usuário; (II) agendamento e envio de notificações; (III) atendimento e suporte; (IV) comunicações relativas ao serviço; (V) cumprimento de obrigações legais; (VI) outras finalidades informadas ao Titular no momento da coleta.',
+              '2.3. O tratamento dos dados será pautado pelas bases legais previstas na LGPD, especialmente (quando aplicável) o consentimento do Titular (art. 7º, I da LGPD) e/ou execução de contrato ou de medidas pré-contratuais, cumprimento de obrigação legal, interesse legítimo, entre outras.',
+            ],
+          },
+          {
+            heading: '3. Consentimento',
+            paragraphs: [
+              '3.1. O Titular manifesta, de forma livre, informada e inequívoca, seu consentimento para que a Controladora realize o tratamento de seus dados pessoais conforme as finalidades acima descritas.',
+              '3.2. O Titular poderá revogar o consentimento a qualquer tempo, mediante solicitação à Controladora, por meio de [e-mail, contato] indicado. A revogação poderá implicar na impossibilidade de utilização de parte ou totalidade dos serviços oferecidos.',
+              '3.3. O Titular confirma que foi informado sobre (I) quais dados são coletados; (II) para que finalidades; (III) por quanto tempo os dados serão armazenados; (IV) com quem poderão ser compartilhados; (V) quais são os seus direitos como titular de dados.',
+            ],
+          },
+          {
+            heading: '4. Compartilhamento de Dados',
+            paragraphs: [
+              '4.1. A Controladora poderá compartilhar os dados pessoais do Titular com terceiros (fornecedores, parceiros, prestadores de serviço) somente para as finalidades descritas neste Termo e sob compromisso destes terceiros de observar os mesmos padrões de segurança e privacidade.',
+              '4.2. Em hipótese alguma serão compartilhados os dados pessoais para finalidades diversas não informadas ou sem a base legal adequada ao tratamento.',
+            ],
+          },
+          {
+            heading: '5. Armazenamento e Segurança',
+            paragraphs: [
+              '5.1. Os dados pessoais serão armazenados pelo período necessário para cumprimento das finalidades descritas ou conforme exigido por lei, regulamento ou autoridade competente.',
+              '5.2. A Controladora se compromete a adotar medidas técnicas e organizacionais adequadas para proteger os dados pessoais contra acesso não autorizado, vazamento, alteração ou destruição.',
+              '5.3. Em caso de incidente de segurança que possa acarretar risco ou dano relevante aos Titulares, a Controladora comunicará o Titular e a autoridade competente, quando exigido pela legislação.',
+            ],
+          },
+          {
+            heading: '6. Direitos do Titular',
+            paragraphs: ['6.1. Em conformidade com o art. 18 da LGPD, o Titular tem direito a:'],
+            list: [
+              'confirmar a existência de tratamento;',
+              'acessar os seus dados;',
+              'corrigir dados incompletos, inexatos ou desatualizados;',
+              'solicitar anonimização, bloqueio ou eliminação de dados desnecessários, excessivos ou tratados em desconformidade;',
+              'solicitar a portabilidade dos dados a outro fornecedor de serviço, mediante requisição;',
+              'revogar seu consentimento e solicitar a eliminação dos dados tratados com base no consentimento;',
+              'ser informado sobre as entidades públicas e privadas com as quais a Controladora compartilhou seus dados.',
+            ],
+          },
+          {
+            paragraphs: [
+              '6.2. Para exercer seus direitos, o Titular poderá entrar em contato com a Controladora através de [e-mail de contato / endereço / telefone]. A Controladora poderá exigir comprovação de identidade para atender à solicitação.',
+            ],
+          },
+          {
+            heading: '7. Alterações do Termo',
+            paragraphs: [
+              '7.1. A Controladora reserva-se o direito de modificar este Termo a qualquer momento, mediante publicação da versão atualizada em seu site/portal ou envio de comunicação ao Titular.',
+              '7.2. A continuidade do uso dos serviços após alterações constitui aceitação pelo Titular da nova versão.',
+            ],
+          },
+          {
+            heading: '8. Vigência e Foro',
+            paragraphs: [
+              '8.1. Este Termo entra em vigor na data da aceitação (por exemplo, quando o Titular clicar em “Aceito” ou “Concordo”) e permanecerá em vigor enquanto houver tratamento dos dados conforme as finalidades aqui previstas.',
+              '8.2. Para dirimir quaisquer controvérsias oriundas deste Termo será aplicado o direito brasileiro, e fica eleito o foro da comarca de [Natal/RN], com renúncia expressa a qualquer outro, por mais privilegiado que seja.',
+            ],
+          },
+        ],
       },
       trails: [
         {
@@ -1061,6 +1163,93 @@ const translations: Record<Language, TranslationContent> = {
         disclaimer:
           'Our team will get back to you within 24h with confirmation and full instructions for your experience.',
         helpText: 'Available trails may be updated by administrators at any time.',
+      },
+      terms: {
+        checkboxLabel:
+          'I have read and agree with the Service Terms and Consent for Personal Data Processing.',
+        openModal: 'Read the full terms',
+        modalTitle: 'Service Terms and Consent for Personal Data Processing',
+        modalIntro:
+          'Please review the Service Terms carefully before continuing with your booking. Acceptance is required to move forward.',
+        acceptLabel: 'I have read and agree',
+        closeLabel: 'Close',
+        sections: [
+          {
+            paragraphs: [
+              'By this instrument, a private legal entity, hereinafter referred to as Agendunas, and, on the other side, the data subject hereinafter referred to as IDEMA, agree to the following:',
+            ],
+          },
+          {
+            heading: '1. Purpose',
+            paragraphs: [
+              '1.1. These Terms regulate the use of the services made available by the Controller through Agendunas’ website/portal/application, as well as obtain the Data Subject’s consent for processing the personal data required to provide the service.',
+              '1.2. The Data Subject understands that, for the service to operate properly (registration, scheduling, notifications, support, etc.), it will be necessary to provide certain personal data.',
+            ],
+          },
+          {
+            heading: '2. Collected Personal Data and Purpose',
+            paragraphs: [
+              '2.1. The Controller may collect, among others, the following personal data from the Data Subject: full name, email, phone number, identification data (CPF/RG or equivalent), and other information required for registration and use of the service.',
+              '2.2. The purposes for data processing include: (I) user registration and identification; (II) booking and sending notifications; (III) customer service and support; (IV) communications related to the service; (V) compliance with legal obligations; (VI) other purposes informed to the Data Subject at the time of collection.',
+              '2.3. Data processing will be based on the legal grounds set forth in the LGPD, especially (when applicable) the Data Subject’s consent (Art. 7, I of the LGPD) and/or the execution of a contract or pre-contractual procedures, compliance with legal obligations, legitimate interest, among others.',
+            ],
+          },
+          {
+            heading: '3. Consent',
+            paragraphs: [
+              '3.1. The Data Subject freely, expressly, and unequivocally consents to the Controller processing their personal data for the purposes described above.',
+              '3.2. The Data Subject may revoke consent at any time by requesting it from the Controller through the indicated [email/contact]. Revocation may result in the partial or total impossibility of using the services provided.',
+              '3.3. The Data Subject confirms having been informed about (I) which data are collected; (II) for which purposes; (III) how long the data will be stored; (IV) with whom they may be shared; (V) their rights as a data subject.',
+            ],
+          },
+          {
+            heading: '4. Data Sharing',
+            paragraphs: [
+              '4.1. The Controller may share the Data Subject’s personal data with third parties (suppliers, partners, service providers) solely for the purposes described in these Terms and under the commitment that such third parties observe the same security and privacy standards.',
+              '4.2. Under no circumstances will personal data be shared for different purposes that have not been disclosed or without the appropriate legal basis for processing.',
+            ],
+          },
+          {
+            heading: '5. Storage and Security',
+            paragraphs: [
+              '5.1. Personal data will be stored for the period necessary to fulfil the purposes described herein or as required by law, regulation, or competent authority.',
+              '5.2. The Controller undertakes to adopt appropriate technical and organisational measures to protect personal data against unauthorised access, leakage, alteration, or destruction.',
+              '5.3. In the event of a security incident that may pose risk or significant damage to Data Subjects, the Controller will notify the Data Subject and the competent authority, when required by law.',
+            ],
+          },
+          {
+            heading: '6. Rights of the Data Subject',
+            paragraphs: ['6.1. In accordance with Art. 18 of the LGPD, the Data Subject is entitled to:'],
+            list: [
+              'confirm the existence of processing;',
+              'access their data;',
+              'correct incomplete, inaccurate, or outdated data;',
+              'request anonymisation, blocking, or deletion of unnecessary, excessive, or unlawfully processed data;',
+              'request data portability to another service provider upon request;',
+              'revoke consent and request deletion of data processed on the basis of consent;',
+              'be informed about public and private entities with whom the Controller has shared their data.',
+            ],
+          },
+          {
+            paragraphs: [
+              '6.2. To exercise their rights, the Data Subject may contact the Controller through [contact email / address / phone number]. The Controller may require proof of identity to meet the request.',
+            ],
+          },
+          {
+            heading: '7. Changes to the Terms',
+            paragraphs: [
+              '7.1. The Controller reserves the right to modify these Terms at any time by publishing the updated version on its website/portal or by sending a notice to the Data Subject.',
+              '7.2. Continued use of the services after any changes constitutes acceptance of the new version by the Data Subject.',
+            ],
+          },
+          {
+            heading: '8. Term and Jurisdiction',
+            paragraphs: [
+              '8.1. These Terms take effect on the date of acceptance (for example, when the Data Subject clicks “I agree” or “I accept”) and remain in force as long as data processing continues for the purposes set forth herein.',
+              '8.2. Brazilian law governs any disputes arising from these Terms, and the parties elect the courts of [Natal/RN], expressly waiving any other, however privileged it may be.',
+            ],
+          },
+        ],
       },
       trails: [
         {

@@ -54,6 +54,8 @@ function BookingPage({ navigation, searchParams }: PageProps) {
   const [selectedDate, setSelectedDate] = useState('')
   const [weatherState, setWeatherState] = useState<WeatherState>({ status: 'idle' })
   const [showRainWarning, setShowRainWarning] = useState(false)
+  const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false)
+  const [showTermsModal, setShowTermsModal] = useState(false)
   const abortControllerRef = useRef<AbortController | null>(null)
   const allowRainySubmitRef = useRef(false)
   const formRef = useRef<HTMLFormElement | null>(null)
@@ -195,6 +197,23 @@ function BookingPage({ navigation, searchParams }: PageProps) {
     [fetchWeather],
   )
 
+  const handleTermsChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    setHasAcceptedTerms(event.target.checked)
+  }, [])
+
+  const handleOpenTermsModal = useCallback(() => {
+    setShowTermsModal(true)
+  }, [])
+
+  const handleCloseTermsModal = useCallback(() => {
+    setShowTermsModal(false)
+  }, [])
+
+  const handleAcceptTerms = useCallback(() => {
+    setHasAcceptedTerms(true)
+    setShowTermsModal(false)
+  }, [])
+
   const isHighRainProbability =
     weatherState.status === 'success' &&
     typeof weatherState.summary.precipitationProbability === 'number' &&
@@ -310,8 +329,23 @@ function BookingPage({ navigation, searchParams }: PageProps) {
                 />
               </label>
             </div>
+            <div className="terms-consent">
+              <label className="terms-consent__checkbox">
+                <input
+                  type="checkbox"
+                  name="termsConsent"
+                  required
+                  checked={hasAcceptedTerms}
+                  onChange={handleTermsChange}
+                />
+                <span>{booking.terms.checkboxLabel}</span>
+              </label>
+              <button type="button" className="terms-consent__open" onClick={handleOpenTermsModal}>
+                {booking.terms.openModal}
+              </button>
+            </div>
             <div className="form-actions">
-              <button type="submit" className="btn solid">
+              <button type="submit" className="btn solid" disabled={!hasAcceptedTerms}>
                 {booking.form.submit}
               </button>
               <p className="form-disclaimer">{booking.form.disclaimer}</p>
@@ -474,6 +508,52 @@ function BookingPage({ navigation, searchParams }: PageProps) {
                 </button>
                 <button type="button" className="btn solid" onClick={handleProceedWithRain}>
                   {booking.rainWarningModal.proceed}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {showTermsModal && (
+        <div className="terms-modal" role="presentation">
+          <div className="terms-modal__backdrop" aria-hidden="true" onClick={handleCloseTermsModal} />
+          <div
+            className="terms-modal__dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="terms-modal-title"
+          >
+            <div className="terms-modal__content">
+              <h3 id="terms-modal-title">{booking.terms.modalTitle}</h3>
+              {booking.terms.modalIntro ? (
+                <p className="terms-modal__intro">{booking.terms.modalIntro}</p>
+              ) : null}
+              <div className="terms-modal__body">
+                {booking.terms.sections.map((section, index) => (
+                  <section
+                    key={section.heading ? section.heading : `terms-section-${index}`}
+                    className="terms-modal__section"
+                  >
+                    {section.heading ? <h4>{section.heading}</h4> : null}
+                    {section.paragraphs.map((paragraph, paragraphIndex) => (
+                      <p key={`terms-paragraph-${index}-${paragraphIndex}`}>{paragraph}</p>
+                    ))}
+                    {section.list ? (
+                      <ul>
+                        {section.list.map((item) => (
+                          <li key={item}>{item}</li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </section>
+                ))}
+              </div>
+              <div className="terms-modal__actions">
+                <button type="button" className="btn ghost" onClick={handleCloseTermsModal}>
+                  {booking.terms.closeLabel}
+                </button>
+                <button type="button" className="btn solid" onClick={handleAcceptTerms}>
+                  {booking.terms.acceptLabel}
                 </button>
               </div>
             </div>
