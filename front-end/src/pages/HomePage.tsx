@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { PageProps } from '../App'
 import { useTranslation } from '../i18n/TranslationProvider'
+import { fetchFaunaFloraRecords, fetchPublicTrails } from '../api/public'
 
 const heroImages = [
   'https://semeia.org.br/wp-content/uploads/2025/07/IMG_20250619_081831285_HDR-edited-scaled.jpg',
@@ -14,15 +15,88 @@ function HomePage({ navigation, onNavigate }: PageProps) {
   const home = content.home
   const [activeTestimonial, setActiveTestimonial] = useState(0)
   const [activeHeroImage, setActiveHeroImage] = useState(0)
+  const [trailCards, setTrailCards] = useState(home.trails.items)
+  const [wildlifeCards, setWildlifeCards] = useState(home.wildlife.items)
   const testimonials = home.testimonials.items
   const highlights = home.about.highlights
-  const trails = home.trails.items
-  const wildlife = home.wildlife.items
+  const trails = trailCards
+  const wildlife = wildlifeCards
   const stats = home.stats
   const aboutTitleText = `${home.about.title.prefix}${home.about.title.highlight}${home.about.title.suffix ?? ''}`
   const normalizedAboutTitle = aboutTitleText.replace(/\s+/g, ' ').trim().toLowerCase()
   const normalizedAboutTag = (home.about.tag ?? '').replace(/\s+/g, ' ').trim().toLowerCase()
   const shouldShowAboutTag = Boolean(normalizedAboutTag) && normalizedAboutTag !== normalizedAboutTitle
+
+  useEffect(() => {
+    let isMounted = true
+
+    const difficultyLabels: Record<string, string> = {
+      EASY: 'Leve',
+      MODERATE: 'Moderada',
+      HARD: 'Desafiadora',
+    }
+
+    const formatDuration = (minutes: number) => {
+      if (!Number.isFinite(minutes)) {
+        return ''
+      }
+
+      const hours = Math.floor(minutes / 60)
+      const remaining = Math.max(0, minutes - hours * 60)
+      if (remaining === 0) {
+        return `${hours}h`
+      }
+
+      return `${hours}h${String(remaining).padStart(2, '0')}`
+    }
+
+    fetchPublicTrails()
+      .then((data) => {
+        if (!isMounted || data.length === 0) {
+          return
+        }
+
+        const mapped = data.map((trail) => ({
+          name: trail.name,
+          description: trail.summary ?? trail.description,
+          duration: formatDuration(trail.durationMinutes),
+          difficulty: difficultyLabels[trail.difficulty] ?? trail.difficulty,
+          groups: `Até ${trail.maxGroupSize} pessoas`,
+          badge: trail.badgeLabel ?? home.trails.items[0]?.badge ?? 'Destaque',
+          image: trail.imageUrl ?? home.trails.items[0]?.image ?? '',
+        }))
+
+        if (mapped.length > 0) {
+          setTrailCards(mapped)
+        }
+      })
+      .catch(() => {
+        /* ignora falhas de rede mantendo conteúdo estático */
+      })
+
+    fetchFaunaFloraRecords()
+      .then((data) => {
+        if (!isMounted || data.length === 0) {
+          return
+        }
+
+        const mapped = data.slice(0, home.wildlife.items.length).map((item) => ({
+          name: item.name,
+          image: item.imageUrl ?? home.wildlife.items[0]?.image ?? '',
+        }))
+
+        if (mapped.length > 0) {
+          setWildlifeCards(mapped)
+        }
+      })
+      .catch(() => {
+        /* ignora falhas de rede mantendo conteúdo estático */
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [home.trails.items, home.wildlife.items])
 
   useEffect(() => {
     if (testimonials.length === 0) {

@@ -1626,6 +1626,26 @@ section {
   border-radius: 4px;
 }
 
+.form-feedback {
+  padding: 1rem 1.25rem;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.form-feedback--success {
+  background: rgba(44, 210, 130, 0.12);
+  border-color: rgba(26, 163, 97, 0.45);
+  color: #145c3e;
+}
+
+.form-feedback--error {
+  background: rgba(235, 87, 87, 0.12);
+  border-color: rgba(235, 87, 87, 0.55);
+  color: #7a1a1a;
+}
+
 .form-actions {
   display: flex;
   flex-direction: column;

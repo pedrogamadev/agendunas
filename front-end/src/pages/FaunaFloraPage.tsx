@@ -1,16 +1,58 @@
-import { useMemo, useState, type CSSProperties } from 'react'
+import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import type { PageProps } from '../App'
 import { useTranslation } from '../i18n/TranslationProvider'
+import { fetchFaunaFloraRecords } from '../api/public'
 
 function FaunaFloraPage({ navigation }: PageProps) {
   const { content } = useTranslation()
   const faunaFlora = content.faunaFlora
-  const galleryItems = faunaFlora.gallery
+  const [galleryItems, setGalleryItems] = useState(faunaFlora.gallery)
   const [selectedFilter, setSelectedFilter] = useState<string>('all')
   const [query, setQuery] = useState('')
   const heroStyle = {
     '--hero-background-image': `url(${faunaFlora.hero.photo})`,
   } as CSSProperties
+
+  useEffect(() => {
+    let isMounted = true
+
+    const statusLabels: Record<string, string> = {
+      NOT_EVALUATED: 'Não avaliado',
+      LEAST_CONCERN: 'Pouco preocupante',
+      NEAR_THREATENED: 'Quase ameaçado',
+      VULNERABLE: 'Vulnerável',
+      ENDANGERED: 'Em perigo',
+      CRITICALLY_ENDANGERED: 'Criticamente em perigo',
+    }
+
+    fetchFaunaFloraRecords()
+      .then((data) => {
+        if (!isMounted || data.length === 0) {
+          return
+        }
+
+        const mapped = data.map((item) => ({
+          id: item.slug,
+          name: item.name,
+          scientificName: item.scientificName,
+          type: item.category.toLowerCase(),
+          status: statusLabels[item.status] ?? item.status,
+          description: item.description ?? '',
+          image: item.imageUrl ?? faunaFlora.gallery[0]?.image ?? '',
+        }))
+
+        if (mapped.length > 0) {
+          setGalleryItems(mapped)
+        }
+      })
+      .catch(() => {
+        /* mantém o mural estático em caso de erro */
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [faunaFlora.gallery])
 
   const visibleItems = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase()

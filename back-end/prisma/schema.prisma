@@ -1,0 +1,249 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TrailDifficulty {
+  EASY
+  MODERATE
+  HARD
+}
+
+enum TrailStatus {
+  ACTIVE
+  INACTIVE
+  MAINTENANCE
+}
+
+enum TrailSessionStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  RESCHEDULED
+}
+
+enum BookingSource {
+  PUBLIC_PORTAL
+  ADMIN
+}
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  CANCELLED
+  ARCHIVED
+}
+
+enum EventRegistrationStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
+
+enum FaunaFloraCategory {
+  FAUNA
+  FLORA
+}
+
+enum ConservationStatus {
+  NOT_EVALUATED
+  LEAST_CONCERN
+  NEAR_THREATENED
+  VULNERABLE
+  ENDANGERED
+  CRITICALLY_ENDANGERED
+}
+
+model Guide {
+  id              String        @id @default(cuid())
+  slug            String        @unique
+  name            String
+  photoUrl        String?
+  speciality      String?
+  biography       String?
+  summary         String?
+  experienceYears Int            @default(0)
+  rating          Float          @default(0)
+  toursCompleted  Int            @default(0)
+  languages       String[]       @default([])
+  certifications  String[]       @default([])
+  curiosities     String[]       @default([])
+  featuredTrailId String?
+  featuredTrail   Trail?         @relation("FeaturedGuideTrail", fields: [featuredTrailId], references: [id])
+  isFeatured      Boolean        @default(false)
+  isActive        Boolean        @default(true)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  trails          TrailGuide[]
+  sessions        TrailSession[]
+  bookings        Booking[]
+}
+
+model Trail {
+  id               String         @id @default(cuid())
+  slug             String         @unique
+  name             String
+  description      String
+  summary          String?
+  durationMinutes  Int
+  difficulty       TrailDifficulty
+  maxGroupSize     Int
+  badgeLabel       String?
+  imageUrl         String?
+  status           TrailStatus     @default(ACTIVE)
+  basePrice        Decimal?        @db.Numeric(10, 2)
+  highlight        Boolean         @default(false)
+  meetingPoint     String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  guides           TrailGuide[]
+  sessions         TrailSession[]
+  bookings         Booking[]
+  featuredInGuides Guide[]         @relation("FeaturedGuideTrail")
+  activityLogs     ActivityLog[]
+}
+
+model TrailGuide {
+  trailId  String
+  guideId  String
+  assigned DateTime @default(now())
+
+  trail Trail @relation(fields: [trailId], references: [id], onDelete: Cascade)
+  guide Guide @relation(fields: [guideId], references: [id], onDelete: Cascade)
+
+  @@id([trailId, guideId])
+}
+
+model TrailSession {
+  id              String            @id @default(cuid())
+  trailId         String
+  primaryGuideId  String?
+  startsAt        DateTime
+  endsAt          DateTime?
+  capacity        Int
+  meetingPoint    String?
+  notes           String?
+  status          TrailSessionStatus @default(SCHEDULED)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  trail         Trail @relation(fields: [trailId], references: [id])
+  primaryGuide  Guide? @relation(fields: [primaryGuideId], references: [id])
+  bookings      Booking[]
+}
+
+model Booking {
+  id               String        @id @default(cuid())
+  protocol         String        @unique
+  trailId          String
+  sessionId        String?
+  guideId          String?
+  status           BookingStatus  @default(PENDING)
+  scheduledFor     DateTime
+  participantsCount Int           @default(1)
+  contactName      String
+  contactEmail     String
+  contactPhone     String
+  notes            String?
+  source           BookingSource  @default(PUBLIC_PORTAL)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  trail    Trail        @relation(fields: [trailId], references: [id])
+  session  TrailSession? @relation(fields: [sessionId], references: [id])
+  guide    Guide?       @relation(fields: [guideId], references: [id])
+  participants Participant[]
+  activityLogs ActivityLog[]
+}
+
+model Participant {
+  id               String   @id @default(cuid())
+  bookingId        String
+  fullName         String
+  documentId       String?
+  email            String?
+  phone            String?
+  birthDate        DateTime?
+  emergencyContact String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
+}
+
+model Event {
+  id          String    @id @default(cuid())
+  slug        String    @unique
+  title       String
+  description String
+  location    String?
+  startsAt    DateTime
+  endsAt      DateTime?
+  capacity    Int?
+  status      EventStatus @default(DRAFT)
+  highlight   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  registrations EventRegistration[]
+  activityLogs  ActivityLog[]
+}
+
+model EventRegistration {
+  id        String                  @id @default(cuid())
+  eventId   String
+  fullName  String
+  email     String
+  phone     String?
+  status    EventRegistrationStatus @default(PENDING)
+  createdAt DateTime                @default(now())
+  updatedAt DateTime                @updatedAt
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
+}
+
+model FaunaFloraRecord {
+  id             String              @id @default(cuid())
+  slug           String              @unique
+  name           String
+  scientificName String
+  category       FaunaFloraCategory
+  status         ConservationStatus
+  description    String?
+  imageUrl       String?
+  tags           String[]            @default([])
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  bookingId String?
+  eventId   String?
+  trailId   String?
+  message   String
+  loggedAt  DateTime @default(now())
+  createdAt DateTime @default(now())
+  createdBy String?
+
+  booking Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  event   Event?   @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  trail   Trail?   @relation(fields: [trailId], references: [id], onDelete: SetNull)
+
+  @@index([loggedAt])
+}

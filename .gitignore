@@ -1,0 +1,12 @@
+node_modules/
+back-end/node_modules/
+front-end/node_modules/
+.agendunas
+.env
+.env.*
+!.env.example
+!back-end/.env.example
+!front-end/.env.example
+back-end/.env
+front-end/.env
+.DS_Store

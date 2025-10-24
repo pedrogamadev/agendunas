@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import AdminLayout, { type AdminSection } from '../components/admin/AdminLayout'
 import MetricCard, { type MetricCardProps } from '../components/admin/MetricCard'
@@ -7,6 +7,7 @@ import AdminTable, {
   type AdminTableColumn,
   type AdminTableRow,
 } from '../components/admin/AdminTable'
+import { fetchAdminOverview, type AdminOverview } from '../api/admin'
 import './AdminPage.css'
 
 type SectionKey =
@@ -25,6 +26,29 @@ type SectionConfig = {
   description?: string
   actions?: ReactNode
   content: ReactNode
+}
+
+type AdminPageData = {
+  metrics: MetricCardProps[]
+  bookingRows: AdminTableRow[]
+  participantRows: AdminTableRow[]
+  todaysTrails: typeof fallbackTodaysTrails
+  upcomingEvents: typeof fallbackUpcomingEvents
+  recentActivity: typeof fallbackRecentActivity
+  eventCards: typeof fallbackEventCards
+  trailCards: typeof fallbackTrailCards
+  calendar: {
+    title: string
+    days: typeof fallbackCalendarDays
+  }
+  report: {
+    metrics: MetricCardProps[]
+    lineChart: typeof fallbackLineChartData
+    pieChart: typeof fallbackPieChartData
+    barChart: typeof fallbackBarChartData
+  }
+  isLive: boolean
+  error?: string | null
 }
 
 const createIcon = (children: ReactNode) => (
@@ -199,7 +223,7 @@ const participantColumns: AdminTableColumn[] = [
   { id: 'status', label: 'Status', align: 'center' },
 ]
 
-const bookingRows: AdminTableRow[] = [
+const fallbackBookingRows: AdminTableRow[] = [
   {
     id: 'acd-2025-0001',
     cells: {
@@ -258,7 +282,7 @@ const bookingRows: AdminTableRow[] = [
   },
 ]
 
-const participantRows: AdminTableRow[] = [
+const fallbackParticipantRows: AdminTableRow[] = [
   {
     id: 'participant-1',
     cells: {
@@ -320,7 +344,7 @@ const participantRows: AdminTableRow[] = [
   },
 ]
 
-const dashboardMetrics: MetricCardProps[] = [
+const fallbackDashboardMetrics: MetricCardProps[] = [
   {
     title: 'Agendamentos Hoje',
     value: '48',
@@ -347,7 +371,7 @@ const dashboardMetrics: MetricCardProps[] = [
   },
 ]
 
-const todaysTrails = [
+const fallbackTodaysTrails = [
   {
     id: 'trail-1',
     name: 'Trilha Perobinha',
@@ -371,7 +395,7 @@ const todaysTrails = [
   },
 ]
 
-const upcomingEvents = [
+const fallbackUpcomingEvents = [
   {
     id: 'event-1',
     title: 'Mutirão de Educação Ambiental',
@@ -392,14 +416,14 @@ const upcomingEvents = [
   },
 ]
 
-const recentActivity = [
+const fallbackRecentActivity = [
   { id: 'activity-1', time: '22/10/2025 • 14:35', text: 'Agendamento confirmado do cliente notificado' },
   { id: 'activity-2', time: '22/10/2025 • 13:20', text: 'Agendamento remarcado para 23/10' },
   { id: 'activity-3', time: '22/10/2025 • 09:10', text: 'Check-in realizado - Trilha Perobinha' },
   { id: 'activity-4', time: '21/10/2025 • 18:42', text: 'Novo evento publicado: Observação de Aves' },
 ]
 
-const eventCards = [
+const fallbackEventCards = [
   {
     id: 'event-card-1',
     title: 'Mutirão de Educação Ambiental',
@@ -429,7 +453,7 @@ const eventCards = [
   },
 ]
 
-const trailCards = [
+const fallbackTrailCards = [
   {
     id: 'trail-card-1',
     name: 'Trilha Perobinha',
@@ -486,7 +510,7 @@ const guideCards = [
   },
 ]
 
-const calendarDays = [
+const fallbackCalendarDays = [
   { date: '01', events: [] },
   { date: '02', events: [] },
   { date: '03', events: [] },
@@ -520,7 +544,7 @@ const calendarDays = [
   { date: '31', events: [] },
 ]
 
-const reportMetrics: MetricCardProps[] = [
+const fallbackReportMetrics: MetricCardProps[] = [
   {
     title: 'Total de Agendamentos',
     value: '684',
@@ -547,7 +571,7 @@ const reportMetrics: MetricCardProps[] = [
   },
 ]
 
-const lineChartData = [
+const fallbackLineChartData = [
   { label: 'Mai', value: 62 },
   { label: 'Jun', value: 75 },
   { label: 'Jul', value: 82 },
@@ -556,14 +580,14 @@ const lineChartData = [
   { label: 'Out', value: 96 },
 ]
 
-const pieChartData = [
+const fallbackPieChartData = [
   { label: 'Confirmados', value: 58, tone: '#1aa361' },
   { label: 'Pendentes', value: 22, tone: '#f2c94c' },
   { label: 'Cancelados', value: 12, tone: '#eb5757' },
   { label: 'Remarcados', value: 8, tone: '#2d9cdb' },
 ]
 
-const barChartData = [
+const fallbackBarChartData = [
   { label: 'Perobinha', value: 32 },
   { label: 'Ubaú-doce', value: 28 },
   { label: 'Aroeira', value: 24 },
@@ -679,7 +703,7 @@ const BarChart = ({ data }: { data: ChartDatum[] }) => {
   )
 }
 
-const buildSection = (key: SectionKey): SectionConfig => {
+const buildSection = (key: SectionKey, data: AdminPageData): SectionConfig => {
   switch (key) {
     case 'dashboard':
       return {
@@ -687,8 +711,14 @@ const buildSection = (key: SectionKey): SectionConfig => {
         description: 'Visão geral da operação do Parque das Dunas',
         content: (
           <div className="admin-dashboard">
+            {!data.isLive && data.error && (
+              <div className="admin-alert-card">
+                <strong>Exibindo dados de demonstração</strong>
+                <p>{data.error}</p>
+              </div>
+            )}
             <div className="admin-grid admin-grid--metrics">
-              {dashboardMetrics.map((metric) => (
+              {data.metrics.map((metric) => (
                 <MetricCard key={metric.title} {...metric} />
               ))}
             </div>
@@ -700,7 +730,7 @@ const buildSection = (key: SectionKey): SectionConfig => {
                 </header>
                 <div className="admin-card__content">
                   <ul className="admin-trail-list">
-                    {todaysTrails.map((trail) => (
+                    {data.todaysTrails.map((trail) => (
                       <li key={trail.id}>
                         <div className="admin-trail-list__meta">
                           <strong>{trail.name}</strong>
@@ -750,7 +780,7 @@ const buildSection = (key: SectionKey): SectionConfig => {
                 </header>
                 <div className="admin-card__content">
                   <ul className="admin-event-list">
-                    {upcomingEvents.map((event) => (
+                    {data.upcomingEvents.map((event) => (
                       <li key={event.id}>
                         <div>
                           <strong>{event.title}</strong>
@@ -769,7 +799,7 @@ const buildSection = (key: SectionKey): SectionConfig => {
                 </header>
                 <div className="admin-card__content">
                   <ul className="admin-activity-list">
-                    {recentActivity.map((item) => (
+                    {data.recentActivity.map((item) => (
                       <li key={item.id}>
                         <span className="admin-activity-list__time">{item.time}</span>
                         <p>{item.text}</p>
@@ -817,7 +847,7 @@ const buildSection = (key: SectionKey): SectionConfig => {
                 <input type="date" defaultValue="2025-10-22" />
               </label>
             </div>
-            <AdminTable columns={bookingColumns} rows={bookingRows} />
+            <AdminTable columns={bookingColumns} rows={data.bookingRows} />
           </div>
         ),
       }
@@ -854,7 +884,7 @@ const buildSection = (key: SectionKey): SectionConfig => {
                 </select>
               </label>
             </div>
-            <AdminTable columns={participantColumns} rows={participantRows} />
+            <AdminTable columns={participantColumns} rows={data.participantRows} />
           </div>
         ),
       }
@@ -867,7 +897,7 @@ const buildSection = (key: SectionKey): SectionConfig => {
         ),
         content: (
           <div className="admin-grid admin-grid--three">
-            {eventCards.map((event) => (
+            {data.eventCards.map((event) => (
               <article key={event.id} className="admin-event-card">
                 <header>
                   <span className={`admin-tag admin-tag--${event.tagTone}`}>{event.tag}</span>
@@ -903,7 +933,7 @@ const buildSection = (key: SectionKey): SectionConfig => {
         ),
         content: (
           <div className="admin-grid admin-grid--two">
-            {trailCards.map((trail) => (
+            {data.trailCards.map((trail) => (
               <article key={trail.id} className="admin-trail-card">
                 <header>
                   <div>
@@ -1015,7 +1045,7 @@ const buildSection = (key: SectionKey): SectionConfig => {
           <div className="admin-calendar">
             <header className="admin-calendar__header">
               <div>
-                <h2>Outubro 2025</h2>
+                <h2>{data.calendar.title}</h2>
                 <span>Agenda integrada do parque</span>
               </div>
               <div className="admin-calendar__controls">
@@ -1029,7 +1059,7 @@ const buildSection = (key: SectionKey): SectionConfig => {
                   {day}
                 </div>
               ))}
-              {calendarDays.map((day) => (
+              {data.calendar.days.map((day) => (
                 <div key={day.date} className={`admin-calendar__day${day.events.length > 0 ? ' has-events' : ''}`}>
                   <span className="admin-calendar__date">{day.date}</span>
                   <ul>
@@ -1064,20 +1094,20 @@ const buildSection = (key: SectionKey): SectionConfig => {
         content: (
           <div className="admin-reports">
             <div className="admin-grid admin-grid--metrics">
-              {reportMetrics.map((metric) => (
+              {data.report.metrics.map((metric) => (
                 <MetricCard key={metric.title} {...metric} />
               ))}
             </div>
             <div className="admin-grid admin-grid--two">
               <ChartCard title="Agendamentos por Período">
-                <LineChart data={lineChartData} />
+                <LineChart data={data.report.lineChart} />
               </ChartCard>
               <ChartCard title="Distribuição por Status">
-                <PieChart data={pieChartData} />
+                <PieChart data={data.report.pieChart} />
               </ChartCard>
             </div>
             <ChartCard title="Agendamentos por Trilha">
-              <BarChart data={barChartData} />
+              <BarChart data={data.report.barChart} />
             </ChartCard>
           </div>
         ),
@@ -1129,9 +1159,201 @@ const buildSection = (key: SectionKey): SectionConfig => {
 }
 
 function AdminPage() {
+  const [overview, setOverview] = useState<AdminOverview | null>(null)
+  const [overviewError, setOverviewError] = useState<string | null>(null)
+  const [isLoadingOverview, setIsLoadingOverview] = useState(true)
   const [activeSection, setActiveSection] = useState<SectionKey>('dashboard')
 
-  const section = useMemo(() => buildSection(activeSection), [activeSection])
+  useEffect(() => {
+    let isMounted = true
+    setIsLoadingOverview(true)
+
+    fetchAdminOverview()
+      .then((data) => {
+        if (!isMounted) {
+          return
+        }
+        setOverview(data)
+        setOverviewError(null)
+      })
+      .catch((error) => {
+        if (!isMounted) {
+          return
+        }
+        const message =
+          error instanceof Error
+            ? error.message
+            : 'Não foi possível carregar os dados em tempo real.'
+        setOverview(null)
+        setOverviewError(message)
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsLoadingOverview(false)
+        }
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  const adminData = useMemo<AdminPageData>(() => {
+    const difficultyLabels: Record<string, string> = {
+      EASY: 'Leve',
+      MODERATE: 'Moderada',
+      HARD: 'Intensa',
+    }
+
+    const formatDuration = (minutes: number) => {
+      if (!Number.isFinite(minutes)) {
+        return '—'
+      }
+
+      const hours = Math.floor(minutes / 60)
+      const remaining = minutes - hours * 60
+      if (remaining <= 0) {
+        return `${hours}h`
+      }
+
+      return `${hours}h${String(remaining).padStart(2, '0')}`
+    }
+
+    const bookings = overview
+      ? overview.bookings.map((booking) => ({
+          id: booking.id,
+          cells: {
+            protocol: booking.protocol,
+            name: booking.contactName,
+            trail: booking.trailName,
+            date: booking.dateLabel,
+            time: booking.timeLabel,
+            participants: String(booking.participantsCount),
+            guide: booking.guideName ?? '—',
+          },
+          status: booking.statusTone,
+          actions: tableActions,
+        }))
+      : fallbackBookingRows
+
+    const participants = overview
+      ? overview.participants.map((participant) => ({
+          id: participant.id,
+          cells: {
+            name: participant.name,
+            contact: participant.contact,
+            trail: participant.trailName,
+            datetime: participant.datetimeLabel,
+            status: participant.statusTone.label,
+          },
+          status: participant.statusTone,
+          actions: [],
+        }))
+      : fallbackParticipantRows
+
+    const todaysSessions = overview
+      ? overview.todaysSessions.map((session) => ({
+          id: session.id,
+          name: session.trailName,
+          schedule: session.scheduleLabel,
+          occupancy: session.occupancy,
+          capacity: session.capacityLabel,
+        }))
+      : fallbackTodaysTrails
+
+    const upcoming = overview
+      ? overview.upcomingEvents.map((event) => ({
+          id: event.id,
+          title: event.title,
+          description: event.description,
+          date: event.dateLabel,
+        }))
+      : fallbackUpcomingEvents
+
+    const activities = overview
+      ? overview.recentActivity.map((item) => ({
+          id: item.id,
+          time: item.label,
+          text: item.message,
+        }))
+      : fallbackRecentActivity
+
+    const eventCards = overview
+      ? overview.eventCards.map((event) => ({
+          id: event.id,
+          title: event.title,
+          description: event.description,
+          tag: event.tag ?? event.status ?? 'Atualização',
+          tagTone: event.tagTone ?? 'info',
+          date: event.dateLabel,
+          capacity: event.capacityLabel ?? '—',
+        }))
+      : fallbackEventCards
+
+    const trails = overview
+      ? overview.trailCards.map((trail) => ({
+          id: trail.id,
+          name: trail.name,
+          difficulty: difficultyLabels[trail.difficulty] ?? trail.difficulty,
+          duration: formatDuration(trail.durationMinutes),
+          capacity: trail.capacityLabel ?? '—',
+          status: trail.status,
+          description: trail.description,
+        }))
+      : fallbackTrailCards
+
+    const calendar = overview
+      ? {
+          title: `${overview.calendar.month} ${overview.calendar.year}`,
+          days: overview.calendar.days.map((day) => ({
+            date: day.label,
+            events: day.events,
+          })),
+        }
+      : {
+          title: 'Outubro 2025',
+          days: fallbackCalendarDays,
+        }
+
+    const report = overview
+      ? {
+          metrics: overview.report.reportMetrics,
+          lineChart: overview.report.lineChartData,
+          pieChart: overview.report.pieChartData,
+          barChart: overview.report.barChartData,
+        }
+      : {
+          metrics: fallbackReportMetrics,
+          lineChart: fallbackLineChartData,
+          pieChart: fallbackPieChartData,
+          barChart: fallbackBarChartData,
+        }
+
+    return {
+      metrics: overview?.metrics ?? fallbackDashboardMetrics,
+      bookingRows: bookings,
+      participantRows: participants,
+      todaysTrails: todaysSessions,
+      upcomingEvents: upcoming,
+      recentActivity: activities,
+      eventCards,
+      trailCards: trails,
+      calendar,
+      report,
+      isLive: Boolean(overview),
+      error: overview
+        ? null
+        : isLoadingOverview
+        ? 'Carregando dados em tempo real...'
+        : overviewError ?? 'Dados ao vivo indisponíveis no momento.',
+    }
+  }, [
+    isLoadingOverview,
+    overview,
+    overviewError,
+  ])
+
+  const section = useMemo(() => buildSection(activeSection, adminData), [activeSection, adminData])
 
   return (
     <AdminLayout

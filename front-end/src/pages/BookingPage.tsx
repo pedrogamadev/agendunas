@@ -10,6 +10,12 @@ import {
 } from 'react'
 import type { PageProps } from '../App'
 import { useTranslation } from '../i18n/TranslationProvider'
+import {
+  createPublicBooking,
+  fetchPublicGuides,
+  fetchPublicTrails,
+  type CreateBookingPayload,
+} from '../api/public'
 
 type WeatherConditionKey =
   | 'clear'
@@ -44,24 +50,126 @@ type WeatherState =
 function BookingPage({ navigation, searchParams }: PageProps) {
   const { content, language } = useTranslation()
   const booking = content.booking
+  const guidesContent = content.guides
+  type GuideOption = (typeof guidesContent.guides)[number] & { databaseId?: string }
+  type TrailOption = (typeof booking.trails)[number] & { databaseId?: string }
+  const [guideOptions, setGuideOptions] = useState<GuideOption[]>(
+    guidesContent.guides.map((guide) => ({ ...guide, databaseId: guide.id })),
+  )
+  const [trailOptions, setTrailOptions] = useState<TrailOption[]>(
+    booking.trails.map((trail) => ({ ...trail, databaseId: trail.id })),
+  )
   const guideId = searchParams.get('guide')
-  const selectedGuide = guideId
-    ? content.guides.guides.find((guide) => guide.id === guideId)
-    : undefined
+  const selectedGuide = guideId ? guideOptions.find((guide) => guide.id === guideId) : undefined
   const selectedTrail = selectedGuide
-    ? booking.trails.find((trail) => trail.id === selectedGuide.featuredTrailId)
+    ? trailOptions.find((trail) => trail.id === selectedGuide.featuredTrailId)
     : undefined
   const [selectedDate, setSelectedDate] = useState('')
   const [weatherState, setWeatherState] = useState<WeatherState>({ status: 'idle' })
   const [showRainWarning, setShowRainWarning] = useState(false)
   const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false)
   const [showTermsModal, setShowTermsModal] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submissionResult, setSubmissionResult] = useState<
+    | { type: 'success'; message: string; protocol?: string }
+    | { type: 'error'; message: string }
+    | null
+  >(null)
   const abortControllerRef = useRef<AbortController | null>(null)
   const allowRainySubmitRef = useRef(false)
   const formRef = useRef<HTMLFormElement | null>(null)
   const heroStyle = {
     '--hero-background-image': `url(${booking.hero.photo})`,
   } as CSSProperties
+
+  useEffect(() => {
+    let isMounted = true
+
+    const difficultyLabels: Record<string, string> = {
+      EASY: 'Leve',
+      MODERATE: 'Moderada',
+      HARD: 'Desafiadora',
+    }
+
+    const formatDuration = (minutes: number) => {
+      if (!Number.isFinite(minutes)) {
+        return ''
+      }
+
+      const hours = Math.floor(minutes / 60)
+      const remaining = Math.max(0, minutes - hours * 60)
+      if (remaining === 0) {
+        return `${hours}h`
+      }
+
+      return `${hours}h${String(remaining).padStart(2, '0')}`
+    }
+
+    fetchPublicTrails()
+      .then((data) => {
+        if (!isMounted || data.length === 0) {
+          return
+        }
+
+        const mapped: TrailOption[] = data.map((trail) => ({
+          id: trail.slug,
+          databaseId: trail.id,
+          label: trail.name,
+          description: trail.summary ?? trail.description,
+          duration: formatDuration(trail.durationMinutes),
+          difficulty: difficultyLabels[trail.difficulty] ?? trail.difficulty,
+        }))
+
+        if (mapped.length > 0) {
+          setTrailOptions(mapped)
+        }
+      })
+      .catch(() => {
+        /* mantém opções padrão quando API estiver indisponível */
+      })
+
+    fetchPublicGuides()
+      .then((data) => {
+        if (!isMounted || data.length === 0) {
+          return
+        }
+
+        const mapped: GuideOption[] = data.map((guide) => ({
+          id: guide.slug,
+          databaseId: guide.id,
+          name: guide.name,
+          photo: guide.photoUrl ?? guidesContent.guides[0]?.photo ?? '',
+          speciality: guide.speciality ?? guidesContent.guides[0]?.speciality ?? '',
+          description:
+            guide.summary ?? guide.biography ?? guidesContent.guides[0]?.description ?? '',
+          trails: guide.toursCompleted > 0 ? guide.toursCompleted : guide.trails.length,
+          experience: `${guide.experienceYears} anos guiando trilhas`,
+          rating: guide.rating ?? guidesContent.guides[0]?.rating ?? 0,
+          certifications:
+            guide.certifications.length > 0
+              ? guide.certifications
+              : guidesContent.guides[0]?.certifications ?? [],
+          languages: guide.languages.length > 0 ? guide.languages : ['Português'],
+          curiosities:
+            guide.curiosities.length > 0
+              ? guide.curiosities
+              : guidesContent.guides[0]?.curiosities ?? [],
+          featuredTrailId:
+            guide.featuredTrail?.slug ?? guidesContent.guides[0]?.featuredTrailId ?? undefined,
+        }))
+
+        if (mapped.length > 0) {
+          setGuideOptions(mapped)
+        }
+      })
+      .catch(() => {
+        /* mantém o catálogo estático se não houver API */
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [booking.trails, guidesContent.guides])
 
   const dateFormatter = useMemo(() => {
     const locale = language === 'pt' ? 'pt-BR' : 'en-US'
@@ -233,16 +341,79 @@ function BookingPage({ navigation, searchParams }: PageProps) {
   }, [booking.rainWarningModal.description, formatForecastDate, isHighRainProbability, weatherState])
 
   const handleSubmit = useCallback(
-    (event: FormEvent<HTMLFormElement>) => {
+    async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault()
+
+      if (isSubmitting) {
+        return
+      }
+
       if (isHighRainProbability && !allowRainySubmitRef.current) {
-        event.preventDefault()
         setShowRainWarning(true)
         return
       }
 
       allowRainySubmitRef.current = false
+      setSubmissionResult(null)
+      setIsSubmitting(true)
+
+      const form = event.currentTarget
+      const formData = new FormData(form)
+      const trailKey = String(formData.get('trail') ?? '')
+      const trailSelection = trailOptions.find((trail) => trail.id === trailKey)
+
+      if (!trailSelection) {
+        setSubmissionResult({ type: 'error', message: 'Selecione uma trilha válida.' })
+        setIsSubmitting(false)
+        return
+      }
+
+      const participantsRaw = Number.parseInt(String(formData.get('participants') ?? '1'), 10)
+      const participantsCount = Number.isNaN(participantsRaw) ? 1 : participantsRaw
+
+      const payload: CreateBookingPayload = {
+        trailId: trailSelection.databaseId ?? trailSelection.id,
+        contactName: String(formData.get('name') ?? ''),
+        contactEmail: String(formData.get('email') ?? ''),
+        contactPhone: String(formData.get('phone') ?? ''),
+        scheduledDate: String(formData.get('date') ?? ''),
+        scheduledTime: String(formData.get('time') ?? '') || undefined,
+        participantsCount,
+        notes: (formData.get('notes') as string | null) ?? undefined,
+      }
+
+      const guideSelection = guideId ? guideOptions.find((guide) => guide.id === guideId) : undefined
+      if (guideSelection) {
+        payload.guideId = guideSelection.databaseId ?? guideSelection.id
+      }
+
+      try {
+        const result = await createPublicBooking(payload)
+        setSubmissionResult({
+          type: 'success',
+          message: 'Solicitação registrada! Em breve entraremos em contato para confirmação.',
+          protocol: result.protocol,
+        })
+        form.reset()
+        setHasAcceptedTerms(false)
+        setSelectedDate('')
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : 'Não foi possível enviar sua solicitação. Tente novamente mais tarde.'
+        setSubmissionResult({ type: 'error', message })
+      } finally {
+        setIsSubmitting(false)
+      }
     },
-    [isHighRainProbability],
+    [
+      guideId,
+      guideOptions,
+      isHighRainProbability,
+      isSubmitting,
+      trailOptions,
+    ],
   )
 
   const handleCloseRainWarning = useCallback(() => {
@@ -300,7 +471,7 @@ function BookingPage({ navigation, searchParams }: PageProps) {
                   <option value="" disabled>
                     {booking.form.selectPlaceholder}
                   </option>
-                  {booking.trails.map((trail) => (
+                  {trailOptions.map((trail) => (
                     <option key={trail.id} value={trail.id}>
                       {trail.label} · {trail.duration}
                     </option>
@@ -344,8 +515,25 @@ function BookingPage({ navigation, searchParams }: PageProps) {
                 {booking.terms.openModal}
               </button>
             </div>
+            {submissionResult && (
+              <div
+                className={`form-feedback form-feedback--${submissionResult.type}`}
+                role="status"
+                aria-live="polite"
+              >
+                <p>
+                  {submissionResult.message}
+                  {submissionResult.type === 'success' && submissionResult.protocol ? (
+                    <>
+                      <br />
+                      <strong>Protocolo:</strong> {submissionResult.protocol}
+                    </>
+                  ) : null}
+                </p>
+              </div>
+            )}
             <div className="form-actions">
-              <button type="submit" className="btn solid" disabled={!hasAcceptedTerms}>
+              <button type="submit" className="btn solid" disabled={!hasAcceptedTerms || isSubmitting}>
                 {booking.form.submit}
               </button>
               <p className="form-disclaimer">{booking.form.disclaimer}</p>

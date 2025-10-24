@@ -1,16 +1,66 @@
 import { useEffect, useState, type CSSProperties } from 'react'
 import type { PageProps } from '../App'
 import { useTranslation } from '../i18n/TranslationProvider'
+import { fetchPublicGuides } from '../api/public'
 
 function GuidesPage({ navigation, onNavigate }: PageProps) {
   const { content } = useTranslation()
   const guidesContent = content.guides
-  type Guide = (typeof guidesContent.guides)[number]
+  type Guide = (typeof guidesContent.guides)[number] & { databaseId?: string }
+  const [guides, setGuides] = useState<Guide[]>(
+    guidesContent.guides.map((guide) => ({ ...guide, databaseId: guide.id })),
+  )
   const [selectedGuide, setSelectedGuide] = useState<Guide | null>(null)
 
   const heroStyle = {
     '--hero-background-image': `url(${guidesContent.header.photo})`,
   } as CSSProperties
+
+  useEffect(() => {
+    let isMounted = true
+
+    fetchPublicGuides()
+      .then((data) => {
+        if (!isMounted || data.length === 0) {
+          return
+        }
+
+        const mapped: Guide[] = data.map((guide) => ({
+          id: guide.slug,
+          databaseId: guide.id,
+          name: guide.name,
+          photo: guide.photoUrl ?? guidesContent.guides[0]?.photo ?? '',
+          speciality: guide.speciality ?? guidesContent.guides[0]?.speciality ?? '',
+          description:
+            guide.summary ?? guide.biography ?? guidesContent.guides[0]?.description ?? '',
+          trails: guide.toursCompleted > 0 ? guide.toursCompleted : guide.trails.length,
+          experience: `${guide.experienceYears} anos guiando trilhas`,
+          rating: guide.rating ?? guidesContent.guides[0]?.rating ?? 0,
+          certifications:
+            guide.certifications.length > 0
+              ? guide.certifications
+              : guidesContent.guides[0]?.certifications ?? [],
+          languages: guide.languages.length > 0 ? guide.languages : ['Português'],
+          curiosities:
+            guide.curiosities.length > 0
+              ? guide.curiosities
+              : guidesContent.guides[0]?.curiosities ?? [],
+          featuredTrailId:
+            guide.featuredTrail?.slug ?? guidesContent.guides[0]?.featuredTrailId ?? undefined,
+        }))
+
+        if (mapped.length > 0) {
+          setGuides(mapped)
+        }
+      })
+      .catch(() => {
+        /* mantém dados estáticos caso a API não esteja disponível */
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [guidesContent.guides])
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -58,7 +108,7 @@ function GuidesPage({ navigation, onNavigate }: PageProps) {
 
       <main className="page-main guides-main">
         <section className="guide-grid" aria-label={guidesContent.gridAriaLabel}>
-          {guidesContent.guides.map((guide) => (
+          {guides.map((guide) => (
             <article key={guide.id} className="guide-card">
               <div className="guide-card-header">
                 <button
