@@ -35,7 +35,7 @@ function FaunaFloraPage({ navigation }: PageProps) {
           id: item.slug,
           name: item.name,
           scientificName: item.scientificName,
-          type: item.category.toLowerCase(),
+          type: (item.category === 'FAUNA' ? 'fauna' : 'flora') as 'fauna' | 'flora',
           status: statusLabels[item.status] ?? item.status,
           description: item.description ?? '',
           image: item.imageUrl ?? faunaFlora.gallery[0]?.image ?? '',

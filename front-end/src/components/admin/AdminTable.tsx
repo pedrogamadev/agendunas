@@ -18,7 +18,7 @@ type AdminTableRow = {
   cells: Record<string, ReactNode>
   status?: {
     label: string
-    tone?: 'success' | 'warning' | 'danger' | 'info'
+    tone?: 'success' | 'warning' | 'danger' | 'info' | 'neutral'
   }
   actions?: AdminTableAction[]
 }

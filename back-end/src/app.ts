@@ -9,7 +9,7 @@ import { notFoundHandler } from './middlewares/not-found-handler.js'
 const app: Application = express()
 
 const allowedOrigins = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(',').map((origin) => origin.trim()).filter(Boolean)
+  ? process.env.ALLOWED_ORIGINS.split(',').map((origin: string) => origin.trim()).filter(Boolean)
   : undefined
 
 app.use(

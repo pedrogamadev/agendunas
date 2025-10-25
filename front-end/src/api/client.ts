@@ -1,4 +1,4 @@
-export type HttpMethod = 'GET' | 'POST'
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 
 const DEFAULT_BASE_URL = 'http://localhost:3001/api'
 
@@ -11,11 +11,20 @@ function getBaseUrl() {
 }
 
 async function parseResponse<T>(response: Response): Promise<T> {
+  if (response.status === 204) {
+    return undefined as T
+  }
+
   const contentType = response.headers.get('content-type')
+
   if (!contentType || !contentType.includes('application/json')) {
-    return response.text().then((text) => {
-      throw new Error(text || `Erro inesperado (HTTP ${response.status})`)
-    })
+    const text = await response.text()
+
+    if (response.ok && text.trim().length === 0) {
+      return undefined as T
+    }
+
+    throw new Error(text || `Erro inesperado (HTTP ${response.status})`)
   }
 
   const payload = (await response.json()) as { data?: T; message?: string }

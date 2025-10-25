@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import type { ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import type { ChangeEvent, FormEvent, ReactNode } from 'react'
 import AdminLayout, { type AdminSection } from '../components/admin/AdminLayout'
 import MetricCard, { type MetricCardProps } from '../components/admin/MetricCard'
 import AdminTable, {
@@ -7,7 +7,17 @@ import AdminTable, {
   type AdminTableColumn,
   type AdminTableRow,
 } from '../components/admin/AdminTable'
-import { fetchAdminOverview, type AdminOverview } from '../api/admin'
+import {
+  fetchAdminOverview,
+  fetchAdminGuides,
+  createAdminGuide,
+  updateAdminGuide,
+  deleteAdminGuide,
+  type AdminOverview,
+  type AdminGuide,
+  type AdminGuidePayload,
+  type AdminGuideTrail,
+} from '../api/admin'
 import './AdminPage.css'
 
 type SectionKey =
@@ -49,6 +59,46 @@ type AdminPageData = {
   }
   isLive: boolean
   error?: string | null
+}
+
+type GuideFormState = {
+  name: string
+  slug: string
+  speciality: string
+  summary: string
+  biography: string
+  experienceYears: string
+  languages: string
+  certifications: string
+  photoUrl: string
+  isFeatured: boolean
+  isActive: boolean
+  featuredTrailId: string
+  trailIds: string[]
+}
+
+type GuidesState = {
+  items: AdminGuide[]
+  trails: AdminGuideTrail[]
+  isLoading: boolean
+  isInitialized: boolean
+  error: string | null
+}
+
+const initialGuideFormState: GuideFormState = {
+  name: '',
+  slug: '',
+  speciality: '',
+  summary: '',
+  biography: '',
+  experienceYears: '0',
+  languages: '',
+  certifications: '',
+  photoUrl: '',
+  isFeatured: false,
+  isActive: true,
+  featuredTrailId: '',
+  trailIds: [],
 }
 
 const createIcon = (children: ReactNode) => (
@@ -483,33 +533,6 @@ const fallbackTrailCards = [
   },
 ]
 
-const guideCards = [
-  {
-    id: 'guide-card-1',
-    name: 'Carlos Mendes',
-    initials: 'CM',
-    phone: '(84) 99783-4567',
-    availability: 'Seg a Sex • 07h - 14h',
-    trails: ['Trilha Perobinha', 'Trilha Ubaú-doce'],
-  },
-  {
-    id: 'guide-card-2',
-    name: 'Ana Paula Santos',
-    initials: 'AS',
-    phone: '(84) 99612-5678',
-    availability: 'Qua a Dom • 08h - 18h',
-    trails: ['Trilha Perobinha', 'Trilha do Aroeira'],
-  },
-  {
-    id: 'guide-card-3',
-    name: 'Roberto Silva',
-    initials: 'RS',
-    phone: '(84) 99845-6720',
-    availability: 'Sáb e Dom • 06h - 14h',
-    trails: ['Trilha do Aroeira', 'Trilha Foz do Sol'],
-  },
-]
-
 const fallbackCalendarDays = [
   { date: '01', events: [] },
   { date: '02', events: [] },
@@ -703,7 +726,11 @@ const BarChart = ({ data }: { data: ChartDatum[] }) => {
   )
 }
 
-const buildSection = (key: SectionKey, data: AdminPageData): SectionConfig => {
+const buildSection = (key: SectionKey, data: AdminPageData, guidesSection: SectionConfig): SectionConfig => {
+  if (key === 'guias') {
+    return guidesSection
+  }
+
   switch (key) {
     case 'dashboard':
       return {
@@ -980,56 +1007,6 @@ const buildSection = (key: SectionKey, data: AdminPageData): SectionConfig => {
           </div>
         ),
       }
-    case 'guias':
-      return {
-        title: 'Guias',
-        description: 'Gerencie disponibilidade e especialidades dos guias',
-        actions: (
-          <button type="button" className="admin-primary-button">Novo Guia</button>
-        ),
-        content: (
-          <div className="admin-grid admin-grid--three">
-            {guideCards.map((guide) => (
-              <article key={guide.id} className="admin-guide-card">
-                <header>
-                  <div className="admin-guide-card__avatar" aria-hidden="true">
-                    {guide.initials}
-                  </div>
-                  <div>
-                    <h3>{guide.name}</h3>
-                    <span>{guide.phone}</span>
-                  </div>
-                </header>
-                <div className="admin-guide-card__content">
-                  <strong>Disponibilidade</strong>
-                  <span>{guide.availability}</span>
-                  <strong>Trilhas qualificadas</strong>
-                  <ul>
-                    {guide.trails.map((trail) => (
-                      <li key={trail}>{trail}</li>
-                    ))}
-                  </ul>
-                </div>
-                <div className="admin-guide-card__actions">
-                  <button type="button" className="admin-secondary-button">Editar</button>
-                  <button type="button" className="admin-secondary-button">Disponibilidade</button>
-                </div>
-              </article>
-            ))}
-            <aside className="admin-card admin-guide-note">
-              <header className="admin-card__header">
-                <h2>Gestão de Guias</h2>
-              </header>
-              <div className="admin-card__content">
-                <p>
-                  Configure turnos, folgas automáticas e critérios de escalas. Atualize certificações e históricos
-                  de cada guia em um só lugar.
-                </p>
-              </div>
-            </aside>
-          </div>
-        ),
-      }
     case 'calendario':
       return {
         title: 'Calendário',
@@ -1163,6 +1140,242 @@ function AdminPage() {
   const [overviewError, setOverviewError] = useState<string | null>(null)
   const [isLoadingOverview, setIsLoadingOverview] = useState(true)
   const [activeSection, setActiveSection] = useState<SectionKey>('dashboard')
+  const [guidesState, setGuidesState] = useState<GuidesState>({
+    items: [],
+    trails: [],
+    isLoading: false,
+    isInitialized: false,
+    error: null,
+  })
+  const [guideForm, setGuideForm] = useState<GuideFormState>(initialGuideFormState)
+  const [editingGuideId, setEditingGuideId] = useState<string | null>(null)
+  const [isSavingGuide, setIsSavingGuide] = useState(false)
+  const [guideFeedback, setGuideFeedback] = useState<string | null>(null)
+
+  const sortGuides = useCallback((items: AdminGuide[]) => {
+    return items
+      .slice()
+      .sort((a: AdminGuide, b: AdminGuide) => {
+        if (a.isFeatured && !b.isFeatured) {
+          return -1
+        }
+        if (!a.isFeatured && b.isFeatured) {
+          return 1
+        }
+        return a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' })
+      })
+  }, [])
+
+  const loadGuides = useCallback(async () => {
+    setGuidesState((state) => ({ ...state, isLoading: true }))
+
+    try {
+      const payload = await fetchAdminGuides()
+      setGuidesState({
+        items: sortGuides(payload.guides),
+        trails: payload.trails,
+        isLoading: false,
+        isInitialized: true,
+        error: null,
+      })
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Não foi possível carregar os guias cadastrados.'
+      setGuidesState((state) => ({
+        ...state,
+        isLoading: false,
+        isInitialized: true,
+        error: message,
+      }))
+    }
+  }, [sortGuides])
+
+  useEffect(() => {
+    if (activeSection === 'guias' && !guidesState.isInitialized) {
+      loadGuides()
+    }
+  }, [activeSection, guidesState.isInitialized, loadGuides])
+
+  const resetGuideForm = useCallback(() => {
+    setGuideForm(initialGuideFormState)
+    setEditingGuideId(null)
+  }, [])
+
+  const splitList = useCallback((value: string) => {
+    return value
+      .split(',')
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0)
+  }, [])
+
+  const handleStartNewGuide = useCallback(() => {
+    resetGuideForm()
+    setGuideFeedback(null)
+    setGuidesState((state) => ({ ...state, error: null }))
+  }, [resetGuideForm])
+
+  const handleTrailSelectionChange = useCallback((event: ChangeEvent<HTMLSelectElement>) => {
+    const selected = Array.from(event.target.selectedOptions).map((option) => option.value)
+    setGuideForm((prev) => {
+      const uniqueSelected = Array.from(new Set(selected))
+      const shouldClearFeatured =
+        prev.featuredTrailId.length > 0 && !uniqueSelected.includes(prev.featuredTrailId)
+      return {
+        ...prev,
+        trailIds: uniqueSelected,
+        featuredTrailId: shouldClearFeatured ? '' : prev.featuredTrailId,
+      }
+    })
+  }, [])
+
+  const handleEditGuide = useCallback(
+    (guide: AdminGuide) => {
+      setGuideForm({
+        name: guide.name,
+        slug: guide.slug,
+        speciality: guide.speciality ?? '',
+        summary: guide.summary ?? '',
+        biography: guide.biography ?? '',
+        experienceYears: String(guide.experienceYears ?? 0),
+        languages: guide.languages.join(', '),
+        certifications: guide.certifications.join(', '),
+        photoUrl: guide.photoUrl ?? '',
+        isFeatured: guide.isFeatured,
+        isActive: guide.isActive,
+        featuredTrailId: guide.featuredTrailId ?? '',
+        trailIds: guide.trails.map((trail) => trail.id),
+      })
+      setEditingGuideId(guide.id)
+      setGuideFeedback(null)
+      setGuidesState((state) => ({ ...state, error: null }))
+    },
+    [],
+  )
+
+  const handleGuideSubmit = useCallback(
+    async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault()
+
+      const trimmedName = guideForm.name.trim()
+      const trimmedSlug = guideForm.slug.trim()
+
+      if (!trimmedName) {
+        setGuidesState((state) => ({ ...state, error: 'Informe o nome do guia.' }))
+        return
+      }
+
+      if (!trimmedSlug) {
+        setGuidesState((state) => ({ ...state, error: 'Informe o identificador (slug) do guia.' }))
+        return
+      }
+
+      const parsedExperience = Number.parseInt(guideForm.experienceYears, 10)
+      const experienceYears = Number.isFinite(parsedExperience) && parsedExperience >= 0 ? parsedExperience : 0
+
+      const featuredTrailId = guideForm.featuredTrailId.trim()
+      const selectedTrailIds = new Set<string>(guideForm.trailIds)
+
+      if (featuredTrailId) {
+        selectedTrailIds.add(featuredTrailId)
+      }
+
+      const payload: AdminGuidePayload = {
+        name: trimmedName,
+        slug: trimmedSlug,
+        speciality: guideForm.speciality.trim() || null,
+        summary: guideForm.summary.trim() || null,
+        biography: guideForm.biography.trim() || null,
+        experienceYears,
+        languages: splitList(guideForm.languages),
+        certifications: splitList(guideForm.certifications),
+        photoUrl: guideForm.photoUrl.trim() || null,
+        isFeatured: guideForm.isFeatured,
+        isActive: guideForm.isActive,
+        featuredTrailId: featuredTrailId || null,
+        trailIds: Array.from(selectedTrailIds),
+      }
+
+      setIsSavingGuide(true)
+      setGuideFeedback(null)
+      setGuidesState((state) => ({ ...state, error: null }))
+
+      try {
+        const savedGuide = editingGuideId
+          ? await updateAdminGuide(editingGuideId, payload)
+          : await createAdminGuide(payload)
+
+        setGuidesState((state) => ({
+          ...state,
+          items: sortGuides(
+            editingGuideId
+              ? state.items.map((item) => (item.id === savedGuide.id ? savedGuide : item))
+              : [...state.items, savedGuide],
+          ),
+          error: null,
+        }))
+
+        setGuideFeedback(
+          editingGuideId ? 'Guia atualizado com sucesso.' : 'Guia cadastrado com sucesso.',
+        )
+        resetGuideForm()
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Não foi possível salvar o guia.'
+        setGuidesState((state) => ({ ...state, error: message }))
+      } finally {
+        setIsSavingGuide(false)
+      }
+    },
+    [
+      guideForm.biography,
+      guideForm.certifications,
+      guideForm.experienceYears,
+      guideForm.featuredTrailId,
+      guideForm.isActive,
+      guideForm.isFeatured,
+      guideForm.languages,
+      guideForm.name,
+      guideForm.photoUrl,
+      guideForm.slug,
+      guideForm.speciality,
+      guideForm.summary,
+      guideForm.trailIds,
+      splitList,
+      editingGuideId,
+      sortGuides,
+      resetGuideForm,
+    ],
+  )
+
+  const handleDeleteGuide = useCallback(
+    async (guide: AdminGuide) => {
+      const confirmed = window.confirm(`Deseja realmente remover o guia ${guide.name}?`)
+      if (!confirmed) {
+        return
+      }
+
+      setGuidesState((state) => ({ ...state, isLoading: true, error: null }))
+
+      try {
+        await deleteAdminGuide(guide.id)
+        setGuidesState((state) => ({
+          ...state,
+          items: state.items.filter((item) => item.id !== guide.id),
+          isLoading: false,
+          error: null,
+        }))
+
+        if (editingGuideId === guide.id) {
+          resetGuideForm()
+        }
+
+        setGuideFeedback('Guia removido com sucesso.')
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Não foi possível remover o guia.'
+        setGuidesState((state) => ({ ...state, isLoading: false, error: message }))
+      }
+    },
+    [editingGuideId, resetGuideForm],
+  )
 
   useEffect(() => {
     let isMounted = true
@@ -1353,7 +1566,297 @@ function AdminPage() {
     overviewError,
   ])
 
-  const section = useMemo(() => buildSection(activeSection, adminData), [activeSection, adminData])
+  const guidesSection: SectionConfig = {
+    title: 'Guias',
+    description: 'Gerencie disponibilidade, trilhas qualificadas e destaque de guias do parque',
+    actions: (
+      <button
+        type="button"
+        className="admin-primary-button"
+        onClick={handleStartNewGuide}
+        disabled={isSavingGuide}
+      >
+        Novo Guia
+      </button>
+    ),
+    content: (
+      <div className="admin-guides">
+        <section className="admin-card admin-guides__form">
+          <header className="admin-card__header">
+            <h2>{editingGuideId ? 'Editar guia' : 'Cadastrar guia'}</h2>
+            <span>
+              {editingGuideId
+                ? 'Atualize as informações e a disponibilidade do guia selecionado.'
+                : 'Preencha os dados para registrar um novo guia credenciado.'}
+            </span>
+          </header>
+          <form className="admin-guides__form-fields" onSubmit={handleGuideSubmit}>
+            <div className="admin-guides__grid">
+              <label>
+                Nome do guia
+                <input
+                  type="text"
+                  value={guideForm.name}
+                  onChange={(event) => setGuideForm((prev) => ({ ...prev, name: event.target.value }))}
+                  placeholder="Ex.: Maria Santos"
+                  required
+                />
+              </label>
+              <label>
+                Identificador (slug)
+                <input
+                  type="text"
+                  value={guideForm.slug}
+                  onChange={(event) => setGuideForm((prev) => ({ ...prev, slug: event.target.value }))}
+                  placeholder="Ex.: maria-santos"
+                  required
+                />
+                <small>Utilizado em URLs e integrações externas.</small>
+              </label>
+              <label>
+                Especialidade
+                <input
+                  type="text"
+                  value={guideForm.speciality}
+                  onChange={(event) =>
+                    setGuideForm((prev) => ({ ...prev, speciality: event.target.value }))
+                  }
+                  placeholder="Ex.: Educação ambiental"
+                />
+              </label>
+              <label>
+                Anos de experiência
+                <input
+                  type="number"
+                  min={0}
+                  value={guideForm.experienceYears}
+                  onChange={(event) =>
+                    setGuideForm((prev) => ({ ...prev, experienceYears: event.target.value }))
+                  }
+                />
+              </label>
+              <label className="admin-guides__full">
+                Resumo
+                <textarea
+                  value={guideForm.summary}
+                  onChange={(event) => setGuideForm((prev) => ({ ...prev, summary: event.target.value }))}
+                  placeholder="Descrição breve apresentada nos cartões públicos"
+                  rows={3}
+                />
+              </label>
+              <label className="admin-guides__full">
+                Biografia
+                <textarea
+                  value={guideForm.biography}
+                  onChange={(event) => setGuideForm((prev) => ({ ...prev, biography: event.target.value }))}
+                  placeholder="Conte a história e diferenciais do guia"
+                  rows={4}
+                />
+              </label>
+              <label>
+                Idiomas (separados por vírgula)
+                <input
+                  type="text"
+                  value={guideForm.languages}
+                  onChange={(event) => setGuideForm((prev) => ({ ...prev, languages: event.target.value }))}
+                  placeholder="Português, Inglês"
+                />
+              </label>
+              <label>
+                Certificações (separadas por vírgula)
+                <input
+                  type="text"
+                  value={guideForm.certifications}
+                  onChange={(event) =>
+                    setGuideForm((prev) => ({ ...prev, certifications: event.target.value }))
+                  }
+                  placeholder="Primeiros socorros, Condução ambiental"
+                />
+              </label>
+              <label>
+                Foto (URL)
+                <input
+                  type="url"
+                  value={guideForm.photoUrl}
+                  onChange={(event) => setGuideForm((prev) => ({ ...prev, photoUrl: event.target.value }))}
+                  placeholder="https://..."
+                />
+              </label>
+              <div className="admin-guides__toggles">
+                <label className="admin-guides__checkbox">
+                  <input
+                    type="checkbox"
+                    checked={guideForm.isFeatured}
+                    onChange={(event) =>
+                      setGuideForm((prev) => ({ ...prev, isFeatured: event.target.checked }))
+                    }
+                  />
+                  <span>Destacar guia nas páginas públicas</span>
+                </label>
+                <label className="admin-guides__checkbox">
+                  <input
+                    type="checkbox"
+                    checked={guideForm.isActive}
+                    onChange={(event) =>
+                      setGuideForm((prev) => ({ ...prev, isActive: event.target.checked }))
+                    }
+                  />
+                  <span>Guia ativo para agendamentos</span>
+                </label>
+              </div>
+              <label className="admin-guides__full">
+                Trilhas habilitadas
+                <select
+                  multiple
+                  value={guideForm.trailIds}
+                  onChange={handleTrailSelectionChange}
+                  size={Math.min(Math.max(guidesState.trails.length, 4), 8)}
+                >
+                  {guidesState.trails.map((trail) => (
+                    <option key={trail.id} value={trail.id}>
+                      {trail.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Trilha destaque
+                <select
+                  value={guideForm.featuredTrailId}
+                  onChange={(event) =>
+                    setGuideForm((prev) => ({ ...prev, featuredTrailId: event.target.value }))
+                  }
+                  disabled={guidesState.trails.length === 0}
+                >
+                  <option value="">Nenhuma</option>
+                  {guidesState.trails.map((trail) => (
+                    <option key={trail.id} value={trail.id}>
+                      {trail.name}
+                    </option>
+                  ))}
+                </select>
+                <small>Quando preenchido, o guia será exibido como destaque nessa trilha.</small>
+              </label>
+            </div>
+            <div className="admin-guides__form-actions">
+              {editingGuideId ? (
+                <button type="button" className="admin-secondary-button" onClick={handleStartNewGuide}>
+                  Cancelar edição
+                </button>
+              ) : null}
+              <button type="submit" className="admin-primary-button" disabled={isSavingGuide}>
+                {isSavingGuide
+                  ? 'Salvando...'
+                  : editingGuideId
+                  ? 'Salvar alterações'
+                  : 'Cadastrar guia'}
+              </button>
+            </div>
+          </form>
+        </section>
+        <section className="admin-card admin-guides__list">
+          <header className="admin-card__header">
+            <h2>Guias cadastrados</h2>
+            <span>Acompanhe especialistas habilitados e suas trilhas qualificadas.</span>
+          </header>
+          <div className="admin-card__content">
+            {guidesState.error ? (
+              <div className="admin-alert admin-alert--error">{guidesState.error}</div>
+            ) : null}
+            {guideFeedback ? (
+              <div className="admin-alert admin-alert--success">{guideFeedback}</div>
+            ) : null}
+            {guidesState.isLoading && guidesState.items.length > 0 ? (
+              <p className="admin-placeholder">Atualizando lista de guias...</p>
+            ) : null}
+            {guidesState.isLoading && guidesState.items.length === 0 ? (
+              <p className="admin-placeholder">Carregando guias cadastrados...</p>
+            ) : null}
+            {!guidesState.isLoading && guidesState.items.length === 0 ? (
+              <p className="admin-placeholder">Nenhum guia cadastrado até o momento.</p>
+            ) : null}
+            {guidesState.items.length > 0 ? (
+              <ul className="admin-guides__items">
+                {guidesState.items.map((guide) => (
+                  <li key={guide.id} className="admin-guides__item">
+                    <div className="admin-guides__item-header">
+                      <div>
+                        <h3>{guide.name}</h3>
+                        <span className="admin-guides__item-slug">{guide.slug}</span>
+                      </div>
+                      <div className="admin-guides__item-status">
+                        {guide.isFeatured ? (
+                          <span className="admin-tag admin-tag--success">Destaque</span>
+                        ) : null}
+                        {!guide.isActive ? (
+                          <span className="admin-tag admin-tag--warning">Inativo</span>
+                        ) : null}
+                      </div>
+                    </div>
+                    <div className="admin-guides__item-body">
+                      {guide.speciality ? (
+                        <p className="admin-guides__item-speciality">
+                          <strong>Especialidade:</strong> {guide.speciality}
+                        </p>
+                      ) : null}
+                      {guide.summary ? (
+                        <p className="admin-guides__item-summary">{guide.summary}</p>
+                      ) : null}
+                      <div className="admin-guides__item-meta">
+                        <span>
+                          <strong>Idiomas:</strong>{' '}
+                          {guide.languages.length ? guide.languages.join(', ') : '—'}
+                        </span>
+                        <span>
+                          <strong>Experiência:</strong>{' '}
+                          {`${guide.experienceYears} ano${guide.experienceYears === 1 ? '' : 's'}`}
+                        </span>
+                      </div>
+                      <div className="admin-guides__item-trails">
+                        <strong>Trilhas:</strong>
+                        <span>
+                          {guide.trails.length
+                            ? guide.trails.map((trail) => trail.name).join(', ')
+                            : 'Nenhuma trilha atribuída'}
+                        </span>
+                      </div>
+                      {guide.featuredTrail ? (
+                        <div className="admin-guides__item-featured">
+                          <strong>Trilha destaque:</strong> {guide.featuredTrail.name}
+                        </div>
+                      ) : null}
+                    </div>
+                    <div className="admin-guides__item-actions">
+                      <button
+                        type="button"
+                        className="admin-secondary-button"
+                        onClick={() => handleEditGuide(guide)}
+                      >
+                        Editar
+                      </button>
+                      <button
+                        type="button"
+                        className="admin-secondary-button admin-secondary-button--danger"
+                        onClick={() => handleDeleteGuide(guide)}
+                        disabled={guidesState.isLoading}
+                      >
+                        Excluir
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        </section>
+      </div>
+    ),
+  }
+
+  const section = useMemo(
+    () => buildSection(activeSection, adminData, guidesSection),
+    [activeSection, adminData, guidesSection],
+  )
 
   return (
     <AdminLayout

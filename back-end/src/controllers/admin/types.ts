@@ -94,6 +94,35 @@ export type TrailCard = {
   lastSessionLabel: string | null
 }
 
+export type GuideTrailSummary = {
+  id: string
+  name: string
+  difficulty: string
+}
+
+export type AdminGuide = {
+  id: string
+  slug: string
+  name: string
+  speciality: string | null
+  summary: string | null
+  biography: string | null
+  experienceYears: number
+  toursCompleted: number
+  rating: number
+  languages: string[]
+  certifications: string[]
+  curiosities: string[]
+  photoUrl: string | null
+  isFeatured: boolean
+  isActive: boolean
+  featuredTrailId: string | null
+  featuredTrail: GuideTrailSummary | null
+  trails: GuideTrailSummary[]
+  createdAt: string
+  updatedAt: string
+}
+
 export type AdminOverview = {
   metrics: Metric[]
   bookings: BookingRow[]

@@ -6,6 +6,10 @@ import { listBookings } from '../../controllers/admin/list-bookings.js'
 import { listEvents } from '../../controllers/admin/list-events.js'
 import { listParticipants } from '../../controllers/admin/list-participants.js'
 import { listTrails } from '../../controllers/admin/list-trails.js'
+import { createGuide } from '../../controllers/admin/create-guide.js'
+import { deleteGuide } from '../../controllers/admin/delete-guide.js'
+import { listGuides } from '../../controllers/admin/list-guides.js'
+import { updateGuide } from '../../controllers/admin/update-guide.js'
 
 const router = Router()
 
@@ -16,5 +20,9 @@ router.get('/events', listEvents)
 router.get('/trails', listTrails)
 router.get('/calendar', getCalendar)
 router.get('/reports', getReports)
+router.get('/guides', listGuides)
+router.post('/guides', createGuide)
+router.put('/guides/:id', updateGuide)
+router.delete('/guides/:id', deleteGuide)
 
 export default router

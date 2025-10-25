@@ -23,7 +23,7 @@ export type BookingRow = {
   participantsCount: number
   guideName: string | null
   status: string
-  statusTone: { label: string; tone: string }
+  statusTone: { label: string; tone: 'success' | 'warning' | 'danger' | 'info' | 'neutral' }
 }
 
 export type ParticipantRow = {
@@ -32,7 +32,7 @@ export type ParticipantRow = {
   contact: string
   trailName: string
   datetimeLabel: string
-  statusTone: { label: string; tone: string }
+  statusTone: { label: string; tone: 'success' | 'warning' | 'danger' | 'info' | 'neutral' }
 }
 
 export type SessionSummary = {
@@ -130,4 +130,73 @@ export function fetchAdminCalendar() {
 
 export function fetchAdminReports() {
   return apiRequest<ReportData>('/admin/reports')
+}
+
+export type AdminGuideTrail = {
+  id: string
+  name: string
+  difficulty: string
+}
+
+export type AdminGuide = {
+  id: string
+  slug: string
+  name: string
+  speciality: string | null
+  summary: string | null
+  biography: string | null
+  experienceYears: number
+  toursCompleted: number
+  rating: number
+  languages: string[]
+  certifications: string[]
+  curiosities: string[]
+  photoUrl: string | null
+  isFeatured: boolean
+  isActive: boolean
+  featuredTrailId: string | null
+  featuredTrail: AdminGuideTrail | null
+  trails: AdminGuideTrail[]
+  createdAt: string
+  updatedAt: string
+}
+
+export type AdminGuidePayload = {
+  name: string
+  slug: string
+  speciality?: string | null
+  summary?: string | null
+  biography?: string | null
+  experienceYears?: number
+  toursCompleted?: number
+  rating?: number
+  languages?: string[]
+  certifications?: string[]
+  curiosities?: string[]
+  photoUrl?: string | null
+  isFeatured?: boolean
+  isActive?: boolean
+  featuredTrailId?: string | null
+  trailIds?: string[]
+}
+
+export type AdminGuideListResponse = {
+  guides: AdminGuide[]
+  trails: AdminGuideTrail[]
+}
+
+export function fetchAdminGuides() {
+  return apiRequest<AdminGuideListResponse>('/admin/guides')
+}
+
+export function createAdminGuide(payload: AdminGuidePayload) {
+  return apiRequest<AdminGuide>('/admin/guides', { method: 'POST', body: payload })
+}
+
+export function updateAdminGuide(id: string, payload: AdminGuidePayload) {
+  return apiRequest<AdminGuide>(`/admin/guides/${id}`, { method: 'PUT', body: payload })
+}
+
+export function deleteAdminGuide(id: string) {
+  return apiRequest<{ id: string }>(`/admin/guides/${id}`, { method: 'DELETE' })
 }
