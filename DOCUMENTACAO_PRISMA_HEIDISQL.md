@@ -3,7 +3,7 @@
 Este roteiro explica como preparar o ambiente para que a API do AgenDunas utilize o banco PostgreSQL via Prisma e, em seguida, como inspecionar e manipular os dados com o HeidiSQL. Os passos consideram um banco local com as credenciais informadas:
 
 - **Host**: `localhost`
-- **Porta**: `5173`
+- **Porta**: `5432`
 - **Banco**: `agendunas`
 - **Usuário**: `postgres`
 - **Senha**: `postgres`
@@ -37,7 +37,7 @@ Este roteiro explica como preparar o ambiente para que a API do AgenDunas utiliz
    ```
    O arquivo resultante deve conter algo como:
    ```env
-   DATABASE_URL="postgresql://postgres:postgres@localhost:5173/agendunas?schema=public"
+   DATABASE_URL="postgresql://postgres:postgres@localhost:5432/agendunas?schema=public"
    ALLOWED_ORIGINS="http://localhost:5173,http://localhost:3000"
    PORT=3001
    ```
@@ -79,10 +79,12 @@ A API ficará disponível em `http://localhost:3001/api`. Teste alguns endpoints
    - **Servidor**: `localhost`
    - **Usuário**: `postgres`
    - **Senha**: `postgres`
-   - **Porta**: `5173`
+   - **Porta**: `5432`
    - **Banco de dados**: `agendunas`
 3. Na aba **Avançado**, aponte o caminho da `libpq-17.dll` se estiver em Windows (ex.: `C:\Program Files\PostgreSQL\17\bin\libpq-17.dll`).
 4. Clique em **Salvar** e depois em **Conectar**. Você verá o banco `agendunas` com o schema `public` e todas as tabelas criadas pelo Prisma (`Guide`, `Trail`, `Booking`, etc.).
+
+> 💡 **Importe a sessão pronta**: se preferir, utilize o arquivo [`heidisql/HeidiSQL_settings_AgenDunas.txt`](heidisql/HeidiSQL_settings_AgenDunas.txt). Abra o HeidiSQL, clique em **Importar configurações...** na tela inicial, selecione esse arquivo e ajuste apenas o caminho da `libpq-17.dll` conforme a instalação local do PostgreSQL.
 
 ## 6. Fluxo de trabalho recomendado
 
@@ -104,6 +106,6 @@ A API ficará disponível em `http://localhost:3001/api`. Teste alguns endpoints
 - **Backups**: antes de rodar seeds ou migrações destrutivas, faça backup pelo HeidiSQL (`Arquivo > Exportar > Dump SQL`).
 - **Ambiente de produção**: utilize variáveis de ambiente seguras (`DATABASE_URL` com usuário e senha específicos de produção) e desative seeds automáticos.
 - **Observabilidade**: os logs do Prisma podem ser habilitados ajustando o `PrismaClient` em `src/lib/prisma.js` para registrar consultas (`log: ['query', 'error', 'warn']`).
-- **Checagem de conexão**: em caso de erro de autenticação, confirme se o PostgreSQL está ouvindo na porta 5173 (`postgresql.conf` e `pg_hba.conf`) e se o firewall permite conexões locais.
+- **Checagem de conexão**: em caso de erro de autenticação, confirme se o PostgreSQL está ouvindo na porta 5432 (`postgresql.conf` e `pg_hba.conf`) e se o firewall permite conexões locais.
 
 Seguindo esses passos, qualquer pessoa conseguirá replicar a base local, executar comandos do Prisma e inspecionar/ajustar os dados via HeidiSQL com segurança.

@@ -1,0 +1,17 @@
+[General]
+LastUsedVersion=12.12.0.7122
+DataDir=%APPDATA%\HeidiSQL
+
+[Servers]
+Servers\Count=1
+Servers\1\Name=AgenDunas (local)
+Servers\1\Type=PostgreSQL (libpq)
+Servers\1\Library=C:\\Program Files\\PostgreSQL\\17\\bin\\libpq-17.dll
+Servers\1\Host=localhost
+Servers\1\User=postgres
+Servers\1\Password=postgres
+Servers\1\Port=5432
+Servers\1\Databases=agendunas
+Servers\1\StartupScript=
+Servers\1\UseSSL=0
+Servers\1\Comment=Importado do repositório AgenDunas
