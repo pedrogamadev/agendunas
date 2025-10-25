@@ -66,8 +66,8 @@ enum ConservationStatus {
 }
 
 model Guide {
-  id              String        @id @default(cuid())
-  slug            String        @unique
+  id              String         @id @default(cuid())
+  slug            String         @unique
   name            String
   photoUrl        String?
   speciality      String?
@@ -91,8 +91,8 @@ model Guide {
 }
 
 model Trail {
-  id               String         @id @default(cuid())
-  slug             String         @unique
+  id               String          @id @default(cuid())
+  slug             String          @unique
   name             String
   description      String
   summary          String?
@@ -102,7 +102,7 @@ model Trail {
   badgeLabel       String?
   imageUrl         String?
   status           TrailStatus     @default(ACTIVE)
-  basePrice        Decimal?        @db.Numeric(10, 2)
+  basePrice        Decimal?        @db.Decimal(10, 2)
   highlight        Boolean         @default(false)
   meetingPoint     String?
   createdAt        DateTime        @default(now())
@@ -126,49 +126,49 @@ model TrailGuide {
 }
 
 model TrailSession {
-  id              String            @id @default(cuid())
-  trailId         String
-  primaryGuideId  String?
-  startsAt        DateTime
-  endsAt          DateTime?
-  capacity        Int
-  meetingPoint    String?
-  notes           String?
-  status          TrailSessionStatus @default(SCHEDULED)
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+  id             String             @id @default(cuid())
+  trailId        String
+  primaryGuideId String?
+  startsAt       DateTime
+  endsAt         DateTime?
+  capacity       Int
+  meetingPoint   String?
+  notes          String?
+  status         TrailSessionStatus @default(SCHEDULED)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
 
-  trail         Trail @relation(fields: [trailId], references: [id])
-  primaryGuide  Guide? @relation(fields: [primaryGuideId], references: [id])
-  bookings      Booking[]
+  trail        Trail     @relation(fields: [trailId], references: [id])
+  primaryGuide Guide?    @relation(fields: [primaryGuideId], references: [id])
+  bookings     Booking[]
 }
 
 model Booking {
-  id               String        @id @default(cuid())
-  protocol         String        @unique
-  trailId          String
-  sessionId        String?
-  guideId          String?
-  status           BookingStatus  @default(PENDING)
-  scheduledFor     DateTime
+  id                String        @id @default(cuid())
+  protocol          String        @unique
+  trailId           String
+  sessionId         String?
+  guideId           String?
+  status            BookingStatus @default(PENDING)
+  scheduledFor      DateTime
   participantsCount Int           @default(1)
-  contactName      String
-  contactEmail     String
-  contactPhone     String
-  notes            String?
-  source           BookingSource  @default(PUBLIC_PORTAL)
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
+  contactName       String
+  contactEmail      String
+  contactPhone      String
+  notes             String?
+  source            BookingSource @default(PUBLIC_PORTAL)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
 
-  trail    Trail        @relation(fields: [trailId], references: [id])
-  session  TrailSession? @relation(fields: [sessionId], references: [id])
-  guide    Guide?       @relation(fields: [guideId], references: [id])
+  trail        Trail         @relation(fields: [trailId], references: [id])
+  session      TrailSession? @relation(fields: [sessionId], references: [id])
+  guide        Guide?        @relation(fields: [guideId], references: [id])
   participants Participant[]
   activityLogs ActivityLog[]
 }
 
 model Participant {
-  id               String   @id @default(cuid())
+  id               String    @id @default(cuid())
   bookingId        String
   fullName         String
   documentId       String?
@@ -176,8 +176,8 @@ model Participant {
   phone            String?
   birthDate        DateTime?
   emergencyContact String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
 
@@ -185,8 +185,8 @@ model Participant {
 }
 
 model Event {
-  id          String    @id @default(cuid())
-  slug        String    @unique
+  id          String      @id @default(cuid())
+  slug        String      @unique
   title       String
   description String
   location    String?
@@ -194,9 +194,9 @@ model Event {
   endsAt      DateTime?
   capacity    Int?
   status      EventStatus @default(DRAFT)
-  highlight   Boolean   @default(false)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  highlight   Boolean     @default(false)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 
   registrations EventRegistration[]
   activityLogs  ActivityLog[]
@@ -218,17 +218,17 @@ model EventRegistration {
 }
 
 model FaunaFloraRecord {
-  id             String              @id @default(cuid())
-  slug           String              @unique
+  id             String             @id @default(cuid())
+  slug           String             @unique
   name           String
   scientificName String
   category       FaunaFloraCategory
   status         ConservationStatus
   description    String?
   imageUrl       String?
-  tags           String[]            @default([])
-  createdAt      DateTime            @default(now())
-  updatedAt      DateTime            @updatedAt
+  tags           String[]           @default([])
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
 }
 
 model ActivityLog {
