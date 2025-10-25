@@ -1,7 +1,42 @@
+import type { NextFunction, Request, Response } from 'express'
 import prisma from '../../lib/prisma.js'
 import { calculateOccupancy, formatDateTimeLabel } from '../admin/formatters.js'
 
-export async function getTrails(request, response, next) {
+type GuideSummary = {
+  id: string
+  name: string
+  speciality: string | null
+  photoUrl: string | null
+}
+
+type TrailSessionSummary = {
+  id: string
+  startsAt: Date
+  endsAt: Date
+  capacity: number
+  primaryGuide: { id: string; name: string } | null
+  label: string
+  occupancyPercentage: number
+}
+
+type PublicTrail = {
+  id: string
+  slug: string
+  name: string
+  description: string
+  summary: string | null
+  durationMinutes: number
+  difficulty: string
+  maxGroupSize: number
+  badgeLabel: string | null
+  imageUrl: string | null
+  meetingPoint: string | null
+  highlight: boolean
+  upcomingSession: TrailSessionSummary | null
+  guides: GuideSummary[]
+}
+
+export async function getTrails(_request: Request, response: Response, next: NextFunction): Promise<void> {
   try {
     const now = new Date()
     const trails = await prisma.trail.findMany({
@@ -41,11 +76,19 @@ export async function getTrails(request, response, next) {
       orderBy: { name: 'asc' },
     })
 
-    const normalized = trails.map((trail) => {
+    type TrailRecord = (typeof trails)[number]
+
+    const normalized: PublicTrail[] = trails.map((trail: TrailRecord) => {
+      type GuideAssignment = (typeof trail.guides)[number]
+
       const upcomingSession = trail.sessions[0]
-      const occupancy = upcomingSession
-        ? upcomingSession.bookings.reduce((sum, booking) => sum + booking.participantsCount, 0)
-        : 0
+      let occupancy = 0
+
+      if (upcomingSession) {
+        for (const booking of upcomingSession.bookings) {
+          occupancy += booking.participantsCount
+        }
+      }
 
       return {
         id: trail.id,
@@ -76,7 +119,7 @@ export async function getTrails(request, response, next) {
               occupancyPercentage: calculateOccupancy(occupancy, upcomingSession.capacity),
             }
           : null,
-        guides: trail.guides.map((assignment) => ({
+        guides: trail.guides.map((assignment: GuideAssignment) => ({
           id: assignment.guide.id,
           name: assignment.guide.name,
           speciality: assignment.guide.speciality,

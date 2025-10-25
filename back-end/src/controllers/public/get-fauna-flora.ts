@@ -1,12 +1,27 @@
+import type { NextFunction, Request, Response } from 'express'
 import prisma from '../../lib/prisma.js'
 
-export async function getFaunaFlora(request, response, next) {
+type FaunaFloraSummary = {
+  id: string
+  slug: string
+  name: string
+  scientificName: string | null
+  category: string
+  status: string | null
+  description: string | null
+  imageUrl: string | null
+  tags: string[]
+}
+
+export async function getFaunaFlora(_request: Request, response: Response, next: NextFunction): Promise<void> {
   try {
     const records = await prisma.faunaFloraRecord.findMany({
       orderBy: [{ category: 'asc' }, { name: 'asc' }],
     })
 
-    const normalized = records.map((record) => ({
+    type RecordItem = (typeof records)[number]
+
+    const normalized: FaunaFloraSummary[] = records.map((record: RecordItem) => ({
       id: record.id,
       slug: record.slug,
       name: record.name,

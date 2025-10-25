@@ -10,3 +10,5 @@ front-end/node_modules/
 back-end/.env
 front-end/.env
 .DS_Store
+
+back-end/dist/

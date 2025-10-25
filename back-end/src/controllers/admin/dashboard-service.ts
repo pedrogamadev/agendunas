@@ -8,8 +8,19 @@ import {
   formatTime,
   toISODate,
 } from './formatters.js'
+import type {
+  ActivityItem,
+  AdminOverview,
+  BookingRow,
+  CalendarOverview,
+  EventCard,
+  ParticipantRow,
+  ReportData,
+  SessionSummary,
+  TrailCard,
+} from './types.js'
 
-export async function fetchBookingsTable(limit = 12) {
+export async function fetchBookingsTable(limit = 12): Promise<BookingRow[]> {
   const bookings = await prisma.booking.findMany({
     orderBy: { scheduledFor: 'asc' },
     take: limit,
@@ -19,7 +30,9 @@ export async function fetchBookingsTable(limit = 12) {
     },
   })
 
-  return bookings.map((booking) => ({
+  type BookingRecord = (typeof bookings)[number]
+
+  return bookings.map((booking: BookingRecord): BookingRow => ({
     id: booking.id,
     protocol: booking.protocol,
     contactName: booking.contactName,
@@ -33,7 +46,7 @@ export async function fetchBookingsTable(limit = 12) {
   }))
 }
 
-export async function fetchParticipantsTable(limit = 12) {
+export async function fetchParticipantsTable(limit = 12): Promise<ParticipantRow[]> {
   const participants = await prisma.participant.findMany({
     orderBy: { createdAt: 'desc' },
     take: limit,
@@ -46,7 +59,9 @@ export async function fetchParticipantsTable(limit = 12) {
     },
   })
 
-  return participants.map((participant) => ({
+  type ParticipantRecord = (typeof participants)[number]
+
+  return participants.map((participant: ParticipantRecord): ParticipantRow => ({
     id: participant.id,
     name: participant.fullName,
     contact: participant.phone ?? participant.email ?? participant.booking.contactName,
@@ -56,7 +71,7 @@ export async function fetchParticipantsTable(limit = 12) {
   }))
 }
 
-export async function fetchTodaysSessions() {
+export async function fetchTodaysSessions(): Promise<SessionSummary[]> {
   const now = new Date()
   const startOfDay = new Date(now)
   startOfDay.setHours(0, 0, 0, 0)
@@ -84,8 +99,14 @@ export async function fetchTodaysSessions() {
     },
   })
 
-  return sessions.map((session) => {
-    const occupied = session.bookings.reduce((sum, booking) => sum + booking.participantsCount, 0)
+  type SessionRecord = (typeof sessions)[number]
+
+  return sessions.map((session: SessionRecord): SessionSummary => {
+    let occupied = 0
+    for (const booking of session.bookings) {
+      occupied += booking.participantsCount
+    }
+
     return {
       id: session.id,
       trailName: session.trail.name,
@@ -96,7 +117,7 @@ export async function fetchTodaysSessions() {
   })
 }
 
-export async function fetchUpcomingEvents(limit = 4) {
+export async function fetchUpcomingEvents(limit = 4): Promise<EventCard[]> {
   const now = new Date()
   const events = await prisma.event.findMany({
     where: { startsAt: { gte: now } },
@@ -104,7 +125,9 @@ export async function fetchUpcomingEvents(limit = 4) {
     take: limit,
   })
 
-  return events.map((event) => ({
+  type EventRecord = (typeof events)[number]
+
+  return events.map((event: EventRecord): EventCard => ({
     id: event.id,
     title: event.title,
     description: event.description,
@@ -115,20 +138,22 @@ export async function fetchUpcomingEvents(limit = 4) {
   }))
 }
 
-export async function fetchRecentActivities(limit = 6) {
+export async function fetchRecentActivities(limit = 6): Promise<ActivityItem[]> {
   const activities = await prisma.activityLog.findMany({
     orderBy: { loggedAt: 'desc' },
     take: limit,
   })
 
-  return activities.map((activity) => ({
+  type ActivityRecord = (typeof activities)[number]
+
+  return activities.map((activity: ActivityRecord): ActivityItem => ({
     id: activity.id,
     label: formatDateTimeLabel(activity.loggedAt),
     message: activity.message,
   }))
 }
 
-export async function fetchEventCards(limit = 6) {
+export async function fetchEventCards(limit = 6): Promise<EventCard[]> {
   const events = await prisma.event.findMany({
     orderBy: [
       { highlight: 'desc' },
@@ -137,19 +162,27 @@ export async function fetchEventCards(limit = 6) {
     take: limit,
   })
 
-  return events.map((event) => ({
+  type EventRecord = (typeof events)[number]
+
+  return events.map((event: EventRecord): EventCard => ({
     id: event.id,
     title: event.title,
     description: event.description,
     tag: event.status === 'PUBLISHED' ? 'Publicado' : event.status === 'DRAFT' ? 'Rascunho' : 'Atualização',
     tagTone:
-      event.status === 'PUBLISHED' ? 'success' : event.status === 'DRAFT' ? 'warning' : event.status === 'CANCELLED' ? 'danger' : 'info',
+      event.status === 'PUBLISHED'
+        ? 'success'
+        : event.status === 'DRAFT'
+        ? 'warning'
+        : event.status === 'CANCELLED'
+        ? 'danger'
+        : 'info',
     dateLabel: `${formatDate(event.startsAt)} • ${formatTime(event.startsAt)}`,
     capacityLabel: event.capacity ? `${event.capacity} vagas` : undefined,
   }))
 }
 
-export async function fetchTrailCards(limit = 6) {
+export async function fetchTrailCards(limit = 6): Promise<TrailCard[]> {
   const trails = await prisma.trail.findMany({
     where: { status: 'ACTIVE' },
     orderBy: [{ highlight: 'desc' }, { name: 'asc' }],
@@ -165,7 +198,9 @@ export async function fetchTrailCards(limit = 6) {
     },
   })
 
-  return trails.map((trail) => ({
+  type TrailRecord = (typeof trails)[number]
+
+  return trails.map((trail: TrailRecord): TrailCard => ({
     id: trail.id,
     name: trail.name,
     difficulty: trail.difficulty,
@@ -177,7 +212,7 @@ export async function fetchTrailCards(limit = 6) {
   }))
 }
 
-export async function fetchCalendarOverview() {
+export async function fetchCalendarOverview(): Promise<CalendarOverview> {
   const now = new Date()
   const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
   const endOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0, 23, 59, 59, 999))
@@ -195,18 +230,23 @@ export async function fetchCalendarOverview() {
     orderBy: { startsAt: 'asc' },
   })
 
-  const daysMap = new Map()
+  type SessionRecord = (typeof sessions)[number]
 
-  sessions.forEach((session) => {
+  const daysMap = new Map<string, string[]>()
+
+  sessions.forEach((session: SessionRecord) => {
     const key = toISODate(session.startsAt)
     if (!daysMap.has(key)) {
       daysMap.set(key, [])
     }
 
-    daysMap.get(key).push(`${formatTime(session.startsAt)} • ${session.trail.name}`)
+    const eventsForDay = daysMap.get(key)
+    if (eventsForDay) {
+      eventsForDay.push(`${formatTime(session.startsAt)} • ${session.trail.name}`)
+    }
   })
 
-  const days = []
+  const days: CalendarOverview['days'] = []
   for (let day = 1; day <= endOfMonth.getUTCDate(); day += 1) {
     const current = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), day))
     const iso = toISODate(current)
@@ -224,7 +264,7 @@ export async function fetchCalendarOverview() {
   }
 }
 
-export async function fetchReportData() {
+export async function fetchReportData(): Promise<ReportData> {
   const [totalBookings, groupedStatuses, publishedEvents, bookingsForMonths, bookingsByTrail] = await Promise.all([
     prisma.booking.count(),
     prisma.booking.groupBy({
@@ -250,7 +290,13 @@ export async function fetchReportData() {
     }),
   ])
 
-  const statusCount = Object.fromEntries(groupedStatuses.map((item) => [item.status, item._count._all]))
+  type GroupedStatus = (typeof groupedStatuses)[number]
+  type BookingForMonth = (typeof bookingsForMonths)[number]
+  type BookingByTrail = (typeof bookingsByTrail)[number]
+
+  const statusCount = Object.fromEntries(
+    groupedStatuses.map((item: GroupedStatus) => [item.status, item._count._all]),
+  ) as Record<string, number>
   const confirmed = statusCount.CONFIRMED ?? 0
   const cancelled = statusCount.CANCELLED ?? 0
   const pending = statusCount.PENDING ?? 0
@@ -259,13 +305,13 @@ export async function fetchReportData() {
   const confirmationRate = total > 0 ? Math.round((confirmed / total) * 100) : 0
   const cancellationRate = total > 0 ? Math.round((cancelled / total) * 100) : 0
 
-  const monthlyAccumulator = new Map()
+  const monthlyAccumulator = new Map<string, number>()
   const chartStart = new Date()
   chartStart.setMonth(chartStart.getMonth() - 5)
   chartStart.setDate(1)
   chartStart.setHours(0, 0, 0, 0)
 
-  bookingsForMonths.forEach((booking) => {
+  bookingsForMonths.forEach((booking: BookingForMonth) => {
     if (booking.scheduledFor < chartStart) {
       return
     }
@@ -273,7 +319,7 @@ export async function fetchReportData() {
     monthlyAccumulator.set(key, (monthlyAccumulator.get(key) ?? 0) + 1)
   })
 
-  const lineChartData = []
+  const lineChartData: ReportData['lineChartData'] = []
   const reference = new Date(chartStart)
   for (let i = 0; i < 6; i += 1) {
     const key = `${reference.getFullYear()}-${String(reference.getMonth() + 1).padStart(2, '0')}`
@@ -284,7 +330,7 @@ export async function fetchReportData() {
     reference.setMonth(reference.getMonth() + 1)
   }
 
-  const pieChartData = [
+  const pieChartData: ReportData['pieChartData'] = [
     { label: 'Confirmados', value: confirmed, tone: '#1aa361' },
     { label: 'Pendentes', value: pending, tone: '#f2c94c' },
     { label: 'Cancelados', value: cancelled, tone: '#eb5757' },
@@ -295,22 +341,27 @@ export async function fetchReportData() {
     },
   ]
 
-  const trailIds = bookingsByTrail.map((item) => item.trailId)
+  const trailIds = bookingsByTrail.map((item: BookingByTrail) => item.trailId)
   const trails = await prisma.trail.findMany({
     where: { id: { in: trailIds } },
     select: { id: true, name: true },
   })
-  const trailNameMap = Object.fromEntries(trails.map((trail) => [trail.id, trail.name]))
+  type TrailRecord = (typeof trails)[number]
+
+  const trailNameMap = Object.fromEntries(trails.map((trail: TrailRecord) => [trail.id, trail.name])) as Record<
+    string,
+    string
+  >
 
   const barChartData = bookingsByTrail
-    .map((item) => ({
+    .map((item: BookingByTrail): { label: string; value: number } => ({
       label: trailNameMap[item.trailId] ?? 'Trilha',
       value: item._sum.participantsCount ?? 0,
     }))
-    .sort((a, b) => b.value - a.value)
+    .sort((a: { label: string; value: number }, b: { label: string; value: number }) => b.value - a.value)
     .slice(0, 6)
 
-  const reportMetrics = [
+  const reportMetrics: ReportData['reportMetrics'] = [
     {
       title: 'Total de Agendamentos',
       value: String(totalBookings),
@@ -345,30 +396,36 @@ export async function fetchReportData() {
   }
 }
 
-export async function buildOverviewPayload() {
-  const [bookings, participants, todaysSessions, upcomingEvents, recentActivity, eventCards, trailCards, calendar, report] =
-    await Promise.all([
-      fetchBookingsTable(8),
-      fetchParticipantsTable(8),
-      fetchTodaysSessions(),
-      fetchUpcomingEvents(4),
-      fetchRecentActivities(6),
-      fetchEventCards(6),
-      fetchTrailCards(6),
-      fetchCalendarOverview(),
-      fetchReportData(),
-    ])
+export async function buildOverviewPayload(): Promise<AdminOverview> {
+  const [
+    bookings,
+    participants,
+    todaysSessions,
+    upcomingEvents,
+    recentActivity,
+    eventCards,
+    trailCards,
+    calendar,
+    report,
+  ] = await Promise.all([
+    fetchBookingsTable(8),
+    fetchParticipantsTable(8),
+    fetchTodaysSessions(),
+    fetchUpcomingEvents(4),
+    fetchRecentActivities(6),
+    fetchEventCards(6),
+    fetchTrailCards(6),
+    fetchCalendarOverview(),
+    fetchReportData(),
+  ])
 
-  const totalsByStatus = bookings.reduce(
-    (acc, booking) => {
-      acc.total += 1
-      acc[booking.status] = (acc[booking.status] ?? 0) + 1
-      return acc
-    },
-    { total: 0 },
-  )
+  const totalsByStatus = bookings.reduce<Record<string, number>>((acc, booking) => {
+    acc.total = (acc.total ?? 0) + 1
+    acc[booking.status] = (acc[booking.status] ?? 0) + 1
+    return acc
+  }, { total: 0 })
 
-  const metrics = [
+  const metrics: AdminOverview['metrics'] = [
     {
       title: 'Agendamentos Hoje',
       value: String(todaysSessions.reduce((sum, session) => sum + session.occupancy, 0)),

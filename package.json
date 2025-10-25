@@ -1,0 +1,16 @@
+{
+  "name": "agendunas",
+  "private": true,
+  "workspaces": ["front-end", "back-end"],
+  "scripts": {
+    "dev": "concurrently \"npm run dev --workspace back-end\" \"npm run dev --workspace front-end\"",
+    "build": "npm run build --workspace back-end && npm run build --workspace front-end",
+    "lint": "npm run lint --workspace front-end",
+    "generate": "npm run generate --workspace back-end",
+    "migrate": "npm run migrate --workspace back-end",
+    "seed": "npm run seed --workspace back-end"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

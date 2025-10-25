@@ -1,7 +1,8 @@
 import crypto from 'node:crypto'
+import type { NextFunction, Request, Response } from 'express'
+import { z } from 'zod'
 import prisma from '../../lib/prisma.js'
 import { formatDateTimeLabel } from '../admin/formatters.js'
-import { z } from 'zod'
 
 const participantSchema = z.object({
   fullName: z.string().min(1, 'Informe o nome do participante'),
@@ -25,7 +26,9 @@ const bookingSchema = z.object({
   source: z.enum(['PUBLIC_PORTAL', 'ADMIN']).optional(),
 })
 
-async function generateProtocol() {
+type CreateBookingBody = z.infer<typeof bookingSchema>
+
+async function generateProtocol(): Promise<string> {
   const now = new Date()
   const prefix = `ACD-${now.getUTCFullYear()}${String(now.getUTCMonth() + 1).padStart(2, '0')}`
   let attempts = 0
@@ -42,7 +45,11 @@ async function generateProtocol() {
   return `${prefix}-${crypto.randomUUID().slice(0, 4).toUpperCase()}`
 }
 
-export async function createBooking(request, response, next) {
+export async function createBooking(
+  request: Request<unknown, unknown, CreateBookingBody>,
+  response: Response,
+  next: NextFunction,
+): Promise<void> {
   try {
     const data = bookingSchema.parse(request.body)
 
@@ -56,25 +63,30 @@ export async function createBooking(request, response, next) {
       return
     }
 
-    let session = null
-    let scheduledFor
-    let guideIdInput = data.guideId ?? null
-    let resolvedGuideId = guideIdInput
+    const guideIdInput = data.guideId ?? null
+    let resolvedGuideId: string | null = guideIdInput
+    let scheduledFor: Date
+
+    const session = data.sessionId
+      ? await prisma.trailSession.findUnique({
+          where: { id: data.sessionId },
+          include: {
+            bookings: { select: { participantsCount: true } },
+          },
+        })
+      : null
 
     if (data.sessionId) {
-      session = await prisma.trailSession.findUnique({
-        where: { id: data.sessionId },
-        include: {
-          bookings: { select: { participantsCount: true } },
-        },
-      })
-
       if (!session || session.trailId !== data.trailId) {
         response.status(400).json({ message: 'Sessão selecionada não corresponde à trilha informada.' })
         return
       }
 
-      const occupied = session.bookings.reduce((sum, booking) => sum + booking.participantsCount, 0)
+      let occupied = 0
+      for (const booking of session.bookings) {
+        occupied += booking.participantsCount
+      }
+
       if (occupied + data.participantsCount > session.capacity) {
         response.status(409).json({ message: 'Capacidade da sessão excedida para a quantidade de participantes.' })
         return
