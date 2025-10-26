@@ -8,6 +8,7 @@ import {
   formatTime,
   toISODate,
 } from './formatters.js'
+import { normalizeTrail, trailInclude, trailSessionsInclude } from './trail-service.js'
 import type {
   ActivityItem,
   AdminOverview,
@@ -188,28 +189,36 @@ export async function fetchTrailCards(limit = 6): Promise<TrailCard[]> {
     orderBy: [{ highlight: 'desc' }, { name: 'asc' }],
     take: limit,
     include: {
+      ...trailInclude,
       sessions: {
-        orderBy: { startsAt: 'desc' },
+        ...trailSessionsInclude,
         take: 1,
-        select: {
-          startsAt: true,
-        },
       },
     },
   })
 
-  type TrailRecord = (typeof trails)[number]
+  const statusLabels = {
+    ACTIVE: 'Ativa',
+    INACTIVE: 'Indisponível',
+    MAINTENANCE: 'Em manutenção',
+  } as const
 
-  return trails.map((trail: TrailRecord): TrailCard => ({
-    id: trail.id,
-    name: trail.name,
-    difficulty: trail.difficulty,
-    durationMinutes: trail.durationMinutes,
-    capacityLabel: `${trail.maxGroupSize} pessoas`,
-    status: trail.status === 'ACTIVE' ? 'Ativa' : 'Indisponível',
-    description: trail.summary ?? trail.description.slice(0, 160),
-    lastSessionLabel: trail.sessions[0] ? formatDate(trail.sessions[0].startsAt) : null,
-  }))
+  return trails.map((trail) => {
+    const normalized = normalizeTrail(trail)
+
+    return {
+      id: normalized.id,
+      name: normalized.name,
+      difficulty: normalized.difficulty,
+      durationMinutes: normalized.durationMinutes,
+      capacityLabel: `${normalized.maxGroupSize} pessoas`,
+      status: statusLabels[normalized.status] ?? 'Indisponível',
+      description: normalized.summary ?? normalized.description.slice(0, 160),
+      lastSessionLabel: normalized.lastSessionStartsAt
+        ? formatDate(new Date(normalized.lastSessionStartsAt))
+        : null,
+    }
+  })
 }
 
 export async function fetchCalendarOverview(): Promise<CalendarOverview> {

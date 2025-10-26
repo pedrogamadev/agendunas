@@ -120,8 +120,130 @@ export function fetchAdminEvents() {
   return apiRequest<{ cards: EventCard[]; upcoming: EventCard[] }>('/admin/events')
 }
 
+export type TrailStatus = 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE'
+
+export type TrailDifficulty = 'EASY' | 'MODERATE' | 'HARD'
+
+export type TrailSessionStatus = 'SCHEDULED' | 'CANCELLED' | 'COMPLETED'
+
+export type AdminTrailGuideAssignment = {
+  id: string
+  slug: string
+  name: string
+  speciality: string | null
+  photoUrl: string | null
+  isActive: boolean
+  isFeatured: boolean
+  assignedAt: string
+}
+
+export type AdminTrailGuideOption = {
+  id: string
+  slug: string
+  name: string
+  speciality: string | null
+  photoUrl: string | null
+  isActive: boolean
+  isFeatured: boolean
+}
+
+export type AdminTrailSession = {
+  id: string
+  startsAt: string
+  endsAt: string | null
+  capacity: number
+  meetingPoint: string | null
+  status: TrailSessionStatus
+  primaryGuide: { id: string; name: string } | null
+}
+
+export type AdminTrail = {
+  id: string
+  slug: string
+  name: string
+  description: string
+  summary: string | null
+  durationMinutes: number
+  difficulty: TrailDifficulty
+  maxGroupSize: number
+  badgeLabel: string | null
+  imageUrl: string | null
+  status: TrailStatus
+  basePrice: number | null
+  highlight: boolean
+  meetingPoint: string | null
+  guides: AdminTrailGuideAssignment[]
+  sessions: AdminTrailSession[]
+  upcomingSessions: number
+  nextSessionStartsAt: string | null
+  lastSessionStartsAt: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type AdminTrailStats = {
+  total: number
+  highlights: number
+  averageCapacity: number
+  upcomingSessions: number
+  byStatus: Record<TrailStatus, number>
+  byDifficulty: Record<TrailDifficulty, number>
+}
+
+export type AdminTrailListResponse = {
+  trails: AdminTrail[]
+  guides: AdminTrailGuideOption[]
+  stats: AdminTrailStats
+}
+
+export type CreateAdminTrailPayload = {
+  name: string
+  slug: string
+  description: string
+  summary?: string | null
+  durationMinutes: number
+  difficulty: TrailDifficulty
+  maxGroupSize: number
+  badgeLabel?: string | null
+  imageUrl?: string | null
+  status?: TrailStatus
+  basePrice?: number | null
+  highlight?: boolean
+  meetingPoint?: string | null
+  guideIds?: string[]
+}
+
+export type UpdateAdminTrailPayload = {
+  name: string
+  slug: string
+  description: string
+  summary?: string | null
+  durationMinutes: number
+  difficulty: TrailDifficulty
+  maxGroupSize: number
+  badgeLabel?: string | null
+  imageUrl?: string | null
+  status: TrailStatus
+  basePrice?: number | null
+  highlight: boolean
+  meetingPoint?: string | null
+  guideIds?: string[]
+}
+
 export function fetchAdminTrails() {
-  return apiRequest<AdminOverview['trailCards']>('/admin/trails')
+  return apiRequest<AdminTrailListResponse>('/admin/trails')
+}
+
+export function createAdminTrail(payload: CreateAdminTrailPayload) {
+  return apiRequest<AdminTrail>('/admin/trails', { method: 'POST', body: payload })
+}
+
+export function updateAdminTrail(id: string, payload: UpdateAdminTrailPayload) {
+  return apiRequest<AdminTrail>(`/admin/trails/${id}`, { method: 'PUT', body: payload })
+}
+
+export function deleteAdminTrail(id: string) {
+  return apiRequest<{ id: string }>(`/admin/trails/${id}`, { method: 'DELETE' })
 }
 
 export function fetchAdminCalendar() {

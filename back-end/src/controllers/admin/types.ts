@@ -1,3 +1,5 @@
+import type { TrailDifficulty, TrailSessionStatus, TrailStatus } from '@prisma/client'
+
 export type MetricTrend = {
   value: string
   direction: 'up' | 'down'
@@ -98,6 +100,76 @@ export type GuideTrailSummary = {
   id: string
   name: string
   difficulty: string
+}
+
+export type AdminTrailGuideAssignment = {
+  id: string
+  slug: string
+  name: string
+  speciality: string | null
+  photoUrl: string | null
+  isActive: boolean
+  isFeatured: boolean
+  assignedAt: string
+}
+
+export type AdminTrailGuideOption = {
+  id: string
+  slug: string
+  name: string
+  speciality: string | null
+  photoUrl: string | null
+  isActive: boolean
+  isFeatured: boolean
+}
+
+export type AdminTrailSession = {
+  id: string
+  startsAt: string
+  endsAt: string | null
+  capacity: number
+  meetingPoint: string | null
+  status: TrailSessionStatus
+  primaryGuide: { id: string; name: string } | null
+}
+
+export type AdminTrail = {
+  id: string
+  slug: string
+  name: string
+  description: string
+  summary: string | null
+  durationMinutes: number
+  difficulty: TrailDifficulty
+  maxGroupSize: number
+  badgeLabel: string | null
+  imageUrl: string | null
+  status: TrailStatus
+  basePrice: number | null
+  highlight: boolean
+  meetingPoint: string | null
+  guides: AdminTrailGuideAssignment[]
+  sessions: AdminTrailSession[]
+  upcomingSessions: number
+  nextSessionStartsAt: string | null
+  lastSessionStartsAt: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type AdminTrailStats = {
+  total: number
+  highlights: number
+  averageCapacity: number
+  upcomingSessions: number
+  byStatus: Record<TrailStatus, number>
+  byDifficulty: Record<TrailDifficulty, number>
+}
+
+export type AdminTrailListResponse = {
+  trails: AdminTrail[]
+  guides: AdminTrailGuideOption[]
+  stats: AdminTrailStats
 }
 
 export type AdminGuide = {
