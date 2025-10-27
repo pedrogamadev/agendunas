@@ -152,6 +152,19 @@ type BookingTranslation = {
     selectPlaceholder: string
     date: string
     time: string
+    sessionLabel: string
+    sessionPlaceholder: string
+    sessionSelect: string
+    sessionChange: string
+    sessionSummary: string
+    sessionCapacity: string
+    sessionRequired: string
+    sessionUnavailable: string
+    sessionModalTitle: string
+    sessionModalDescription: string
+    sessionModalClose: string
+    sessionModalEmpty: string
+    sessionSlotCapacity: string
     participants: string
     participantsSelfOption: string
     participantsGuestOption: string
@@ -580,6 +593,19 @@ const translations: Record<Language, TranslationContent> = {
         selectPlaceholder: 'Selecione uma opção',
         date: 'Data preferida',
         time: 'Horário',
+        sessionLabel: 'Turmas disponíveis',
+        sessionPlaceholder: 'Selecione a data e o horário da turma publicada.',
+        sessionSelect: 'Escolher turma',
+        sessionChange: 'Trocar turma',
+        sessionSummary: 'Turma selecionada para {date} às {time}',
+        sessionCapacity: '{available} vagas disponíveis de {total}',
+        sessionRequired: 'Selecione uma turma disponível para continuar.',
+        sessionUnavailable: 'Esta turma não possui mais vagas disponíveis. Escolha outra data.',
+        sessionModalTitle: 'Selecione a turma desejada',
+        sessionModalDescription: 'Escolha a data e o horário disponíveis para realizar seu passeio.',
+        sessionModalClose: 'Fechar seleção de turmas',
+        sessionModalEmpty: 'Nenhuma turma publicada para esta trilha no momento.',
+        sessionSlotCapacity: '{available} vagas de {total}',
         participants: 'Quantidade de participantes',
         participantsSelfOption: '1 - reserva só pra mim',
         participantsGuestOption: '{count} pessoas (eu + {guests} {guestLabel})',
@@ -1254,6 +1280,19 @@ const translations: Record<Language, TranslationContent> = {
         selectPlaceholder: 'Select an option',
         date: 'Preferred date',
         time: 'Time',
+        sessionLabel: 'Published sessions',
+        sessionPlaceholder: 'Select the published group date and time.',
+        sessionSelect: 'Choose session',
+        sessionChange: 'Change session',
+        sessionSummary: 'Session selected for {date} at {time}',
+        sessionCapacity: '{available} spots available out of {total}',
+        sessionRequired: 'Please choose an available session to continue.',
+        sessionUnavailable: 'This session is no longer available. Please choose another slot.',
+        sessionModalTitle: 'Select your session',
+        sessionModalDescription: 'Pick one of the available dates and times for your experience.',
+        sessionModalClose: 'Close session selection',
+        sessionModalEmpty: 'No published sessions for this trail at the moment.',
+        sessionSlotCapacity: '{available} of {total} spots',
         participants: 'Number of participants',
         participantsSelfOption: '1 - just me',
         participantsGuestOption: '{count} people (me + {guests} {guestLabel})',

@@ -1,22 +1,12 @@
 import type { NextFunction, Request, Response } from 'express'
 import prisma from '../../lib/prisma.js'
-import { calculateOccupancy, formatDateTimeLabel } from '../admin/formatters.js'
+import { calculateOccupancy, formatDate, formatDateTimeLabel, formatTime } from '../admin/formatters.js'
 
 type GuideSummary = {
   cpf: string
   name: string
   speciality: string | null
   photoUrl: string | null
-}
-
-type TrailSessionSummary = {
-  id: string
-  startsAt: Date
-  endsAt: Date
-  capacity: number
-  primaryGuide: { cpf: string; name: string } | null
-  label: string
-  occupancyPercentage: number
 }
 
 type PublicTrail = {
@@ -33,7 +23,30 @@ type PublicTrail = {
   imageUrl: string | null
   meetingPoint: string | null
   highlight: boolean
-  upcomingSession: TrailSessionSummary | null
+  upcomingSession: {
+    id: string
+    startsAt: string
+    endsAt: string | null
+    capacity: number
+    label: string
+    occupancyPercentage: number
+    primaryGuide: { cpf: string; name: string } | null
+  } | null
+  sessions: Array<{
+    date: string
+    dateLabel: string
+    slots: Array<{
+      id: string
+      startsAt: string
+      endsAt: string | null
+      timeLabel: string
+      capacity: number
+      availableSpots: number
+      occupancyPercentage: number
+      status: string
+      primaryGuide: { cpf: string; name: string } | null
+    }>
+  }>
   guides: GuideSummary[]
 }
 
@@ -44,13 +57,13 @@ export async function getTrails(_request: Request, response: Response, next: Nex
       where: { status: 'ACTIVE' },
       include: {
         sessions: {
-          where: { startsAt: { gte: new Date(now.getTime() - 2 * 60 * 60 * 1000) } },
+          where: { startsAt: { gte: now } },
           orderBy: { startsAt: 'asc' },
-          take: 3,
           include: {
             bookings: {
               select: {
                 participantsCount: true,
+                status: true,
               },
             },
             primaryGuide: {
@@ -82,17 +95,58 @@ export async function getTrails(_request: Request, response: Response, next: Nex
     const normalized: PublicTrail[] = trails.map((trail: TrailRecord) => {
       type GuideAssignment = (typeof trail.guides)[number]
 
-      const upcomingSession = trail.sessions[0]
-      let occupancy = 0
+      const sessionGroups = new Map<
+        string,
+        {
+          date: string
+          dateLabel: string
+          slots: PublicTrail['sessions'][number]['slots']
+        }
+      >()
 
-      if (upcomingSession) {
-        for (const booking of upcomingSession.bookings) {
-          occupancy += booking.participantsCount
+      let upcomingSession: (typeof trail.sessions)[number] | null = null
+      let upcomingAvailableSpots = trail.maxGroupSize
+
+      for (const session of trail.sessions) {
+        const sessionDate = session.startsAt.toISOString().slice(0, 10)
+        const dateLabel = formatDate(session.startsAt)
+
+        const totalParticipants = session.bookings.reduce((total, booking) => {
+          return booking.status === 'CANCELLED' ? total : total + booking.participantsCount
+        }, 0)
+
+        const availableSpots = Math.max(0, session.capacity - totalParticipants)
+        const occupancyPercentage = calculateOccupancy(totalParticipants, session.capacity)
+
+        if (!upcomingSession) {
+          upcomingSession = session
+          upcomingAvailableSpots = availableSpots
+        }
+
+        const slot = {
+          id: session.id,
+          startsAt: session.startsAt.toISOString(),
+          endsAt: session.endsAt ? session.endsAt.toISOString() : null,
+          timeLabel: formatTime(session.startsAt),
+          capacity: session.capacity,
+          availableSpots,
+          occupancyPercentage,
+          status: session.status,
+          primaryGuide: session.primaryGuide
+            ? { cpf: session.primaryGuide.cpf, name: session.primaryGuide.name }
+            : null,
+        }
+
+        if (!sessionGroups.has(sessionDate)) {
+          sessionGroups.set(sessionDate, {
+            date: sessionDate,
+            dateLabel,
+            slots: [slot],
+          })
+        } else {
+          sessionGroups.get(sessionDate)!.slots.push(slot)
         }
       }
-
-      const totalCapacity = upcomingSession?.capacity ?? trail.maxGroupSize
-      const availableSpots = Math.max(0, totalCapacity - occupancy)
 
       return {
         id: trail.id,
@@ -103,7 +157,7 @@ export async function getTrails(_request: Request, response: Response, next: Nex
         durationMinutes: trail.durationMinutes,
         difficulty: trail.difficulty,
         maxGroupSize: trail.maxGroupSize,
-        availableSpots,
+        availableSpots: upcomingAvailableSpots,
         badgeLabel: trail.badgeLabel,
         imageUrl: trail.imageUrl,
         meetingPoint: trail.meetingPoint,
@@ -111,19 +165,28 @@ export async function getTrails(_request: Request, response: Response, next: Nex
         upcomingSession: upcomingSession
           ? {
               id: upcomingSession.id,
-              startsAt: upcomingSession.startsAt,
-              endsAt: upcomingSession.endsAt,
+              startsAt: upcomingSession.startsAt.toISOString(),
+              endsAt: upcomingSession.endsAt ? upcomingSession.endsAt.toISOString() : null,
               capacity: upcomingSession.capacity,
+              label: formatDateTimeLabel(upcomingSession.startsAt),
+              occupancyPercentage: calculateOccupancy(
+                upcomingSession.bookings.reduce((total, booking) => {
+                  return booking.status === 'CANCELLED' ? total : total + booking.participantsCount
+                }, 0),
+                upcomingSession.capacity,
+              ),
               primaryGuide: upcomingSession.primaryGuide
                 ? {
                     cpf: upcomingSession.primaryGuide.cpf,
                     name: upcomingSession.primaryGuide.name,
                   }
                 : null,
-              label: formatDateTimeLabel(upcomingSession.startsAt),
-              occupancyPercentage: calculateOccupancy(occupancy, upcomingSession.capacity),
             }
           : null,
+        sessions: Array.from(sessionGroups.values()).map((group) => ({
+          ...group,
+          slots: group.slots.sort((a, b) => a.startsAt.localeCompare(b.startsAt)),
+        })),
         guides: trail.guides.map((assignment: GuideAssignment) => ({
           cpf: assignment.guide.cpf,
           name: assignment.guide.name,

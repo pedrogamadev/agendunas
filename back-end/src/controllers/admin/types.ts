@@ -124,14 +124,54 @@ export type AdminTrailGuideOption = {
   isFeatured: boolean
 }
 
+export type AdminTrailSessionParticipant = {
+  id: string
+  fullName: string
+  email: string | null
+  phone: string | null
+  isBanned: boolean
+  bookingId: string
+  bookingProtocol: string
+  bookingStatus: string
+  bookingStatusTone: StatusTone
+  contactName: string
+  contactEmail: string
+  contactPhone: string
+  scheduledFor: string
+  scheduledForLabel: string
+  createdAt: string
+}
+
+export type AdminTrailSessionBooking = {
+  id: string
+  protocol: string
+  status: string
+  statusTone: StatusTone
+  scheduledFor: string
+  scheduledForLabel: string
+  participantsCount: number
+  contactName: string
+  contactEmail: string
+  contactPhone: string
+  participants: AdminTrailSessionParticipant[]
+}
+
 export type AdminTrailSession = {
   id: string
+  trailId: string
+  trailName: string | null
   startsAt: string
   endsAt: string | null
   capacity: number
   meetingPoint: string | null
+  notes: string | null
   status: TrailSessionStatus
   primaryGuide: { cpf: string; name: string } | null
+  totalParticipants: number
+  availableSpots: number
+  occupancyPercentage: number
+  bookings: AdminTrailSessionBooking[]
+  participants: AdminTrailSessionParticipant[]
 }
 
 export type AdminTrail = {

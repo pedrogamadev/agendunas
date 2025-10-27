@@ -11,8 +11,10 @@ import {
   fetchAdminOverview,
   fetchAdminGuides,
   fetchAdminTrails,
+  fetchAdminTrailSessions,
   fetchAdminBooking,
   fetchAdminParticipant,
+  fetchAdminTrailSessionParticipants,
   createAdminGuide,
   createAdminTrail,
   createAdminInvite,
@@ -36,7 +38,9 @@ import {
   type CreateAdminTrailPayload,
   type UpdateAdminTrailPayload,
   type AdminParticipantDetail,
+  type AdminTrailSession,
   type TrailDifficulty,
+  type TrailSessionStatus,
   type TrailStatus,
 } from '../api/admin'
 import { formatCpf, formatCpfForInput, sanitizeCpf } from '../utils/cpf'
@@ -293,6 +297,15 @@ const TRAIL_DIFFICULTY_LABELS: Record<TrailDifficulty, string> = {
   HARD: 'Intensa',
 }
 
+const SESSION_STATUS_LABELS: Record<
+  TrailSessionStatus,
+  { label: string; tone: 'success' | 'warning' | 'danger' | 'info' | 'neutral' }
+> = {
+  SCHEDULED: { label: 'Agendada', tone: 'success' },
+  COMPLETED: { label: 'Concluída', tone: 'info' },
+  CANCELLED: { label: 'Cancelada', tone: 'danger' },
+}
+
 const INVITE_ROLE_LABELS: Record<'A' | 'C' | 'G', string> = {
   A: 'Administrador',
   C: 'Colaborador',
@@ -514,14 +527,6 @@ const bookingColumns: AdminTableColumn[] = [
   { id: 'guide', label: 'Guia' },
 ]
 
-const participantColumns: AdminTableColumn[] = [
-  { id: 'name', label: 'Nome' },
-  { id: 'contact', label: 'Contato' },
-  { id: 'trail', label: 'Trilha' },
-  { id: 'datetime', label: 'Data & Horário' },
-  { id: 'status', label: 'Status', align: 'center' },
-]
-
 
 type ChartDatum = {
   label: string
@@ -642,6 +647,20 @@ type SectionBuilderParams = {
   onBookingTableAction: (rowId: string, actionId: string) => void
   onParticipantTableAction: (rowId: string, actionId: string) => void
   onOpenEventModal: () => void
+  trailOptions: AdminTrail[]
+  isLoadingTrails: boolean
+  trailError: string | null
+  sessionsState: {
+    trailId: string
+    sessions: AdminTrailSession[]
+    isLoading: boolean
+    error: string | null
+    expandedSessionId: string | null
+  }
+  sessionParticipantsError: string | null
+  onSelectSessionsTrail: (event: ChangeEvent<HTMLSelectElement>) => void
+  onRefreshSessions: () => void
+  onToggleSessionParticipants: (sessionId: string) => void
 }
 
 const buildSection = ({
@@ -654,6 +673,14 @@ const buildSection = ({
   onBookingTableAction,
   onParticipantTableAction,
   onOpenEventModal,
+  trailOptions,
+  isLoadingTrails,
+  trailError,
+  sessionsState,
+  sessionParticipantsError,
+  onSelectSessionsTrail,
+  onRefreshSessions,
+  onToggleSessionParticipants,
 }: SectionBuilderParams): SectionConfig => {
   if (key === 'trilhas') {
     return trailsSection
@@ -819,45 +846,195 @@ const buildSection = ({
       }
     case 'participantes':
       return {
-        title: 'Participantes',
-        description: 'Lista de visitantes com status e check-in',
+        title: 'Turmas e Participantes',
+        description: 'Visualize as sessões publicadas e os participantes de cada turma',
         actions: (
-          <button type="button" className="admin-primary-button">
-            Importar Participantes
-          </button>
+          <>
+            <button type="button" className="admin-secondary-button" disabled>
+              Importar Participantes
+            </button>
+            <button
+              type="button"
+              className="admin-primary-button"
+              onClick={onRefreshSessions}
+              disabled={!sessionsState.trailId || sessionsState.isLoading}
+            >
+              Atualizar turmas
+            </button>
+          </>
         ),
         content: (
           <div className="admin-section">
             <div className="admin-filters">
               <label>
                 Trilha
-                <select defaultValue="todas">
-                  <option value="todas">Todas</option>
-                </select>
-              </label>
-              <label>
-                Data
-                <input type="date" defaultValue={new Date().toISOString().slice(0, 10)} />
-              </label>
-              <label>
-                Status
-                <select defaultValue="todos">
-                  <option value="todos">Todos</option>
-                  <option value="confirmado">Confirmado</option>
-                  <option value="pendente">Pendente</option>
+                <select
+                  value={sessionsState.trailId}
+                  onChange={onSelectSessionsTrail}
+                  disabled={isLoadingTrails || trailOptions.length === 0}
+                >
+                  <option value="">
+                    {isLoadingTrails
+                      ? 'Carregando trilhas...'
+                      : trailOptions.length === 0
+                      ? 'Nenhuma trilha disponível'
+                      : 'Selecione uma trilha'}
+                  </option>
+                  {trailOptions.map((trail) => (
+                    <option key={trail.id} value={trail.id}>
+                      {trail.name}
+                    </option>
+                  ))}
                 </select>
               </label>
             </div>
-            <AdminTable
-              columns={participantColumns}
-              rows={data.participantRows}
-              onAction={onParticipantTableAction}
-              emptyMessage={
-                data.isLive
-                  ? 'Nenhum participante encontrado.'
-                  : data.error ?? 'Participantes indisponíveis.'
-              }
-            />
+            {trailError && trailOptions.length === 0 ? (
+              <div className="admin-alert admin-alert--error">{trailError}</div>
+            ) : null}
+            {sessionsState.error ? (
+              <div className="admin-alert admin-alert--error">{sessionsState.error}</div>
+            ) : null}
+            {sessionsState.isLoading ? (
+              <p className="admin-placeholder">Carregando turmas desta trilha...</p>
+            ) : null}
+            {!sessionsState.isLoading && sessionsState.sessions.length === 0 ? (
+              <p className="admin-placeholder">Nenhuma turma encontrada para a trilha selecionada.</p>
+            ) : null}
+            <div className="admin-session-list">
+              {sessionsState.sessions.map((session) => {
+                const statusTone =
+                  SESSION_STATUS_LABELS[session.status] ?? {
+                    label: session.status,
+                    tone: 'info',
+                  }
+                const isExpanded = sessionsState.expandedSessionId === session.id
+                const guideName = session.primaryGuide?.name ?? 'A definir'
+
+                return (
+                  <article key={session.id} className="admin-session-card">
+                    <header className="admin-session-card__header">
+                      <div>
+                        <h3>{session.trailName ?? 'Turma'}</h3>
+                        <span className="admin-session-card__identifier">ID: {session.id}</span>
+                      </div>
+                      <span className={`admin-tag admin-tag--${statusTone.tone}`}>
+                        {statusTone.label}
+                      </span>
+                    </header>
+                    <dl className="admin-session-card__details">
+                      <div>
+                        <dt>Início</dt>
+                        <dd>
+                          {formatDateLabel(session.startsAt)} • {formatTimeLabel(session.startsAt)}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Guia responsável</dt>
+                        <dd>{guideName}</dd>
+                      </div>
+                      <div>
+                        <dt>Vagas</dt>
+                        <dd>
+                          {session.totalParticipants} / {session.capacity} ocupadas •{' '}
+                          {session.availableSpots} disponíveis
+                        </dd>
+                      </div>
+                    </dl>
+                    {session.meetingPoint ? (
+                      <p className="admin-session-card__meeting-point">
+                        <strong>Ponto de encontro:</strong> {session.meetingPoint}
+                      </p>
+                    ) : null}
+                    <div className="admin-session-card__progress">
+                      <div className="admin-progress">
+                        <div
+                          className="admin-progress__bar"
+                          style={{ width: `${session.occupancyPercentage}%` }}
+                        />
+                      </div>
+                      <span>{session.occupancyPercentage}% de ocupação</span>
+                    </div>
+                    <div className="admin-session-card__actions">
+                      <button
+                        type="button"
+                        className="admin-secondary-button"
+                        onClick={() => onToggleSessionParticipants(session.id)}
+                      >
+                        {isExpanded ? 'Ocultar participantes' : 'Ver participantes'}
+                      </button>
+                      {session.notes ? (
+                        <span className="admin-session-card__notes">
+                          Observações: {session.notes}
+                        </span>
+                      ) : null}
+                    </div>
+                    {isExpanded ? (
+                      <div className="admin-session-card__participants">
+                        {sessionParticipantsError ? (
+                          <div className="admin-alert admin-alert--error">
+                            {sessionParticipantsError}
+                          </div>
+                        ) : null}
+                        {session.participants.length === 0 ? (
+                          <p className="admin-placeholder">
+                            Nenhum participante inscrito nesta turma.
+                          </p>
+                        ) : (
+                          <table className="admin-session-card__table">
+                            <thead>
+                              <tr>
+                                <th>Nome</th>
+                                <th>Contato</th>
+                                <th>Reserva</th>
+                                <th aria-label="Ações" />
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {session.participants.map((participant) => (
+                                <tr key={participant.id}>
+                                  <td>
+                                    <div className="admin-session-card__participant-name">
+                                      <strong>{participant.fullName}</strong>
+                                      {participant.isBanned ? (
+                                        <span className="admin-tag admin-tag--danger">Banido</span>
+                                      ) : null}
+                                    </div>
+                                    <small>{formatDateLabel(participant.createdAt)}</small>
+                                  </td>
+                                  <td>
+                                    <span>
+                                      {participant.contactPhone ?? participant.contactEmail ?? '—'}
+                                    </span>
+                                    <small>{participant.scheduledForLabel}</small>
+                                  </td>
+                                  <td>
+                                    <span
+                                      className={`admin-tag admin-tag--${participant.bookingStatusTone.tone}`}
+                                    >
+                                      {participant.bookingStatusTone.label}
+                                    </span>
+                                    <small>Protocolo {participant.bookingProtocol}</small>
+                                  </td>
+                                  <td className="admin-session-card__actions-cell">
+                                    <button
+                                      type="button"
+                                      className="admin-secondary-button"
+                                      onClick={() => onParticipantTableAction(participant.id, 'manage')}
+                                    >
+                                      Detalhes
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        )}
+                      </div>
+                    ) : null}
+                  </article>
+                )
+              })}
+            </div>
           </div>
         ),
       }
@@ -1093,6 +1270,20 @@ function AdminPage() {
   const [eventForm, setEventForm] = useState<EventFormState>(initialEventFormState)
   const [eventFormError, setEventFormError] = useState<string | null>(null)
   const [isSavingEvent, setIsSavingEvent] = useState(false)
+  const [sessionExplorer, setSessionExplorer] = useState<{
+    trailId: string
+    sessions: AdminTrailSession[]
+    isLoading: boolean
+    error: string | null
+    expandedSessionId: string | null
+  }>({
+    trailId: '',
+    sessions: [],
+    isLoading: false,
+    error: null,
+    expandedSessionId: null,
+  })
+  const [sessionParticipantsError, setSessionParticipantsError] = useState<string | null>(null)
 
   const sortGuides = useCallback((items: AdminGuide[]) => {
     return items
@@ -1173,6 +1364,53 @@ function AdminPage() {
     }
   }, [sortTrails])
 
+  const loadTrailSessions = useCallback(async (trailId: string) => {
+    if (!trailId) {
+      setSessionExplorer({
+        trailId: '',
+        sessions: [],
+        isLoading: false,
+        error: null,
+        expandedSessionId: null,
+      })
+      setSessionParticipantsError(null)
+      return
+    }
+
+    setSessionParticipantsError(null)
+    setSessionExplorer((state) => ({
+      ...state,
+      trailId,
+      isLoading: true,
+      error: null,
+      sessions: state.trailId === trailId ? state.sessions : [],
+      expandedSessionId: null,
+    }))
+
+    try {
+      const payload = await fetchAdminTrailSessions(trailId)
+      setSessionExplorer({
+        trailId,
+        sessions: payload,
+        isLoading: false,
+        error: null,
+        expandedSessionId: null,
+      })
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível carregar as sessões da trilha selecionada.'
+      setSessionExplorer({
+        trailId,
+        sessions: [],
+        isLoading: false,
+        error: message,
+        expandedSessionId: null,
+      })
+    }
+  }, [])
+
   useEffect(() => {
     if (activeSection === 'guias' && !guidesState.isInitialized) {
       loadGuides()
@@ -1184,6 +1422,31 @@ function AdminPage() {
       loadTrails()
     }
   }, [activeSection, trailsState.isInitialized, loadTrails])
+
+  useEffect(() => {
+    if (activeSection === 'participantes' && !trailsState.isInitialized) {
+      loadTrails()
+    }
+  }, [activeSection, trailsState.isInitialized, loadTrails])
+
+  useEffect(() => {
+    if (
+      activeSection === 'participantes' &&
+      trailsState.isInitialized &&
+      trailsState.items.length > 0 &&
+      !sessionExplorer.trailId &&
+      !sessionExplorer.isLoading
+    ) {
+      void loadTrailSessions(trailsState.items[0].id)
+    }
+  }, [
+    activeSection,
+    trailsState.isInitialized,
+    trailsState.items,
+    sessionExplorer.trailId,
+    sessionExplorer.isLoading,
+    loadTrailSessions,
+  ])
 
   const resetGuideForm = useCallback(() => {
     setGuideForm(initialGuideFormState)
@@ -1430,6 +1693,65 @@ function AdminPage() {
       setIsUpdatingParticipant(false)
     }
   }, [loadOverview, participantDetail, updateAdminParticipant])
+
+  const handleSessionsTrailSelect = useCallback(
+    (event: ChangeEvent<HTMLSelectElement>) => {
+      const nextTrailId = event.target.value
+      if (!nextTrailId) {
+        setSessionExplorer({
+          trailId: '',
+          sessions: [],
+          isLoading: false,
+          error: null,
+          expandedSessionId: null,
+        })
+        setSessionParticipantsError(null)
+        return
+      }
+
+      void loadTrailSessions(nextTrailId)
+    },
+    [loadTrailSessions],
+  )
+
+  const handleRefreshTrailSessions = useCallback(() => {
+    if (sessionExplorer.trailId) {
+      void loadTrailSessions(sessionExplorer.trailId)
+    }
+  }, [sessionExplorer.trailId, loadTrailSessions])
+
+  const handleToggleSessionParticipants = useCallback(
+    async (sessionId: string) => {
+      const isCurrentlyExpanded = sessionExplorer.expandedSessionId === sessionId
+      setSessionExplorer((state) => ({
+        ...state,
+        expandedSessionId: isCurrentlyExpanded ? null : sessionId,
+      }))
+
+      if (isCurrentlyExpanded) {
+        return
+      }
+
+      setSessionParticipantsError(null)
+
+      try {
+        const participants = await fetchAdminTrailSessionParticipants(sessionId)
+        setSessionExplorer((state) => ({
+          ...state,
+          sessions: state.sessions.map((session) =>
+            session.id === sessionId ? { ...session, participants } : session,
+          ),
+        }))
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : 'Não foi possível carregar os participantes da sessão.'
+        setSessionParticipantsError(message)
+      }
+    },
+    [sessionExplorer.expandedSessionId],
+  )
 
   const handleBookingSubmit = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
@@ -2977,6 +3299,14 @@ function AdminPage() {
         onBookingTableAction: handleBookingTableAction,
         onParticipantTableAction: handleParticipantTableAction,
         onOpenEventModal: handleOpenEventModal,
+        trailOptions: trailsState.items,
+        isLoadingTrails: trailsState.isLoading,
+        trailError: trailsState.error,
+        sessionsState: sessionExplorer,
+        sessionParticipantsError,
+        onSelectSessionsTrail: handleSessionsTrailSelect,
+        onRefreshSessions: handleRefreshTrailSessions,
+        onToggleSessionParticipants: handleToggleSessionParticipants,
       }),
     [
       activeSection,
@@ -2988,6 +3318,14 @@ function AdminPage() {
       handleBookingTableAction,
       handleParticipantTableAction,
       handleOpenEventModal,
+      trailsState.items,
+      trailsState.isLoading,
+      trailsState.error,
+      sessionExplorer,
+      sessionParticipantsError,
+      handleSessionsTrailSelect,
+      handleRefreshTrailSessions,
+      handleToggleSessionParticipants,
     ],
   )
 

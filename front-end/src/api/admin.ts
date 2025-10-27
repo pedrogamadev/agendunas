@@ -264,14 +264,54 @@ export type AdminTrailGuideOption = {
   isFeatured: boolean
 }
 
+export type AdminTrailSessionParticipant = {
+  id: string
+  fullName: string
+  email: string | null
+  phone: string | null
+  isBanned: boolean
+  bookingId: string
+  bookingProtocol: string
+  bookingStatus: string
+  bookingStatusTone: { label: string; tone: 'success' | 'warning' | 'danger' | 'info' | 'neutral' }
+  contactName: string
+  contactEmail: string
+  contactPhone: string
+  scheduledFor: string
+  scheduledForLabel: string
+  createdAt: string
+}
+
+export type AdminTrailSessionBooking = {
+  id: string
+  protocol: string
+  status: string
+  statusTone: { label: string; tone: 'success' | 'warning' | 'danger' | 'info' | 'neutral' }
+  scheduledFor: string
+  scheduledForLabel: string
+  participantsCount: number
+  contactName: string
+  contactEmail: string
+  contactPhone: string
+  participants: AdminTrailSessionParticipant[]
+}
+
 export type AdminTrailSession = {
   id: string
+  trailId: string
+  trailName: string | null
   startsAt: string
   endsAt: string | null
   capacity: number
   meetingPoint: string | null
+  notes: string | null
   status: TrailSessionStatus
   primaryGuide: { cpf: string; name: string } | null
+  totalParticipants: number
+  availableSpots: number
+  occupancyPercentage: number
+  bookings: AdminTrailSessionBooking[]
+  participants: AdminTrailSessionParticipant[]
 }
 
 export type AdminTrail = {
@@ -349,6 +389,56 @@ export type UpdateAdminTrailPayload = {
 
 export function fetchAdminTrails() {
   return apiRequest<AdminTrailListResponse>('/admin/trails')
+}
+
+export function fetchAdminTrailSessions(trailId: string) {
+  return apiRequest<AdminTrailSession[]>(`/admin/trails/${trailId}/sessions`)
+}
+
+export type CreateAdminTrailSessionPayload = {
+  startsAt: string
+  endsAt?: string | null
+  capacity: number
+  meetingPoint?: string | null
+  notes?: string | null
+  status?: TrailSessionStatus
+  primaryGuideCpf?: string | null
+}
+
+export function createAdminTrailSession(trailId: string, payload: CreateAdminTrailSessionPayload) {
+  return apiRequest<AdminTrailSession>(`/admin/trails/${trailId}/sessions`, {
+    method: 'POST',
+    body: payload,
+  })
+}
+
+export type UpdateAdminTrailSessionPayload = {
+  startsAt?: string
+  endsAt?: string | null
+  capacity?: number
+  meetingPoint?: string | null
+  notes?: string | null
+  status?: TrailSessionStatus
+  primaryGuideCpf?: string | null
+}
+
+export function updateAdminTrailSession(id: string, payload: UpdateAdminTrailSessionPayload) {
+  return apiRequest<AdminTrailSession>(`/admin/sessions/${id}`, {
+    method: 'PATCH',
+    body: payload,
+  })
+}
+
+export type DeleteAdminTrailSessionResponse = AdminTrailSession | { id: string; deleted: true }
+
+export function deleteAdminTrailSession(id: string) {
+  return apiRequest<DeleteAdminTrailSessionResponse>(`/admin/sessions/${id}`, {
+    method: 'DELETE',
+  })
+}
+
+export function fetchAdminTrailSessionParticipants(id: string) {
+  return apiRequest<AdminTrailSessionParticipant[]>(`/admin/sessions/${id}/participants`)
 }
 
 export function createAdminTrail(payload: CreateAdminTrailPayload) {

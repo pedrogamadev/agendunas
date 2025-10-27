@@ -29,6 +29,24 @@ export type PublicGuide = {
   }[]
 }
 
+export type PublicTrailSessionSlot = {
+  id: string
+  startsAt: string
+  endsAt: string | null
+  timeLabel: string
+  capacity: number
+  availableSpots: number
+  occupancyPercentage: number
+  status: 'SCHEDULED' | 'CANCELLED' | 'COMPLETED'
+  primaryGuide: { cpf: string; name: string } | null
+}
+
+export type PublicTrailSessionGroup = {
+  date: string
+  dateLabel: string
+  slots: PublicTrailSessionSlot[]
+}
+
 export type PublicTrail = {
   id: string
   slug: string
@@ -52,6 +70,7 @@ export type PublicTrail = {
     occupancyPercentage: number
     primaryGuide: { cpf: string; name: string } | null
   } | null
+  sessions: PublicTrailSessionGroup[]
   guides: {
     cpf: string
     name: string

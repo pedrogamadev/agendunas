@@ -15,9 +15,11 @@ import {
   fetchPublicGuides,
   fetchPublicTrails,
   type CreateBookingPayload,
+  type PublicTrailSessionGroup,
 } from '../api/public'
 import { formatCpf, formatCpfForInput, sanitizeCpf } from '../utils/cpf'
 import { useAuth } from '../context/AuthContext'
+import './BookingPage.css'
 
 type WeatherConditionKey =
   | 'clear'
@@ -57,12 +59,21 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
   const guidesContent = content.guides
   const { user, isAuthenticating } = useAuth()
   type GuideOption = (typeof guidesContent.guides)[number] & { databaseCpf?: string }
-  type TrailOption = (typeof booking.trails)[number] & { databaseId?: string }
+  type TrailOption = Omit<(typeof booking.trails)[number], 'sessions'> & {
+    databaseId?: string
+    sessions: PublicTrailSessionGroup[]
+  }
   const [guideOptions, setGuideOptions] = useState<GuideOption[]>(
     guidesContent.guides.map((guide) => ({ ...guide, databaseCpf: undefined })),
   )
   const [trailOptions, setTrailOptions] = useState<TrailOption[]>(
-    booking.trails.map((trail) => ({ ...trail, databaseId: trail.id })),
+    booking.trails.map((trail) => ({
+      ...trail,
+      databaseId: trail.id,
+      sessions: Array.isArray((trail as { sessions?: PublicTrailSessionGroup[] }).sessions)
+        ? ((trail as { sessions?: PublicTrailSessionGroup[] }).sessions as PublicTrailSessionGroup[])
+        : [],
+    })),
   )
   const guideParam = searchParams.get('guide')
   const selectedGuide = guideParam
@@ -74,6 +85,8 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
     selectedGuide?.featuredTrailId ?? '',
   )
   const [selectedDate, setSelectedDate] = useState('')
+  const [selectedSessionId, setSelectedSessionId] = useState('')
+  const [isSessionModalOpen, setIsSessionModalOpen] = useState(false)
   const [weatherState, setWeatherState] = useState<WeatherState>({ status: 'idle' })
   const [showRainWarning, setShowRainWarning] = useState(false)
   const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false)
@@ -92,7 +105,63 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
     () => trailOptions.find((trail) => trail.id === selectedTrailId),
     [selectedTrailId, trailOptions],
   )
-  const maxParticipants = selectedTrailOption
+  const availableSessionGroups = useMemo(
+    () => selectedTrailOption?.sessions ?? [],
+    [selectedTrailOption],
+  )
+  const sessionEntries = useMemo(
+    () =>
+      availableSessionGroups.flatMap((group) =>
+        group.slots.map((slot) => ({ groupDate: group.date, groupLabel: group.dateLabel, slot })),
+      ),
+    [availableSessionGroups],
+  )
+  const selectedSession = useMemo(() => {
+    const match = sessionEntries.find((entry) => entry.slot.id === selectedSessionId)
+    if (!match) {
+      return null
+    }
+
+    return {
+      ...match.slot,
+      date: match.groupDate,
+      dateLabel: match.groupLabel,
+    }
+  }, [sessionEntries, selectedSessionId])
+  const hasPublishedSessions = useMemo(
+    () =>
+      availableSessionGroups.some((group) =>
+        group.slots.some((slot) => slot.status === 'SCHEDULED'),
+      ),
+    [availableSessionGroups],
+  )
+  useEffect(() => {
+    if (!selectedTrailOption) {
+      setSelectedSessionId('')
+      return
+    }
+
+    const stillValid = sessionEntries.some((entry) => entry.slot.id === selectedSessionId)
+    if (!stillValid) {
+      setSelectedSessionId('')
+    }
+  }, [selectedTrailOption, sessionEntries, selectedSessionId])
+  useEffect(() => {
+    if (selectedSession) {
+      setSelectedDate(selectedSession.startsAt.slice(0, 10))
+    }
+  }, [selectedSession])
+  useEffect(() => {
+    if (previousTrailIdRef.current !== selectedTrailId) {
+      if (!hasPublishedSessions) {
+        setSelectedDate('')
+      }
+      previousTrailIdRef.current = selectedTrailId
+    }
+  }, [selectedTrailId, hasPublishedSessions])
+  const maxParticipants = selectedSession
+    ? Math.max(1, selectedSession.availableSpots)
+    : selectedTrailOption
     ? Math.max(1, selectedTrailOption.availableSpots)
     : DEFAULT_MAX_PARTICIPANTS
   const participantOptions = useMemo(
@@ -124,6 +193,7 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
   const abortControllerRef = useRef<AbortController | null>(null)
   const allowRainySubmitRef = useRef(false)
   const formRef = useRef<HTMLFormElement | null>(null)
+  const previousTrailIdRef = useRef<string | null>(null)
   const heroStyle = {
     '--hero-background-image': `url(${booking.hero.photo})`,
   } as CSSProperties
@@ -315,6 +385,7 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
           availableSpots: Number.isFinite(trail.availableSpots)
             ? Math.max(1, trail.availableSpots)
             : Math.max(1, trail.maxGroupSize),
+          sessions: trail.sessions ?? [],
         }))
 
         if (mapped.length > 0) {
@@ -514,6 +585,19 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
     setShowTermsModal(false)
   }, [])
 
+  const handleOpenSessionModal = useCallback(() => {
+    setIsSessionModalOpen(true)
+  }, [])
+
+  const handleCloseSessionModal = useCallback(() => {
+    setIsSessionModalOpen(false)
+  }, [])
+
+  const handleSelectSession = useCallback((sessionId: string) => {
+    setSelectedSessionId(sessionId)
+    setIsSessionModalOpen(false)
+  }, [])
+
   const handleAcceptTerms = useCallback(() => {
     setHasAcceptedTerms(true)
     setShowTermsModal(false)
@@ -597,6 +681,22 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
         return
       }
 
+      if (hasPublishedSessions && !selectedSession) {
+        setSubmissionResult({ type: 'error', message: booking.form.sessionRequired })
+        setIsSubmitting(false)
+        return
+      }
+
+      if (
+        hasPublishedSessions &&
+        selectedSession &&
+        (selectedSession.availableSpots <= 0 || selectedSession.status !== 'SCHEDULED')
+      ) {
+        setSubmissionResult({ type: 'error', message: booking.form.sessionUnavailable })
+        setIsSubmitting(false)
+        return
+      }
+
       const shouldUseProfileIdentity = isLoggedIn && !needsIdentityForm
       const contactName = shouldUseProfileIdentity
         ? contactNameFromProfile
@@ -631,16 +731,29 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
         normalizedParticipants.push({ fullName: trimmedName, cpf: cpfDigits })
       }
 
+      const scheduledDateValue =
+        hasPublishedSessions && selectedSession
+          ? selectedSession.startsAt.slice(0, 10)
+          : String(formData.get('date') ?? '')
+      const scheduledTimeValue =
+        hasPublishedSessions && selectedSession
+          ? selectedSession.startsAt.slice(11, 16)
+          : String(formData.get('time') ?? '')
+
       const payload: CreateBookingPayload = {
         trailId: trailSelection.databaseId ?? trailSelection.id,
         contactName,
         contactEmail,
         contactPhone,
-        scheduledDate: String(formData.get('date') ?? ''),
-        scheduledTime: String(formData.get('time') ?? '') || undefined,
+        scheduledDate: scheduledDateValue,
+        scheduledTime: scheduledTimeValue || undefined,
         participantsCount: normalizedParticipants.length,
         notes: (formData.get('notes') as string | null) ?? undefined,
         participants: normalizedParticipants,
+      }
+
+      if (selectedSession) {
+        payload.sessionId = selectedSession.id
       }
 
       const guideSelection = guideParam
@@ -661,6 +774,8 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
         setHasAcceptedTerms(false)
         setSelectedDate('')
         setSelectedTrailId('')
+        setSelectedSessionId('')
+        setIsSessionModalOpen(false)
         updateParticipantsCount(1)
       } catch (error) {
         const message =
@@ -682,6 +797,10 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
       isHighRainProbability,
       isLoggedIn,
       isSubmitting,
+      hasPublishedSessions,
+      booking.form.sessionRequired,
+      booking.form.sessionUnavailable,
+      selectedSession,
       needsIdentityForm,
       participants,
       updateParticipantsCount,
@@ -837,14 +956,61 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
                   </select>
                   <small className="field-help">{booking.form.helpText}</small>
                 </label>
-                <label className="input-field">
-                  <span>{booking.form.date}</span>
-                  <input type="date" name="date" value={selectedDate} onChange={handleDateChange} required />
-                </label>
-                <label className="input-field">
-                  <span>{booking.form.time}</span>
-                  <input type="time" name="time" required />
-                </label>
+                {hasPublishedSessions ? (
+                  <>
+                    <div className="input-field input-full booking-session-field">
+                      <span>{booking.form.sessionLabel}</span>
+                      {selectedSession ? (
+                        <div className="booking-session-summary">
+                          <strong>
+                            {booking.form.sessionSummary
+                              .replace('{date}', selectedSession.dateLabel)
+                              .replace('{time}', selectedSession.timeLabel)}
+                          </strong>
+                          <span>
+                            {booking.form.sessionCapacity
+                              .replace('{available}', String(selectedSession.availableSpots))
+                              .replace('{total}', String(selectedSession.capacity))}
+                          </span>
+                        </div>
+                      ) : (
+                        <p className="booking-session-placeholder">{booking.form.sessionPlaceholder}</p>
+                      )}
+                      <div className="booking-session-actions">
+                        <button type="button" className="btn outline" onClick={handleOpenSessionModal}>
+                          {selectedSession ? booking.form.sessionChange : booking.form.sessionSelect}
+                        </button>
+                      </div>
+                    </div>
+                    <input
+                      type="hidden"
+                      name="date"
+                      value={selectedSession ? selectedSession.startsAt.slice(0, 10) : ''}
+                    />
+                    <input
+                      type="hidden"
+                      name="time"
+                      value={selectedSession ? selectedSession.startsAt.slice(11, 16) : ''}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <label className="input-field">
+                      <span>{booking.form.date}</span>
+                      <input
+                        type="date"
+                        name="date"
+                        value={selectedDate}
+                        onChange={handleDateChange}
+                        required
+                      />
+                    </label>
+                    <label className="input-field">
+                      <span>{booking.form.time}</span>
+                      <input type="time" name="time" required />
+                    </label>
+                  </>
+                )}
                 <label className="input-field">
                   <span>{booking.form.participants}</span>
                   <select
@@ -1090,6 +1256,69 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
           </aside>
         </section>
       </main>
+
+      {isSessionModalOpen && hasPublishedSessions ? (
+        <div className="booking-session-modal" role="presentation">
+          <div
+            className="booking-session-modal__backdrop"
+            aria-hidden="true"
+            onClick={handleCloseSessionModal}
+          />
+          <div
+            className="booking-session-modal__dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="session-modal-title"
+          >
+            <button
+              type="button"
+              className="booking-session-modal__close"
+              onClick={handleCloseSessionModal}
+              aria-label={booking.form.sessionModalClose}
+            >
+              ×
+            </button>
+            <header className="booking-session-modal__header">
+              <h3 id="session-modal-title">{booking.form.sessionModalTitle}</h3>
+              <p>{booking.form.sessionModalDescription}</p>
+            </header>
+            <div className="booking-session-modal__groups">
+              {availableSessionGroups.map((group) => (
+                <section key={group.date} className="booking-session-modal__group">
+                  <h4>{group.dateLabel}</h4>
+                  <div className="booking-session-modal__slots">
+                    {group.slots.map((slot) => {
+                      const isSelected = selectedSessionId === slot.id
+                      const isDisabled = slot.status !== 'SCHEDULED' || slot.availableSpots <= 0
+                      const capacityLabel = booking.form.sessionSlotCapacity
+                        .replace('{available}', String(Math.max(0, slot.availableSpots)))
+                        .replace('{total}', String(slot.capacity))
+
+                      return (
+                        <button
+                          key={slot.id}
+                          type="button"
+                          className={`booking-session-modal__slot${
+                            isSelected ? ' is-selected' : ''
+                          }${isDisabled ? ' is-disabled' : ''}`}
+                          onClick={() => handleSelectSession(slot.id)}
+                          disabled={isDisabled}
+                        >
+                          <span>{slot.timeLabel}</span>
+                          <small>{capacityLabel}</small>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </section>
+              ))}
+              {availableSessionGroups.length === 0 ? (
+                <p className="booking-session-modal__empty">{booking.form.sessionModalEmpty}</p>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {showRainWarning && (
         <div className="rain-warning-modal" role="presentation">

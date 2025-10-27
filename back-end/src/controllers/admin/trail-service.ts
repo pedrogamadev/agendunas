@@ -1,6 +1,13 @@
-import type { TrailDifficulty, TrailSessionStatus, TrailStatus } from '@prisma/client'
+import type { BookingStatus, TrailDifficulty, TrailSessionStatus, TrailStatus } from '@prisma/client'
 import prisma from '../../lib/prisma.js'
-import type { AdminTrail, AdminTrailGuideAssignment, AdminTrailSession } from './types.js'
+import { calculateOccupancy, createStatusTone, formatDateTimeLabel } from './formatters.js'
+import type {
+  AdminTrail,
+  AdminTrailGuideAssignment,
+  AdminTrailSession,
+  AdminTrailSessionBooking,
+  AdminTrailSessionParticipant,
+} from './types.js'
 
 export const trailGuideInclude = {
   include: {
@@ -22,6 +29,21 @@ export const trailSessionsInclude = {
   orderBy: { startsAt: 'desc' as const },
   include: {
     primaryGuide: { select: { cpf: true, name: true } },
+    bookings: {
+      orderBy: { scheduledFor: 'asc' },
+      include: {
+        participants: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+            phone: true,
+            isBanned: true,
+            createdAt: true,
+          },
+        },
+      },
+    },
   },
 } as const
 
@@ -39,6 +61,103 @@ type TrailGuideRecord = TrailRecord['guides'][number]
 
 type TrailSessionRecord = TrailRecord['sessions'][number]
 
+type TrailSessionBookingRecord = NonNullable<TrailSessionRecord['bookings']>[number]
+
+type TrailSessionParticipantRecord =
+  NonNullable<TrailSessionBookingRecord['participants']>[number]
+
+export const activeBookingStatuses: BookingStatus[] = [
+  'PENDING',
+  'CONFIRMED',
+  'COMPLETED',
+  'RESCHEDULED',
+]
+
+function normalizeSessionParticipant(
+  participant: TrailSessionParticipantRecord,
+  booking: TrailSessionBookingRecord,
+): AdminTrailSessionParticipant {
+  return {
+    id: participant.id,
+    fullName: participant.fullName,
+    email: participant.email ?? null,
+    phone: participant.phone ?? null,
+    isBanned: participant.isBanned,
+    bookingId: booking.id,
+    bookingProtocol: booking.protocol,
+    bookingStatus: booking.status,
+    bookingStatusTone: createStatusTone(booking.status),
+    contactName: booking.contactName,
+    contactEmail: booking.contactEmail,
+    contactPhone: booking.contactPhone,
+    scheduledFor: booking.scheduledFor.toISOString(),
+    scheduledForLabel: formatDateTimeLabel(booking.scheduledFor),
+    createdAt: participant.createdAt.toISOString(),
+  }
+}
+
+function normalizeSessionBooking(
+  booking: TrailSessionBookingRecord,
+): AdminTrailSessionBooking {
+  const participants = (booking.participants ?? []).map((participant) =>
+    normalizeSessionParticipant(participant, booking),
+  )
+
+  return {
+    id: booking.id,
+    protocol: booking.protocol,
+    status: booking.status,
+    statusTone: createStatusTone(booking.status),
+    scheduledFor: booking.scheduledFor.toISOString(),
+    scheduledForLabel: formatDateTimeLabel(booking.scheduledFor),
+    participantsCount: booking.participantsCount,
+    contactName: booking.contactName,
+    contactEmail: booking.contactEmail,
+    contactPhone: booking.contactPhone,
+    participants,
+  }
+}
+
+export function normalizeTrailSession(
+  session: TrailSessionRecord,
+  context?: { trailId: string; trailName: string },
+): AdminTrailSession {
+  const startsAtISO = session.startsAt.toISOString()
+  const endsAtISO = session.endsAt ? session.endsAt.toISOString() : null
+
+  const bookings = (session.bookings ?? []).map(normalizeSessionBooking)
+
+  const totalParticipants = bookings.reduce((total, booking) => {
+    if (activeBookingStatuses.includes(booking.status)) {
+      return total + booking.participantsCount
+    }
+    return total
+  }, 0)
+
+  const availableSpots = Math.max(0, session.capacity - totalParticipants)
+  const occupancyPercentage = calculateOccupancy(totalParticipants, session.capacity)
+
+  return {
+    id: session.id,
+    trailId: context?.trailId ?? session.trailId,
+    trailName: context?.trailName ?? null,
+    startsAt: startsAtISO,
+    endsAt: endsAtISO,
+    capacity: session.capacity,
+    meetingPoint: session.meetingPoint ?? null,
+    notes: session.notes ?? null,
+    status: session.status as TrailSessionStatus,
+    primaryGuide: session.primaryGuide
+      ? { cpf: (session.primaryGuide as PrimaryGuide).cpf, name: (session.primaryGuide as PrimaryGuide).name }
+      : null,
+    totalParticipants,
+    availableSpots,
+    occupancyPercentage,
+    bookings,
+    participants: bookings.flatMap((booking) => booking.participants),
+  }
+}
+
 type PrimaryGuide = NonNullable<TrailSessionRecord['primaryGuide']>
 
 export function normalizeTrail(trail: TrailRecord): AdminTrail {
@@ -51,7 +170,6 @@ export function normalizeTrail(trail: TrailRecord): AdminTrail {
 
   const sessions: AdminTrailSession[] = trail.sessions.map((session: TrailSessionRecord) => {
     const startsAtISO = session.startsAt.toISOString()
-    const endsAtISO = session.endsAt ? session.endsAt.toISOString() : null
 
     const startsAtTime = session.startsAt.getTime()
     if (lastSessionTime === null || startsAtTime > lastSessionTime) {
@@ -67,17 +185,7 @@ export function normalizeTrail(trail: TrailRecord): AdminTrail {
       }
     }
 
-    return {
-      id: session.id,
-      startsAt: startsAtISO,
-      endsAt: endsAtISO,
-      capacity: session.capacity,
-      meetingPoint: session.meetingPoint ?? null,
-      status: session.status as TrailSessionStatus,
-      primaryGuide: session.primaryGuide
-        ? { cpf: (session.primaryGuide as PrimaryGuide).cpf, name: (session.primaryGuide as PrimaryGuide).name }
-        : null,
-    }
+    return normalizeTrailSession(session, { trailId: trail.id, trailName: trail.name })
   })
 
   const guides: AdminTrailGuideAssignment[] = trail.guides

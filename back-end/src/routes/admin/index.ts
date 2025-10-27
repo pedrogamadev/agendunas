@@ -9,6 +9,11 @@ import { listTrails } from '../../controllers/admin/list-trails.js'
 import { createTrail } from '../../controllers/admin/create-trail.js'
 import { updateTrail } from '../../controllers/admin/update-trail.js'
 import { deleteTrail } from '../../controllers/admin/delete-trail.js'
+import { listTrailSessions } from '../../controllers/admin/list-trail-sessions.js'
+import { createTrailSession } from '../../controllers/admin/create-trail-session.js'
+import { updateTrailSession } from '../../controllers/admin/update-trail-session.js'
+import { deleteTrailSession } from '../../controllers/admin/delete-trail-session.js'
+import { listTrailSessionParticipants } from '../../controllers/admin/list-trail-session-participants.js'
 import { createGuide } from '../../controllers/admin/create-guide.js'
 import { createInvite } from '../../controllers/admin/create-invite.js'
 import { deleteGuide } from '../../controllers/admin/delete-guide.js'
@@ -35,6 +40,11 @@ router.get('/trails', listTrails)
 router.post('/trails', createTrail)
 router.put('/trails/:id', updateTrail)
 router.delete('/trails/:id', deleteTrail)
+router.get('/trails/:trailId/sessions', listTrailSessions)
+router.post('/trails/:trailId/sessions', createTrailSession)
+router.patch('/sessions/:id', updateTrailSession)
+router.delete('/sessions/:id', deleteTrailSession)
+router.get('/sessions/:id/participants', listTrailSessionParticipants)
 router.get('/calendar', getCalendar)
 router.get('/reports', getReports)
 router.get('/guides', listGuides)
