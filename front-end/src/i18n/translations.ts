@@ -153,6 +153,10 @@ type BookingTranslation = {
     date: string
     time: string
     participants: string
+    participantsSelfOption: string
+    participantsGuestOption: string
+    participantsGuestSingular: string
+    participantsGuestPlural: string
     participantsListTitle: string
     participantsListDescription: string
     participantNameLabel: string
@@ -180,6 +184,7 @@ type BookingTranslation = {
     label: string
     description: string
     duration: string
+    availableSpots: number
   }[]
   sidebar: {
     locationTitle: string
@@ -576,6 +581,10 @@ const translations: Record<Language, TranslationContent> = {
         date: 'Data preferida',
         time: 'Horário',
         participants: 'Quantidade de participantes',
+        participantsSelfOption: '1 - reserva só pra mim',
+        participantsGuestOption: '{count} pessoas (eu + {guests} {guestLabel})',
+        participantsGuestSingular: 'convidado',
+        participantsGuestPlural: 'convidados',
         participantsListTitle: 'Dados dos participantes',
         participantsListDescription:
           'Informe o nome completo e o CPF de cada pessoa que participará da experiência.',
@@ -684,24 +693,28 @@ const translations: Record<Language, TranslationContent> = {
           label: 'Trilha da Cachoeira',
           description: 'Percurso com banho de cachoeira e observação de aves.',
           duration: '5h30',
+          availableSpots: 12,
         },
         {
           id: 'mirante',
           label: 'Trilha do Mirante',
           description: 'Subida com vista panorâmica da costa potiguar.',
           duration: '4h',
+          availableSpots: 10,
         },
         {
           id: 'ecologica',
           label: 'Trilha Ecológica',
           description: 'Experiência educativa com foco em fauna e flora.',
           duration: '3h30',
+          availableSpots: 15,
         },
         {
           id: 'noturna',
           label: 'Trilha Noturna',
           description: 'Vivencie os sons da mata sob o céu estrelado.',
           duration: '2h',
+          availableSpots: 8,
         },
       ],
       sidebar: {
@@ -1242,6 +1255,10 @@ const translations: Record<Language, TranslationContent> = {
         date: 'Preferred date',
         time: 'Time',
         participants: 'Number of participants',
+        participantsSelfOption: '1 - just me',
+        participantsGuestOption: '{count} people (me + {guests} {guestLabel})',
+        participantsGuestSingular: 'guest',
+        participantsGuestPlural: 'guests',
         participantsListTitle: 'Participant details',
         participantsListDescription:
           'Provide the full name and CPF for every person joining the experience.',
@@ -1350,24 +1367,28 @@ const translations: Record<Language, TranslationContent> = {
           label: 'Waterfall Trail',
           description: 'Route with a refreshing waterfall break and birdwatching.',
           duration: '5h30',
+          availableSpots: 12,
         },
         {
           id: 'mirante',
           label: 'Overlook Trail',
           description: 'Climb with panoramic views of the coastline.',
           duration: '4h',
+          availableSpots: 10,
         },
         {
           id: 'ecologica',
           label: 'Ecological Trail',
           description: 'Educational experience focused on wildlife and flora.',
           duration: '3h30',
+          availableSpots: 15,
         },
         {
           id: 'noturna',
           label: 'Night Trail',
           description: 'Experience the sounds of the forest beneath the starry sky.',
           duration: '2h',
+          availableSpots: 8,
         },
       ],
       sidebar: {

@@ -38,6 +38,7 @@ export type PublicTrail = {
   durationMinutes: number
   difficulty: string
   maxGroupSize: number
+  availableSpots: number
   badgeLabel: string | null
   imageUrl: string | null
   meetingPoint: string | null

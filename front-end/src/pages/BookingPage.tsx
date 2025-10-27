@@ -49,6 +49,8 @@ type WeatherState =
   | { status: 'empty' }
   | { status: 'success'; summary: WeatherSummary }
 
+const DEFAULT_MAX_PARTICIPANTS = 10
+
 function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
   const { content, language } = useTranslation()
   const booking = content.booking
@@ -68,9 +70,9 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
         (guide) => guide.databaseCpf === guideParam || guide.id === guideParam,
       )
     : undefined
-  const selectedTrail = selectedGuide
-    ? trailOptions.find((trail) => trail.id === selectedGuide.featuredTrailId)
-    : undefined
+  const [selectedTrailId, setSelectedTrailId] = useState<string>(
+    selectedGuide?.featuredTrailId ?? '',
+  )
   const [selectedDate, setSelectedDate] = useState('')
   const [weatherState, setWeatherState] = useState<WeatherState>({ status: 'idle' })
   const [showRainWarning, setShowRainWarning] = useState(false)
@@ -86,6 +88,39 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
   const [participants, setParticipants] = useState<Array<{ fullName: string; cpf: string }>>([
     { fullName: '', cpf: '' },
   ])
+  const selectedTrailOption = useMemo(
+    () => trailOptions.find((trail) => trail.id === selectedTrailId),
+    [selectedTrailId, trailOptions],
+  )
+  const maxParticipants = selectedTrailOption
+    ? Math.max(1, selectedTrailOption.availableSpots)
+    : DEFAULT_MAX_PARTICIPANTS
+  const participantOptions = useMemo(
+    () =>
+      Array.from({ length: Math.max(1, maxParticipants) }, (_, index) => {
+        const count = index + 1
+        if (count === 1) {
+          return { value: count, label: booking.form.participantsSelfOption }
+        }
+
+        const guests = count - 1
+        const guestLabel =
+          guests === 1 ? booking.form.participantsGuestSingular : booking.form.participantsGuestPlural
+        const label = booking.form.participantsGuestOption
+          .replace('{count}', String(count))
+          .replace('{guests}', String(guests))
+          .replace('{guestLabel}', guestLabel)
+
+        return { value: count, label }
+      }),
+    [
+      booking.form.participantsGuestOption,
+      booking.form.participantsGuestPlural,
+      booking.form.participantsGuestSingular,
+      booking.form.participantsSelfOption,
+      maxParticipants,
+    ],
+  )
   const abortControllerRef = useRef<AbortController | null>(null)
   const allowRainySubmitRef = useRef(false)
   const formRef = useRef<HTMLFormElement | null>(null)
@@ -113,6 +148,7 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
 
     return ''
   }, [user])
+  const firstParticipantLocked = isLoggedIn && Boolean(contactNameFromProfile || user?.cpf)
   const contactEmailFromProfile = typeof user?.email === 'string' ? user.email.trim() : ''
   const formattedBirthDate = useMemo(() => {
     if (!user?.dataNascimento) {
@@ -165,6 +201,34 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
   const shouldShowAuthPrompt = !isLoggedIn && !isAuthenticating
   const shouldShowAuthLoading = !isLoggedIn && isAuthenticating
   const authLoadingMessage = language === 'pt' ? 'Verificando sessão...' : 'Checking session...'
+  const updateParticipantsCount = useCallback(
+    (nextCount: number) => {
+      const normalized = Math.max(1, nextCount)
+      setParticipantsCount(normalized)
+      setParticipants((previous) => {
+        const next = previous.slice(0, normalized)
+        while (next.length < normalized) {
+          next.push({ fullName: '', cpf: '' })
+        }
+
+        if (firstParticipantLocked) {
+          next[0] = {
+            fullName: contactNameFromProfile || '',
+            cpf: user?.cpf ? sanitizeCpf(user.cpf) : '',
+          }
+        }
+
+        return next
+      })
+    },
+    [contactNameFromProfile, firstParticipantLocked, user?.cpf],
+  )
+  useEffect(() => {
+    const maxOption = participantOptions[participantOptions.length - 1]?.value ?? 1
+    if (participantsCount > maxOption) {
+      updateParticipantsCount(maxOption)
+    }
+  }, [participantOptions, participantsCount, updateParticipantsCount])
   const handleNavigateToLogin = useCallback(() => {
     onNavigate('/login', { search: 'redirect=/agendamento' })
   }, [onNavigate])
@@ -173,33 +237,44 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
   }, [onNavigate])
 
   useEffect(() => {
-    if (!contactNameFromProfile && !user?.cpf) {
+    if (!firstParticipantLocked) {
       return
     }
 
     setParticipants((previous) => {
-      if (previous.length === 0) {
-        return [
-          {
-            fullName: contactNameFromProfile || '',
-            cpf: user?.cpf ? sanitizeCpf(user.cpf) : '',
-          },
-        ]
-      }
-
-      const firstParticipant = previous[0]
-      if (firstParticipant.fullName || firstParticipant.cpf) {
-        return previous
-      }
-
       const next = previous.slice()
+
+      if (next.length === 0) {
+        next.push({ fullName: '', cpf: '' })
+      }
+
       next[0] = {
         fullName: contactNameFromProfile || '',
         cpf: user?.cpf ? sanitizeCpf(user.cpf) : '',
       }
+
       return next
     })
-  }, [contactNameFromProfile, sanitizeCpf, user?.cpf])
+  }, [contactNameFromProfile, firstParticipantLocked, sanitizeCpf, user?.cpf])
+
+  useEffect(() => {
+    if (!selectedGuide?.featuredTrailId) {
+      return
+    }
+
+    setSelectedTrailId((current) => (current ? current : selectedGuide.featuredTrailId!))
+  }, [selectedGuide?.featuredTrailId])
+
+  useEffect(() => {
+    if (!selectedTrailId) {
+      return
+    }
+
+    const exists = trailOptions.some((trail) => trail.id === selectedTrailId)
+    if (!exists) {
+      setSelectedTrailId('')
+    }
+  }, [selectedTrailId, trailOptions])
 
   useEffect(() => {
     let isMounted = true
@@ -237,6 +312,9 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
           description: trail.summary ?? trail.description,
           duration: formatDuration(trail.durationMinutes),
           difficulty: difficultyLabels[trail.difficulty] ?? trail.difficulty,
+          availableSpots: Number.isFinite(trail.availableSpots)
+            ? Math.max(1, trail.availableSpots)
+            : Math.max(1, trail.maxGroupSize),
         }))
 
         if (mapped.length > 0) {
@@ -441,21 +519,25 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
     setShowTermsModal(false)
   }, [])
 
-  const handleParticipantsCountChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
-    const parsed = Number.parseInt(event.target.value, 10)
-    const clamped = Number.isNaN(parsed) ? 1 : Math.min(20, Math.max(1, parsed))
-    setParticipantsCount(clamped)
-    setParticipants((previous) => {
-      const next = previous.slice(0, clamped)
-      while (next.length < clamped) {
-        next.push({ fullName: '', cpf: '' })
+  const handleParticipantsCountChange = useCallback(
+    (event: ChangeEvent<HTMLSelectElement>) => {
+      const parsed = Number.parseInt(event.target.value, 10)
+      if (Number.isNaN(parsed)) {
+        updateParticipantsCount(1)
+        return
       }
-      return next
-    })
-  }, [])
+
+      updateParticipantsCount(parsed)
+    },
+    [updateParticipantsCount],
+  )
 
   const handleParticipantFieldChange = useCallback(
     (index: number, field: 'fullName' | 'cpf', value: string) => {
+      if (index === 0 && firstParticipantLocked) {
+        return
+      }
+
       setParticipants((previous) => {
         const next = previous.slice()
         const current = next[index] ?? { fullName: '', cpf: '' }
@@ -466,7 +548,7 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
         return next
       })
     },
-    [sanitizeCpf],
+    [firstParticipantLocked, sanitizeCpf],
   )
 
   const isHighRainProbability =
@@ -578,13 +660,8 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
         form.reset()
         setHasAcceptedTerms(false)
         setSelectedDate('')
-        setParticipantsCount(1)
-        setParticipants([
-          {
-            fullName: contactNameFromProfile || '',
-            cpf: user?.cpf ? sanitizeCpf(user.cpf) : '',
-          },
-        ])
+        setSelectedTrailId('')
+        updateParticipantsCount(1)
       } catch (error) {
         const message =
           error instanceof Error
@@ -607,6 +684,7 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
       isSubmitting,
       needsIdentityForm,
       participants,
+      updateParticipantsCount,
       sanitizeCpf,
       trailOptions,
     ],
@@ -742,7 +820,12 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
                 </label>
                 <label className="input-field">
                   <span>{booking.form.trail}</span>
-                  <select name="trail" required defaultValue={selectedTrail?.id ?? ''}>
+                  <select
+                    name="trail"
+                    required
+                    value={selectedTrailId}
+                    onChange={(event) => setSelectedTrailId(event.target.value)}
+                  >
                     <option value="" disabled>
                       {booking.form.selectPlaceholder}
                     </option>
@@ -764,16 +847,18 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
                 </label>
                 <label className="input-field">
                   <span>{booking.form.participants}</span>
-                  <input
-                    type="number"
+                  <select
                     name="participants"
-                    min={1}
-                    max={20}
-                    inputMode="numeric"
+                    required
                     value={participantsCount}
                     onChange={handleParticipantsCountChange}
-                    required
-                  />
+                  >
+                    {participantOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
                 </label>
                 <div className="participants-details input-full">
                   <div className="participants-details__header">
@@ -781,41 +866,56 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
                     <span>{booking.form.participantsListDescription}</span>
                   </div>
                   <div className="participants-details__list">
-                    {participants.map((participant, index) => (
-                      <div key={`participant-${index}`} className="participants-details__item">
-                        <label className="input-field">
-                          <span>
-                            {booking.form.participantNameLabel.replace('{index}', String(index + 1))}
-                          </span>
-                          <input
-                            type="text"
-                            name={`participant-name-${index}`}
-                            required
-                            value={participant.fullName}
-                            placeholder={booking.form.participantNamePlaceholder}
-                            onChange={(event) =>
-                              handleParticipantFieldChange(index, 'fullName', event.target.value)
-                            }
-                          />
-                        </label>
-                        <label className="input-field">
-                          <span>
-                            {booking.form.participantCpfLabel.replace('{index}', String(index + 1))}
-                          </span>
-                          <input
-                            type="text"
-                            name={`participant-cpf-${index}`}
-                            inputMode="numeric"
-                            required
-                            value={formatCpfForInput(participant.cpf)}
-                            placeholder={booking.form.participantCpfPlaceholder}
-                            onChange={(event) =>
-                              handleParticipantFieldChange(index, 'cpf', event.target.value)
-                            }
-                          />
-                        </label>
-                      </div>
-                    ))}
+                    {participants.map((participant, index) => {
+                      const isFirstParticipant = index === 0
+                      const isLocked = isFirstParticipant && firstParticipantLocked
+
+                      return (
+                        <div key={`participant-${index}`} className="participants-details__item">
+                          <label className="input-field">
+                            <span>
+                              {booking.form.participantNameLabel.replace('{index}', String(index + 1))}
+                            </span>
+                            <input
+                              type="text"
+                              name={`participant-name-${index}`}
+                              required
+                              value={participant.fullName}
+                              placeholder={booking.form.participantNamePlaceholder}
+                              readOnly={isLocked}
+                              aria-readonly={isLocked ? true : undefined}
+                              onChange={
+                                isLocked
+                                  ? undefined
+                                  : (event) =>
+                                      handleParticipantFieldChange(index, 'fullName', event.target.value)
+                              }
+                            />
+                          </label>
+                          <label className="input-field">
+                            <span>
+                              {booking.form.participantCpfLabel.replace('{index}', String(index + 1))}
+                            </span>
+                            <input
+                              type="text"
+                              name={`participant-cpf-${index}`}
+                              inputMode="numeric"
+                              required
+                              value={formatCpfForInput(participant.cpf)}
+                              placeholder={booking.form.participantCpfPlaceholder}
+                              readOnly={isLocked}
+                              aria-readonly={isLocked ? true : undefined}
+                              onChange={
+                                isLocked
+                                  ? undefined
+                                  : (event) =>
+                                      handleParticipantFieldChange(index, 'cpf', event.target.value)
+                              }
+                            />
+                          </label>
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
                 <label className="input-field input-full">
@@ -883,11 +983,11 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
                       <span>{selectedGuide.speciality}</span>
                     </div>
                   </div>
-                  {selectedTrail && (
+                  {selectedTrailOption && (
                     <div className="selected-guide-card__trail">
                       <span className="selected-guide-card__trail-label">{booking.guideSummary.trailLabel}</span>
-                      <strong>{selectedTrail.label}</strong>
-                      <span className="selected-guide-card__trail-details">{selectedTrail.description}</span>
+                      <strong>{selectedTrailOption.label}</strong>
+                      <span className="selected-guide-card__trail-details">{selectedTrailOption.description}</span>
                     </div>
                   )}
                   <p className="selected-guide-card__note">{booking.guideSummary.changeMessage}</p>

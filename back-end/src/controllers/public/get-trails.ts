@@ -28,6 +28,7 @@ type PublicTrail = {
   durationMinutes: number
   difficulty: string
   maxGroupSize: number
+  availableSpots: number
   badgeLabel: string | null
   imageUrl: string | null
   meetingPoint: string | null
@@ -90,6 +91,9 @@ export async function getTrails(_request: Request, response: Response, next: Nex
         }
       }
 
+      const totalCapacity = upcomingSession?.capacity ?? trail.maxGroupSize
+      const availableSpots = Math.max(0, totalCapacity - occupancy)
+
       return {
         id: trail.id,
         slug: trail.slug,
@@ -99,6 +103,7 @@ export async function getTrails(_request: Request, response: Response, next: Nex
         durationMinutes: trail.durationMinutes,
         difficulty: trail.difficulty,
         maxGroupSize: trail.maxGroupSize,
+        availableSpots,
         badgeLabel: trail.badgeLabel,
         imageUrl: trail.imageUrl,
         meetingPoint: trail.meetingPoint,
