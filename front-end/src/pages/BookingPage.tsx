@@ -230,7 +230,7 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
     }
   }, [participantOptions, participantsCount, updateParticipantsCount])
   const handleNavigateToLogin = useCallback(() => {
-    onNavigate('/login', { search: 'redirect=/agendamento' })
+    onNavigate('/login-cliente', { search: 'redirect=/agendamento' })
   }, [onNavigate])
   const handleNavigateToCustomerArea = useCallback(() => {
     onNavigate('/area-cliente')

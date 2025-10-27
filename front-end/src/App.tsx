@@ -5,13 +5,13 @@ import Footer from './components/Footer'
 import { useTranslation } from './i18n/TranslationProvider'
 import { useAuth } from './context/AuthContext'
 import AdminPage from './pages/AdminPage'
-import BookingPage from './pages/BookingPage'
 import CustomerAuthPage from './pages/CustomerAuthPage'
 import FaunaFloraPage from './pages/FaunaFloraPage'
 import GuidesPage from './pages/GuidesPage'
 import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
+import Agendamento from './app/pages/Agendamento'
 
 type RouteComponent = (props: PageProps) => JSX.Element
 
@@ -35,11 +35,12 @@ type PageProps = {
 const routes: RouteConfig[] = [
   { path: '/', labelKey: 'home', component: HomePage },
   { path: '/guias', labelKey: 'guides', component: GuidesPage },
-  { path: '/agendamento', labelKey: 'booking', component: BookingPage },
+  { path: '/agendamento', labelKey: 'booking', component: Agendamento },
   { path: '/fauna-e-flora', labelKey: 'faunaFlora', component: FaunaFloraPage },
   { path: '/admin', labelKey: 'admin', component: AdminPage, requireAdmin: true },
   { path: '/login', component: LoginPage },
   { path: '/cadastro', component: RegisterPage },
+  { path: '/login-cliente', component: CustomerAuthPage },
   { path: '/area-cliente', component: CustomerAuthPage },
 ]
 
