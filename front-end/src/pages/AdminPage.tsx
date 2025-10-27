@@ -11,14 +11,21 @@ import {
   fetchAdminOverview,
   fetchAdminGuides,
   fetchAdminTrails,
+  fetchAdminBooking,
+  fetchAdminParticipant,
   createAdminGuide,
   createAdminTrail,
   createAdminInvite,
+  createAdminBooking,
+  createAdminEvent,
   updateAdminGuide,
   updateAdminTrail,
+  updateAdminBookingStatus,
+  updateAdminParticipant,
   deleteAdminGuide,
   deleteAdminTrail,
   type AdminOverview,
+  type AdminBookingDetail,
   type AdminInviteResponse,
   type AdminGuide,
   type AdminGuidePayload,
@@ -28,6 +35,7 @@ import {
   type AdminTrailGuideOption,
   type CreateAdminTrailPayload,
   type UpdateAdminTrailPayload,
+  type AdminParticipantDetail,
   type TrailDifficulty,
   type TrailStatus,
 } from '../api/admin'
@@ -52,25 +60,74 @@ type SectionConfig = {
   content: ReactNode
 }
 
+type DashboardSession = {
+  id: string
+  name: string
+  schedule: string
+  occupancy: number
+  capacity: string
+}
+
+type DashboardEventHighlight = {
+  id: string
+  title: string
+  description: string
+  date: string
+}
+
+type DashboardActivity = {
+  id: string
+  time: string
+  text: string
+}
+
+type DashboardEventCard = {
+  id: string
+  title: string
+  description: string
+  tag: string
+  tagTone: string
+  date: string
+  capacity: string
+}
+
+type DashboardTrailCard = {
+  id: string
+  name: string
+  difficulty: string
+  duration: string
+  capacity: string
+  status: string
+  description: string
+}
+
+type DashboardCalendarDay = {
+  id: string
+  date: string
+  events: string[]
+}
+
+type DashboardReport = {
+  metrics: MetricCardProps[]
+  lineChart: Array<{ label: string; value: number }>
+  pieChart: Array<{ label: string; value: number; tone: string }>
+  barChart: Array<{ label: string; value: number }>
+}
+
 type AdminPageData = {
   metrics: MetricCardProps[]
   bookingRows: AdminTableRow[]
   participantRows: AdminTableRow[]
-  todaysTrails: typeof fallbackTodaysTrails
-  upcomingEvents: typeof fallbackUpcomingEvents
-  recentActivity: typeof fallbackRecentActivity
-  eventCards: typeof fallbackEventCards
-  trailCards: typeof fallbackTrailCards
+  todaysTrails: DashboardSession[]
+  upcomingEvents: DashboardEventHighlight[]
+  recentActivity: DashboardActivity[]
+  eventCards: DashboardEventCard[]
+  trailCards: DashboardTrailCard[]
   calendar: {
     title: string
-    days: typeof fallbackCalendarDays
+    days: DashboardCalendarDay[]
   }
-  report: {
-    metrics: MetricCardProps[]
-    lineChart: typeof fallbackLineChartData
-    pieChart: typeof fallbackPieChartData
-    barChart: typeof fallbackBarChartData
-  }
+  report: DashboardReport
   isLive: boolean
   error?: string | null
 }
@@ -160,6 +217,70 @@ const initialTrailFormState: TrailFormState = {
   guideCpfs: [],
 }
 
+type BookingParticipantForm = {
+  id: string
+  fullName: string
+  cpf: string
+  email: string
+  phone: string
+}
+
+type BookingFormState = {
+  trailId: string
+  sessionId: string
+  guideCpf: string
+  contactName: string
+  contactEmail: string
+  contactPhone: string
+  scheduledDate: string
+  scheduledTime: string
+  participantsCount: string
+  notes: string
+  participants: BookingParticipantForm[]
+}
+
+const initialBookingFormState: BookingFormState = {
+  trailId: '',
+  sessionId: '',
+  guideCpf: '',
+  contactName: '',
+  contactEmail: '',
+  contactPhone: '',
+  scheduledDate: '',
+  scheduledTime: '08:00',
+  participantsCount: '1',
+  notes: '',
+  participants: [],
+}
+
+type EventFormState = {
+  title: string
+  slug: string
+  description: string
+  location: string
+  startsAtDate: string
+  startsAtTime: string
+  endsAtDate: string
+  endsAtTime: string
+  capacity: string
+  status: 'DRAFT' | 'PUBLISHED' | 'CANCELLED' | 'ARCHIVED'
+  highlight: boolean
+}
+
+const initialEventFormState: EventFormState = {
+  title: '',
+  slug: '',
+  description: '',
+  location: '',
+  startsAtDate: '',
+  startsAtTime: '08:00',
+  endsAtDate: '',
+  endsAtTime: '10:00',
+  capacity: '',
+  status: 'DRAFT',
+  highlight: false,
+}
+
 const TRAIL_STATUS_LABELS: Record<TrailStatus, string> = {
   ACTIVE: 'Ativa',
   INACTIVE: 'Indisponível',
@@ -183,6 +304,30 @@ const currencyFormatter = new Intl.NumberFormat('pt-BR', {
   currency: 'BRL',
 })
 
+const dateFormatter = new Intl.DateTimeFormat('pt-BR', {
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+})
+
+const timeFormatter = new Intl.DateTimeFormat('pt-BR', {
+  hour: '2-digit',
+  minute: '2-digit',
+})
+
+const createTempId = () =>
+  typeof crypto !== 'undefined' && 'randomUUID' in crypto
+    ? crypto.randomUUID()
+    : Math.random().toString(36).slice(2)
+
+const slugify = (value: string) =>
+  value
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+
 const formatTrailDuration = (minutes: number) => {
   if (!Number.isFinite(minutes) || minutes <= 0) {
     return '—'
@@ -200,6 +345,16 @@ const formatTrailDuration = (minutes: number) => {
   }
 
   return `${hours}h${String(remaining).padStart(2, '0')}`
+}
+
+const formatDateLabel = (value: string) => {
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? value : dateFormatter.format(date)
+}
+
+const formatTimeLabel = (value: string) => {
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? value : timeFormatter.format(date)
 }
 
 const createIcon = (children: ReactNode) => (
@@ -333,13 +488,6 @@ const tableActions: AdminTableAction[] = [
     icon: createIcon(<path d="M12 6c4 0 7.5 2.6 9 6-1.5 3.4-5 6-9 6s-7.5-2.6-9-6c1.5-3.4 5-6 9-6Zm0 10a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" fill="currentColor" />),
   },
   {
-    id: 'edit',
-    label: 'Editar',
-    icon: createIcon(
-      <path d="m6 15.5 8.9-8.9 2.5 2.5-8.9 8.9H6Zm9.6-10.2 1.8-1.8 2.1 2.1-1.8 1.8Z" fill="currentColor" />,
-    ),
-  },
-  {
     id: 'confirm',
     label: 'Confirmar',
     icon: createIcon(
@@ -374,349 +522,6 @@ const participantColumns: AdminTableColumn[] = [
   { id: 'status', label: 'Status', align: 'center' },
 ]
 
-const fallbackBookingRows: AdminTableRow[] = [
-  {
-    id: 'acd-2025-0001',
-    cells: {
-      protocol: 'ACD-2025-0001',
-      name: 'Maria Silva',
-      trail: 'Trilha Perobinha',
-      date: '22/10/2025',
-      time: '08:00',
-      participants: '15',
-      guide: 'Carlos Mendes',
-    },
-    status: { label: 'Confirmado', tone: 'success' },
-    actions: tableActions,
-  },
-  {
-    id: 'acd-2025-0002',
-    cells: {
-      protocol: 'ACD-2025-0002',
-      name: 'João Oliveira',
-      trail: 'Trilha do Acarajé',
-      date: '22/10/2025',
-      time: '09:30',
-      participants: '20',
-      guide: 'Ana Paula Santos',
-    },
-    status: { label: 'Pendente', tone: 'warning' },
-    actions: tableActions,
-  },
-  {
-    id: 'acd-2025-0003',
-    cells: {
-      protocol: 'ACD-2025-0003',
-      name: 'Fernando Costa',
-      trail: 'Trilha do Aroeira',
-      date: '23/10/2025',
-      time: '07:00',
-      participants: '12',
-      guide: 'Roberto Silva',
-    },
-    status: { label: 'Remarcado', tone: 'info' },
-    actions: tableActions,
-  },
-  {
-    id: 'acd-2025-0004',
-    cells: {
-      protocol: 'ACD-2025-0004',
-      name: 'Luciana Alves',
-      trail: 'Trilha Ubaú-doce',
-      date: '23/10/2025',
-      time: '10:30',
-      participants: '18',
-      guide: 'Ana Paula Santos',
-    },
-    status: { label: 'Cancelado', tone: 'danger' },
-    actions: tableActions,
-  },
-]
-
-const fallbackParticipantRows: AdminTableRow[] = [
-  {
-    id: 'participant-1',
-    cells: {
-      name: 'Maria Silva',
-      contact: '(84) 9987-5542',
-      trail: 'Trilha Perobinha',
-      datetime: '22/10/2025 • 08:00',
-      status: 'Confirmado',
-    },
-    status: { label: 'Check-in pendente', tone: 'warning' },
-    actions: [
-      {
-        id: 'checkin',
-        label: 'Confirmar check-in',
-        icon: createIcon(
-          <path d="m10.2 16.6-3.8-3.8 1.4-1.4 2.4 2.4 5.6-5.6 1.4 1.4Z" fill="currentColor" />,
-        ),
-        tone: 'primary',
-      },
-    ],
-  },
-  {
-    id: 'participant-2',
-    cells: {
-      name: 'João Oliveira',
-      contact: '(84) 9876-4431',
-      trail: 'Trilha Perobinha',
-      datetime: '22/10/2025 • 08:00',
-      status: 'Confirmado',
-    },
-    status: { label: 'Check-in realizado', tone: 'success' },
-    actions: [
-      {
-        id: 'badge',
-        label: 'Ver detalhes',
-        icon: createIcon(<path d="M12 6c4 0 7.5 2.6 9 6-1.5 3.4-5 6-9 6s-7.5-2.6-9-6c1.5-3.4 5-6 9-6Z" fill="currentColor" />),
-      },
-    ],
-  },
-  {
-    id: 'participant-3',
-    cells: {
-      name: 'Fernanda Costa',
-      contact: '(84) 9090-5521',
-      trail: 'Trilha do Aroeira',
-      datetime: '22/10/2025 • 09:00',
-      status: 'Pendente',
-    },
-    status: { label: 'Aguardando pagamento', tone: 'info' },
-    actions: [
-      {
-        id: 'reminder',
-        label: 'Enviar lembrete',
-        icon: createIcon(
-          <path d="m6 12 6 6 6-6-1.4-1.4L12 15.2 7.4 10.6Z" fill="currentColor" />,
-        ),
-      },
-    ],
-  },
-]
-
-const fallbackDashboardMetrics: MetricCardProps[] = [
-  {
-    title: 'Agendamentos Hoje',
-    value: '48',
-    helper: 'Reservas confirmadas para o dia',
-    trend: { value: '+12%', direction: 'up', label: 'vs. ontem' },
-  },
-  {
-    title: 'Confirmados',
-    value: '62',
-    helper: '82% taxa de confirmação',
-    trend: { value: '+5%', direction: 'up', label: 'últimos 7 dias' },
-  },
-  {
-    title: 'Pendentes',
-    value: '14',
-    helper: 'Aguardando confirmação',
-    trend: { value: '-8%', direction: 'down', label: 'na semana' },
-  },
-  {
-    title: 'Cancelados',
-    value: '6',
-    helper: '2 cancelamentos nas últimas 24h',
-    trend: { value: '-3%', direction: 'down', label: 'vs. mês anterior' },
-  },
-]
-
-const fallbackTodaysTrails = [
-  {
-    id: 'trail-1',
-    name: 'Trilha Perobinha',
-    schedule: '08:00 • Guia: Carlos Mendes',
-    occupancy: 72,
-    capacity: '45 / 60 vagas',
-  },
-  {
-    id: 'trail-2',
-    name: 'Trilha Ubaú-doce',
-    schedule: '10:30 • Guia: Ana Paula Santos',
-    occupancy: 55,
-    capacity: '33 / 60 vagas',
-  },
-  {
-    id: 'trail-3',
-    name: 'Trilha do Aroeira',
-    schedule: '14:00 • Guia: Roberto Silva',
-    occupancy: 91,
-    capacity: '50 / 55 vagas',
-  },
-]
-
-const fallbackUpcomingEvents = [
-  {
-    id: 'event-1',
-    title: 'Mutirão de Educação Ambiental',
-    date: '23 out • 09:00',
-    description: 'Atividade educativa com trilha sonora de músicos locais.',
-  },
-  {
-    id: 'event-2',
-    title: 'Festival de Trilhas do Parque',
-    date: '24 out • 16:00',
-    description: 'Passeios guiados especiais com guias convidados.',
-  },
-  {
-    id: 'event-3',
-    title: 'Trilha para Foz do Sol',
-    date: '25 out • 17:30',
-    description: 'Expedição ao pôr do sol com observação de aves migratórias.',
-  },
-]
-
-const fallbackRecentActivity = [
-  { id: 'activity-1', time: '22/10/2025 • 14:35', text: 'Agendamento confirmado do cliente notificado' },
-  { id: 'activity-2', time: '22/10/2025 • 13:20', text: 'Agendamento remarcado para 23/10' },
-  { id: 'activity-3', time: '22/10/2025 • 09:10', text: 'Check-in realizado - Trilha Perobinha' },
-  { id: 'activity-4', time: '21/10/2025 • 18:42', text: 'Novo evento publicado: Observação de Aves' },
-]
-
-const fallbackEventCards = [
-  {
-    id: 'event-card-1',
-    title: 'Mutirão de Educação Ambiental',
-    description: 'Atividade educativa com trilha musical e limpeza das trilhas.',
-    tag: 'Publicado',
-    tagTone: 'success',
-    date: '23 out • 09:00',
-    capacity: '30 vagas',
-  },
-  {
-    id: 'event-card-2',
-    title: 'Festival de Trilhas',
-    description: 'Passeios guiados especiais com foco em fauna nativa.',
-    tag: 'Destaque',
-    tagTone: 'info',
-    date: '24 out • 16:00',
-    capacity: '50 vagas',
-  },
-  {
-    id: 'event-card-3',
-    title: 'Observação de Aves - Falcão',
-    description: 'Expedição ao nascer do sol com guias especialistas.',
-    tag: 'Rascunho',
-    tagTone: 'warning',
-    date: '26 out • 05:30',
-    capacity: '15 vagas',
-  },
-]
-
-const fallbackTrailCards = [
-  {
-    id: 'trail-card-1',
-    name: 'Trilha Perobinha',
-    difficulty: 'Moderada',
-    duration: '2h30',
-    capacity: '60 pessoas',
-    status: 'Ativa',
-    description: 'Percurso sombreado com observação de flora local.',
-  },
-  {
-    id: 'trail-card-2',
-    name: 'Trilha Ubaú-doce',
-    difficulty: 'Intensa',
-    duration: '3h',
-    capacity: '45 pessoas',
-    status: 'Ativa',
-    description: 'Trilha com mirantes e visita a nascentes preservadas.',
-  },
-  {
-    id: 'trail-card-3',
-    name: 'Trilha do Aroeira',
-    difficulty: 'Leve',
-    duration: '1h45',
-    capacity: '55 pessoas',
-    status: 'Pausada',
-    description: 'Caminho com interpretação ambiental para escolas.',
-  },
-]
-
-const fallbackCalendarDays = [
-  { date: '01', events: [] },
-  { date: '02', events: [] },
-  { date: '03', events: [] },
-  { date: '04', events: ['Festival de Trilhas'] },
-  { date: '05', events: [] },
-  { date: '06', events: [] },
-  { date: '07', events: ['Agendamento: Perobinha'] },
-  { date: '08', events: [] },
-  { date: '09', events: ['Agendamento: Ubaú-doce'] },
-  { date: '10', events: [] },
-  { date: '11', events: [] },
-  { date: '12', events: [] },
-  { date: '13', events: ['Evento: Observação de Aves'] },
-  { date: '14', events: [] },
-  { date: '15', events: ['Agendamento: Aroeira'] },
-  { date: '16', events: [] },
-  { date: '17', events: [] },
-  { date: '18', events: [] },
-  { date: '19', events: [] },
-  { date: '20', events: [] },
-  { date: '21', events: ['Evento: Educação Ambiental'] },
-  { date: '22', events: ['Agendamento: Perobinha', 'Agendamento: Aroeira'] },
-  { date: '23', events: ['Evento: Educação Ambiental'] },
-  { date: '24', events: ['Festival de Trilhas'] },
-  { date: '25', events: ['Trilha para Foz do Sol'] },
-  { date: '26', events: [] },
-  { date: '27', events: [] },
-  { date: '28', events: ['Mutirão de Limpeza'] },
-  { date: '29', events: [] },
-  { date: '30', events: ['Agendamento: Aroeira'] },
-  { date: '31', events: [] },
-]
-
-const fallbackReportMetrics: MetricCardProps[] = [
-  {
-    title: 'Total de Agendamentos',
-    value: '684',
-    helper: '+15% vs. mês anterior',
-    trend: { value: '+15%', direction: 'up', label: 'mês' },
-  },
-  {
-    title: 'Taxa de Confirmação',
-    value: '82%',
-    helper: '+5 pts em relação ao mês anterior',
-    trend: { value: '+5 pts', direction: 'up', label: 'performance' },
-  },
-  {
-    title: 'Taxa de Cancelamento',
-    value: '6%',
-    helper: '-3 pts em relação ao mês anterior',
-    trend: { value: '-3 pts', direction: 'down', label: 'performance' },
-  },
-  {
-    title: 'Eventos Publicados',
-    value: '18',
-    helper: '+2 novos eventos no mês',
-    trend: { value: '+12%', direction: 'up', label: 'crescimento' },
-  },
-]
-
-const fallbackLineChartData = [
-  { label: 'Mai', value: 62 },
-  { label: 'Jun', value: 75 },
-  { label: 'Jul', value: 82 },
-  { label: 'Ago', value: 78 },
-  { label: 'Set', value: 88 },
-  { label: 'Out', value: 96 },
-]
-
-const fallbackPieChartData = [
-  { label: 'Confirmados', value: 58, tone: '#1aa361' },
-  { label: 'Pendentes', value: 22, tone: '#f2c94c' },
-  { label: 'Cancelados', value: 12, tone: '#eb5757' },
-  { label: 'Remarcados', value: 8, tone: '#2d9cdb' },
-]
-
-const fallbackBarChartData = [
-  { label: 'Perobinha', value: 32 },
-  { label: 'Ubaú-doce', value: 28 },
-  { label: 'Aroeira', value: 24 },
-  { label: 'Foz do Sol', value: 18 },
-]
 
 type ChartDatum = {
   label: string
@@ -827,12 +632,29 @@ const BarChart = ({ data }: { data: ChartDatum[] }) => {
   )
 }
 
-const buildSection = (
-  key: SectionKey,
-  data: AdminPageData,
-  trailsSection: SectionConfig,
-  guidesSection: SectionConfig,
-): SectionConfig => {
+type SectionBuilderParams = {
+  key: SectionKey
+  data: AdminPageData
+  trailsSection: SectionConfig
+  guidesSection: SectionConfig
+  bookingActionFeedback: { message: string; tone: 'success' | 'error' } | null
+  onOpenBookingModal: () => void
+  onBookingTableAction: (rowId: string, actionId: string) => void
+  onParticipantTableAction: (rowId: string, actionId: string) => void
+  onOpenEventModal: () => void
+}
+
+const buildSection = ({
+  key,
+  data,
+  trailsSection,
+  guidesSection,
+  bookingActionFeedback,
+  onOpenBookingModal,
+  onBookingTableAction,
+  onParticipantTableAction,
+  onOpenEventModal,
+}: SectionBuilderParams): SectionConfig => {
   if (key === 'trilhas') {
     return trailsSection
   }
@@ -888,24 +710,13 @@ const buildSection = (
               <section className="admin-card">
                 <header className="admin-card__header">
                   <h2>Clima & Condições</h2>
-                  <span>Atualizado às 07:30</span>
+                  <span>Integração meteorológica em desenvolvimento</span>
                 </header>
                 <div className="admin-card__content">
-                  <div className="admin-weather">
-                    <div>
-                      <span className="admin-weather__temp">28°C</span>
-                      <span>Ensolarado</span>
-                    </div>
-                    <div className="admin-weather__details">
-                      <span>Umidade: 62%</span>
-                      <span>Ventos: 14 km/h</span>
-                      <span>Índice UV: 6 (Alto)</span>
-                    </div>
-                  </div>
-                  <div className="admin-alert-card">
-                    <strong>Atenção às trilhas costeiras</strong>
-                    <p>Rajadas de vento previstas para o fim da tarde. Monitore a capacidade.</p>
-                  </div>
+                  <p className="admin-empty-state">
+                    Os dados de clima serão exibidos assim que a integração com a estação
+                    meteorológica for concluída.
+                  </p>
                 </div>
               </section>
             </div>
@@ -956,7 +767,9 @@ const buildSection = (
         actions: (
           <>
             <button type="button" className="admin-secondary-button">Exportar CSV</button>
-            <button type="button" className="admin-primary-button">Novo Agendamento</button>
+            <button type="button" className="admin-primary-button" onClick={onOpenBookingModal}>
+              Novo Agendamento
+            </button>
           </>
         ),
         content: (
@@ -966,8 +779,6 @@ const buildSection = (
                 Trilha
                 <select defaultValue="todas">
                   <option value="todas">Todas</option>
-                  <option value="perobinha">Trilha Perobinha</option>
-                  <option value="ubaud">Trilha Ubaú-doce</option>
                 </select>
               </label>
               <label>
@@ -981,10 +792,28 @@ const buildSection = (
               </label>
               <label>
                 Período
-                <input type="date" defaultValue="2025-10-22" />
+                <input type="date" defaultValue={new Date().toISOString().slice(0, 10)} />
               </label>
             </div>
-            <AdminTable columns={bookingColumns} rows={data.bookingRows} />
+            {bookingActionFeedback ? (
+              <div
+                className={`admin-alert admin-alert--${
+                  bookingActionFeedback.tone === 'success' ? 'success' : 'error'
+                }`}
+              >
+                {bookingActionFeedback.message}
+              </div>
+            ) : null}
+            <AdminTable
+              columns={bookingColumns}
+              rows={data.bookingRows}
+              onAction={onBookingTableAction}
+              emptyMessage={
+                data.isLive
+                  ? 'Nenhum agendamento encontrado para o período selecionado.'
+                  : data.error ?? 'Agendamentos indisponíveis.'
+              }
+            />
           </div>
         ),
       }
@@ -1004,13 +833,11 @@ const buildSection = (
                 Trilha
                 <select defaultValue="todas">
                   <option value="todas">Todas</option>
-                  <option value="perobinha">Trilha Perobinha</option>
-                  <option value="aroeira">Trilha do Aroeira</option>
                 </select>
               </label>
               <label>
                 Data
-                <input type="date" defaultValue="2025-10-22" />
+                <input type="date" defaultValue={new Date().toISOString().slice(0, 10)} />
               </label>
               <label>
                 Status
@@ -1021,7 +848,16 @@ const buildSection = (
                 </select>
               </label>
             </div>
-            <AdminTable columns={participantColumns} rows={data.participantRows} />
+            <AdminTable
+              columns={participantColumns}
+              rows={data.participantRows}
+              onAction={onParticipantTableAction}
+              emptyMessage={
+                data.isLive
+                  ? 'Nenhum participante encontrado.'
+                  : data.error ?? 'Participantes indisponíveis.'
+              }
+            />
           </div>
         ),
       }
@@ -1030,7 +866,9 @@ const buildSection = (
         title: 'Eventos do Parque',
         description: 'Gerencie e promova eventos e atividades especiais',
         actions: (
-          <button type="button" className="admin-primary-button">Novo Evento</button>
+          <button type="button" className="admin-primary-button" onClick={onOpenEventModal}>
+            Novo Evento
+          </button>
         ),
         content: (
           <div className="admin-grid admin-grid--three">
@@ -1052,12 +890,23 @@ const buildSection = (
                   </div>
                 </dl>
                 <div className="admin-event-card__actions">
-                  <button type="button" className="admin-secondary-button">Editar</button>
-                  <button type="button" className="admin-secondary-button">Publicar</button>
-                  <button type="button" className="admin-secondary-button">Promover</button>
+                  <button type="button" className="admin-secondary-button" disabled>
+                    Editar
+                  </button>
+                  <button type="button" className="admin-secondary-button" disabled>
+                    Publicar
+                  </button>
+                  <button type="button" className="admin-secondary-button" disabled>
+                    Promover
+                  </button>
                 </div>
               </article>
             ))}
+            {data.eventCards.length === 0 ? (
+              <div className="admin-empty-card">
+                <p>Nenhum evento cadastrado até o momento.</p>
+              </div>
+            ) : null}
           </div>
         ),
       }
@@ -1224,6 +1073,26 @@ function AdminPage() {
   const [isSavingTrail, setIsSavingTrail] = useState(false)
   const [trailFeedback, setTrailFeedback] = useState<string | null>(null)
   const [trailFormError, setTrailFormError] = useState<string | null>(null)
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false)
+  const [bookingForm, setBookingForm] = useState<BookingFormState>(initialBookingFormState)
+  const [bookingFormError, setBookingFormError] = useState<string | null>(null)
+  const [isSavingBooking, setIsSavingBooking] = useState(false)
+  const [bookingActionFeedback, setBookingActionFeedback] = useState<
+    { message: string; tone: 'success' | 'error' }
+  | null>(null)
+  const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null)
+  const [bookingDetail, setBookingDetail] = useState<AdminBookingDetail | null>(null)
+  const [bookingDetailError, setBookingDetailError] = useState<string | null>(null)
+  const [isLoadingBookingDetail, setIsLoadingBookingDetail] = useState(false)
+  const [selectedParticipantId, setSelectedParticipantId] = useState<string | null>(null)
+  const [participantDetail, setParticipantDetail] = useState<AdminParticipantDetail | null>(null)
+  const [participantDetailError, setParticipantDetailError] = useState<string | null>(null)
+  const [isLoadingParticipantDetail, setIsLoadingParticipantDetail] = useState(false)
+  const [isUpdatingParticipant, setIsUpdatingParticipant] = useState(false)
+  const [isEventModalOpen, setIsEventModalOpen] = useState(false)
+  const [eventForm, setEventForm] = useState<EventFormState>(initialEventFormState)
+  const [eventFormError, setEventFormError] = useState<string | null>(null)
+  const [isSavingEvent, setIsSavingEvent] = useState(false)
 
   const sortGuides = useCallback((items: AdminGuide[]) => {
     return items
@@ -1327,6 +1196,22 @@ function AdminPage() {
     setTrailFormError(null)
   }, [])
 
+  const resetBookingForm = useCallback(() => {
+    const today = new Date().toISOString().slice(0, 10)
+    const firstTrailId = trailsState.items[0]?.id ?? ''
+    setBookingForm({
+      ...initialBookingFormState,
+      trailId: firstTrailId,
+      scheduledDate: today,
+    })
+    setBookingFormError(null)
+  }, [trailsState.items])
+
+  const resetEventForm = useCallback(() => {
+    setEventForm(initialEventFormState)
+    setEventFormError(null)
+  }, [])
+
   const splitList = useCallback((value: string) => {
     return value
       .split(',')
@@ -1341,6 +1226,444 @@ function AdminPage() {
       guideCpfs: Array.from(new Set(selected)),
     }))
   }, [])
+
+  const handleAddBookingParticipant = useCallback(() => {
+    setBookingForm((prev) => ({
+      ...prev,
+      participants: [
+        ...prev.participants,
+        { id: createTempId(), fullName: '', cpf: '', email: '', phone: '' },
+      ],
+    }))
+  }, [])
+
+  const handleUpdateBookingParticipant = useCallback(
+    (index: number, field: keyof Omit<BookingParticipantForm, 'id'>, value: string) => {
+      setBookingForm((prev) => {
+        if (!prev.participants[index]) {
+          return prev
+        }
+
+        const next = prev.participants.slice()
+        next[index] = { ...next[index], [field]: value }
+        return { ...prev, participants: next }
+      })
+    },
+    [],
+  )
+
+  const handleRemoveBookingParticipant = useCallback((index: number) => {
+    setBookingForm((prev) => ({
+      ...prev,
+      participants: prev.participants.filter((_, itemIndex) => itemIndex !== index),
+    }))
+  }, [])
+
+  const handleBookingFormFieldChange = useCallback(
+    (field: keyof Omit<BookingFormState, 'participants'>, value: string) => {
+      setBookingForm((prev) => {
+        if (field === 'trailId') {
+          return {
+            ...prev,
+            trailId: value,
+            sessionId: '',
+            guideCpf: '',
+          }
+        }
+
+        return {
+          ...prev,
+          [field]: value,
+        }
+      })
+    },
+    [],
+  )
+
+  const handleOpenBookingModal = useCallback(async () => {
+    if (!trailsState.isInitialized) {
+      await loadTrails()
+    }
+    resetBookingForm()
+    setIsBookingModalOpen(true)
+  }, [loadTrails, resetBookingForm, trailsState.isInitialized])
+
+  const handleCloseBookingModal = useCallback(() => {
+    setIsBookingModalOpen(false)
+    resetBookingForm()
+  }, [resetBookingForm])
+
+  const handleOpenEventModal = useCallback(() => {
+    resetEventForm()
+    setIsEventModalOpen(true)
+  }, [resetEventForm])
+
+  const handleCloseEventModal = useCallback(() => {
+    setIsEventModalOpen(false)
+    resetEventForm()
+  }, [resetEventForm])
+
+  const handleCloseBookingDetail = useCallback(() => {
+    setSelectedBookingId(null)
+    setBookingDetail(null)
+    setBookingDetailError(null)
+  }, [])
+
+  const handleCloseParticipantDetail = useCallback(() => {
+    setSelectedParticipantId(null)
+    setParticipantDetail(null)
+    setParticipantDetailError(null)
+  }, [])
+
+  const loadOverview = useCallback(async () => {
+    setIsLoadingOverview(true)
+    try {
+      const data = await fetchAdminOverview()
+      setOverview(data)
+      setOverviewError(null)
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível carregar os dados em tempo real.'
+      setOverview(null)
+      setOverviewError(message)
+    } finally {
+      setIsLoadingOverview(false)
+    }
+  }, [])
+
+  const updateBookingStatus = useCallback(
+    async (bookingId: string, status: 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED' | 'RESCHEDULED') => {
+      try {
+        setBookingActionFeedback(null)
+        await updateAdminBookingStatus(bookingId, { status })
+        setBookingActionFeedback({
+          message: `Status do agendamento atualizado para ${status.toLowerCase()}.`,
+          tone: 'success',
+        })
+        await loadOverview()
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'Não foi possível atualizar o status do agendamento.'
+        setBookingActionFeedback({ message, tone: 'error' })
+      }
+    },
+    [loadOverview],
+  )
+
+  const handleBookingTableAction = useCallback(
+    async (rowId: string, actionId: string) => {
+      if (actionId === 'view') {
+        setSelectedBookingId(rowId)
+        setBookingDetail(null)
+        setBookingDetailError(null)
+        setIsLoadingBookingDetail(true)
+        try {
+          const detail = await fetchAdminBooking(rowId)
+          setBookingDetail(detail)
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : 'Não foi possível carregar os detalhes do agendamento.'
+          setBookingDetailError(message)
+        } finally {
+          setIsLoadingBookingDetail(false)
+        }
+        return
+      }
+
+      if (actionId === 'confirm') {
+        updateBookingStatus(rowId, 'CONFIRMED')
+        return
+      }
+
+      if (actionId === 'cancel') {
+        updateBookingStatus(rowId, 'CANCELLED')
+      }
+    },
+    [fetchAdminBooking, updateBookingStatus],
+  )
+
+  const handleParticipantTableAction = useCallback(
+    async (rowId: string, actionId: string) => {
+      if (actionId !== 'manage') {
+        return
+      }
+
+      setSelectedParticipantId(rowId)
+      setParticipantDetail(null)
+      setParticipantDetailError(null)
+      setIsLoadingParticipantDetail(true)
+
+      try {
+        const detail = await fetchAdminParticipant(rowId)
+        setParticipantDetail(detail)
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : 'Não foi possível carregar os detalhes do participante.'
+        setParticipantDetailError(message)
+      } finally {
+        setIsLoadingParticipantDetail(false)
+      }
+    },
+    [fetchAdminParticipant],
+  )
+
+  const handleToggleParticipantBan = useCallback(async () => {
+    if (!participantDetail) {
+      return
+    }
+
+    setIsUpdatingParticipant(true)
+    try {
+      const nextStatus = !participantDetail.isBanned
+      await updateAdminParticipant(participantDetail.id, { isBanned: nextStatus })
+      setParticipantDetail((prev) => (prev ? { ...prev, isBanned: nextStatus } : prev))
+      await loadOverview()
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Não foi possível atualizar o participante.'
+      setParticipantDetailError(message)
+    } finally {
+      setIsUpdatingParticipant(false)
+    }
+  }, [loadOverview, participantDetail, updateAdminParticipant])
+
+  const handleBookingSubmit = useCallback(
+    async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault()
+
+      if (!bookingForm.trailId) {
+        setBookingFormError('Selecione uma trilha para criar o agendamento.')
+        return
+      }
+
+      const participantsCount = Number.parseInt(bookingForm.participantsCount, 10)
+      if (!Number.isFinite(participantsCount) || participantsCount <= 0) {
+        setBookingFormError('Informe a quantidade de participantes.')
+        return
+      }
+
+      let scheduledDate = bookingForm.scheduledDate
+      let scheduledTime = bookingForm.scheduledTime
+
+      if (bookingForm.sessionId) {
+        const session = trailsState.items
+          .flatMap((trail) => trail.sessions)
+          .find((item) => item.id === bookingForm.sessionId)
+
+        if (!session) {
+          setBookingFormError('Sessão selecionada não encontrada.')
+          return
+        }
+
+        scheduledDate = session.startsAt.slice(0, 10)
+        scheduledTime = session.startsAt.slice(11, 16)
+      } else if (!scheduledDate) {
+        setBookingFormError('Informe a data desejada para o agendamento.')
+        return
+      }
+
+      const participants = bookingForm.participants
+        .filter((participant) => participant.fullName.trim().length > 0)
+        .map((participant) => ({
+          fullName: participant.fullName.trim(),
+          cpf: participant.cpf.trim() || undefined,
+          email: participant.email.trim() || undefined,
+          phone: participant.phone.trim() || undefined,
+        }))
+
+      setIsSavingBooking(true)
+      setBookingFormError(null)
+
+      try {
+        await createAdminBooking({
+          trailId: bookingForm.trailId,
+          sessionId: bookingForm.sessionId || undefined,
+          guideCpf: bookingForm.guideCpf ? sanitizeCpf(bookingForm.guideCpf) : undefined,
+          contactName: bookingForm.contactName,
+          contactEmail: bookingForm.contactEmail,
+          contactPhone: bookingForm.contactPhone,
+          scheduledDate,
+          scheduledTime,
+          participantsCount,
+          notes: bookingForm.notes || undefined,
+          participants,
+          source: 'ADMIN',
+        })
+
+        setBookingActionFeedback({
+          message: 'Agendamento registrado com sucesso.',
+          tone: 'success',
+        })
+        setIsBookingModalOpen(false)
+        resetBookingForm()
+        await loadOverview()
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Não foi possível criar o agendamento.'
+        setBookingFormError(message)
+      } finally {
+        setIsSavingBooking(false)
+      }
+    },
+    [
+      bookingForm.contactEmail,
+      bookingForm.contactName,
+      bookingForm.contactPhone,
+      bookingForm.guideCpf,
+      bookingForm.notes,
+      bookingForm.participants,
+      bookingForm.participantsCount,
+      bookingForm.scheduledDate,
+      bookingForm.scheduledTime,
+      bookingForm.sessionId,
+      bookingForm.trailId,
+      loadOverview,
+      resetBookingForm,
+      trailsState.items,
+    ],
+  )
+
+  const handleEventSubmit = useCallback(
+    async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault()
+
+      if (!eventForm.title.trim()) {
+        setEventFormError('Informe o título do evento.')
+        return
+      }
+
+      if (!eventForm.description.trim()) {
+        setEventFormError('Descreva o evento para divulgação.')
+        return
+      }
+
+      if (!eventForm.startsAtDate) {
+        setEventFormError('Informe a data de início do evento.')
+        return
+      }
+
+      const slug = (eventForm.slug || slugify(eventForm.title)).trim()
+      const startsAtIso = new Date(`${eventForm.startsAtDate}T${eventForm.startsAtTime || '08:00'}:00`)
+
+      if (Number.isNaN(startsAtIso.getTime())) {
+        setEventFormError('Data ou horário inicial inválidos.')
+        return
+      }
+
+      let endsAtIso: Date | null = null
+      if (eventForm.endsAtDate) {
+        endsAtIso = new Date(`${eventForm.endsAtDate}T${eventForm.endsAtTime || '10:00'}:00`)
+        if (Number.isNaN(endsAtIso.getTime())) {
+          setEventFormError('Data ou horário final inválidos.')
+          return
+        }
+      }
+
+      const capacityValue = eventForm.capacity.trim()
+      let parsedCapacity: number | undefined
+      if (capacityValue.length) {
+        const numericCapacity = Number.parseInt(capacityValue, 10)
+        if (!Number.isFinite(numericCapacity) || numericCapacity <= 0) {
+          setEventFormError('Capacidade informada é inválida.')
+          return
+        }
+
+        parsedCapacity = numericCapacity
+      }
+
+      setIsSavingEvent(true)
+      setEventFormError(null)
+
+      try {
+        await createAdminEvent({
+          title: eventForm.title.trim(),
+          slug,
+          description: eventForm.description.trim(),
+          location: eventForm.location.trim() || undefined,
+          startsAt: startsAtIso.toISOString(),
+          endsAt: endsAtIso ? endsAtIso.toISOString() : undefined,
+          capacity: parsedCapacity,
+          status: eventForm.status,
+          highlight: eventForm.highlight,
+        })
+
+        setIsEventModalOpen(false)
+        resetEventForm()
+        await loadOverview()
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Não foi possível cadastrar o evento.'
+        setEventFormError(message)
+      } finally {
+        setIsSavingEvent(false)
+      }
+    },
+    [
+      eventForm.capacity,
+      eventForm.description,
+      eventForm.endsAtDate,
+      eventForm.endsAtTime,
+      eventForm.highlight,
+      eventForm.location,
+      eventForm.slug,
+      eventForm.startsAtDate,
+      eventForm.startsAtTime,
+      eventForm.status,
+      eventForm.title,
+      loadOverview,
+      resetEventForm,
+    ],
+  )
+
+  const handleCreateBookingFromParticipant = useCallback(async () => {
+    if (!participantDetail) {
+      return
+    }
+
+    await handleOpenBookingModal()
+    setBookingForm((prev) => ({
+      ...prev,
+      contactName: participantDetail.fullName,
+      contactEmail: participantDetail.email ?? participantDetail.booking.contactEmail,
+      contactPhone: participantDetail.phone ?? participantDetail.booking.contactPhone,
+      participantsCount: String(Math.max(1, participantDetail.booking.participantsCount)),
+      participants: [
+        {
+          id: createTempId(),
+          fullName: participantDetail.fullName,
+          cpf: participantDetail.cpf ?? '',
+          email: participantDetail.email ?? '',
+          phone: participantDetail.phone ?? '',
+        },
+        ...prev.participants,
+      ],
+    }))
+    handleCloseParticipantDetail()
+  }, [handleCloseParticipantDetail, handleOpenBookingModal, participantDetail])
+
+  const selectedBookingTrail = useMemo(() => {
+    return trailsState.items.find((trail) => trail.id === bookingForm.trailId) ?? null
+  }, [bookingForm.trailId, trailsState.items])
+
+  const availableSessions = useMemo(() => {
+    return selectedBookingTrail?.sessions ?? []
+  }, [selectedBookingTrail])
+
+  const availableGuidesForTrail = useMemo(() => {
+    if (!selectedBookingTrail) {
+      return trailsState.guides
+    }
+    return selectedBookingTrail.guides.map((guide) => ({
+      cpf: guide.cpf,
+      name: guide.name,
+    }))
+  }, [selectedBookingTrail, trailsState.guides])
+
+  const selectedBookingSession = useMemo(() => {
+    return availableSessions.find((session) => session.id === bookingForm.sessionId) ?? null
+  }, [availableSessions, bookingForm.sessionId])
 
   const handleOpenInviteModal = useCallback(() => {
     setInviteCpf('')
@@ -1753,38 +2076,12 @@ function AdminPage() {
   )
 
   useEffect(() => {
-    let isMounted = true
-    setIsLoadingOverview(true)
+    loadOverview()
+  }, [loadOverview])
 
-    fetchAdminOverview()
-      .then((data) => {
-        if (!isMounted) {
-          return
-        }
-        setOverview(data)
-        setOverviewError(null)
-      })
-      .catch((error) => {
-        if (!isMounted) {
-          return
-        }
-        const message =
-          error instanceof Error
-            ? error.message
-            : 'Não foi possível carregar os dados em tempo real.'
-        setOverview(null)
-        setOverviewError(message)
-      })
-      .finally(() => {
-        if (isMounted) {
-          setIsLoadingOverview(false)
-        }
-      })
-
-    return () => {
-      isMounted = false
-    }
-  }, [])
+  useEffect(() => {
+    loadOverview()
+  }, [loadOverview])
 
   const adminData = useMemo<AdminPageData>(() => {
     const bookings = overview
@@ -1802,7 +2099,7 @@ function AdminPage() {
           status: booking.statusTone,
           actions: tableActions,
         }))
-      : fallbackBookingRows
+      : []
 
     const participants = overview
       ? overview.participants.map((participant) => ({
@@ -1815,9 +2112,30 @@ function AdminPage() {
             status: participant.statusTone.label,
           },
           status: participant.statusTone,
-          actions: [],
+          actions: [
+            {
+              id: 'manage',
+              label: 'Gerenciar participante',
+              icon: createIcon(
+                <>
+                  <path
+                    d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Z"
+                    fill="currentColor"
+                    opacity="0.82"
+                  />
+                  <path
+                    d="M4 19c0-3 4-4.5 8-4.5s8 1.5 8 4.5"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </>,
+              ),
+            },
+          ],
         }))
-      : fallbackParticipantRows
+      : []
 
     const todaysSessions = overview
       ? overview.todaysSessions.map((session) => ({
@@ -1827,7 +2145,7 @@ function AdminPage() {
           occupancy: session.occupancy,
           capacity: session.capacityLabel,
         }))
-      : fallbackTodaysTrails
+      : []
 
     const upcoming = overview
       ? overview.upcomingEvents.map((event) => ({
@@ -1836,7 +2154,7 @@ function AdminPage() {
           description: event.description,
           date: event.dateLabel,
         }))
-      : fallbackUpcomingEvents
+      : []
 
     const activities = overview
       ? overview.recentActivity.map((item) => ({
@@ -1844,7 +2162,7 @@ function AdminPage() {
           time: item.label,
           text: item.message,
         }))
-      : fallbackRecentActivity
+      : []
 
     const eventCards = overview
       ? overview.eventCards.map((event) => ({
@@ -1856,7 +2174,7 @@ function AdminPage() {
           date: event.dateLabel,
           capacity: event.capacityLabel ?? '—',
         }))
-      : fallbackEventCards
+      : []
 
     const trails = overview
       ? overview.trailCards.map((trail) => {
@@ -1871,19 +2189,20 @@ function AdminPage() {
             description: trail.description,
           }
         })
-      : fallbackTrailCards
+      : []
 
     const calendar = overview
       ? {
           title: `${overview.calendar.month} ${overview.calendar.year}`,
-          days: overview.calendar.days.map((day) => ({
+          days: overview.calendar.days.map((day, index) => ({
+            id: `${day.date}-${index}`,
             date: day.label,
             events: day.events,
           })),
         }
       : {
-          title: 'Outubro 2025',
-          days: fallbackCalendarDays,
+          title: 'Calendário indisponível',
+          days: [],
         }
 
     const report = overview
@@ -1894,14 +2213,14 @@ function AdminPage() {
           barChart: overview.report.barChartData,
         }
       : {
-          metrics: fallbackReportMetrics,
-          lineChart: fallbackLineChartData,
-          pieChart: fallbackPieChartData,
-          barChart: fallbackBarChartData,
+          metrics: [],
+          lineChart: [],
+          pieChart: [],
+          barChart: [],
         }
 
     return {
-      metrics: overview?.metrics ?? fallbackDashboardMetrics,
+      metrics: overview?.metrics ?? [],
       bookingRows: bookings,
       participantRows: participants,
       todaysTrails: todaysSessions,
@@ -2647,8 +2966,29 @@ function AdminPage() {
   }
 
   const section = useMemo(
-    () => buildSection(activeSection, adminData, trailsSection, guidesSection),
-    [activeSection, adminData, trailsSection, guidesSection],
+    () =>
+      buildSection({
+        key: activeSection,
+        data: adminData,
+        trailsSection,
+        guidesSection,
+        bookingActionFeedback,
+        onOpenBookingModal: handleOpenBookingModal,
+        onBookingTableAction: handleBookingTableAction,
+        onParticipantTableAction: handleParticipantTableAction,
+        onOpenEventModal: handleOpenEventModal,
+      }),
+    [
+      activeSection,
+      adminData,
+      trailsSection,
+      guidesSection,
+      bookingActionFeedback,
+      handleOpenBookingModal,
+      handleBookingTableAction,
+      handleParticipantTableAction,
+      handleOpenEventModal,
+    ],
   )
 
   return (
@@ -2663,6 +3003,557 @@ function AdminPage() {
       header={{ title: section.title, description: section.description, actions: section.actions }}
     >
       {section.content}
+      {isBookingModalOpen ? (
+        <div className="admin-modal" role="dialog" aria-modal="true" aria-labelledby="booking-modal-title">
+          <div className="admin-modal__backdrop" aria-hidden="true" onClick={handleCloseBookingModal} />
+          <div className="admin-modal__dialog admin-modal__dialog--wide" role="document">
+            <button
+              type="button"
+              className="admin-modal__close"
+              onClick={handleCloseBookingModal}
+              aria-label="Fechar"
+            >
+              ×
+            </button>
+            <header className="admin-modal__header">
+              <h2 id="booking-modal-title">Novo agendamento</h2>
+              <p>Cadastre uma reserva vinculada a uma trilha ou sessão existente.</p>
+            </header>
+            <form className="admin-modal__form" onSubmit={handleBookingSubmit}>
+              <div className="admin-modal__body admin-modal__body--scroll">
+                {bookingFormError ? <div className="admin-modal__error">{bookingFormError}</div> : null}
+                <label>
+                  Trilha
+                  <select
+                    value={bookingForm.trailId}
+                    onChange={(event) => handleBookingFormFieldChange('trailId', event.target.value)}
+                    required
+                  >
+                    <option value="">Selecione uma trilha</option>
+                    {trailsState.items.map((trail) => (
+                      <option key={trail.id} value={trail.id}>
+                        {trail.name}
+                      </option>
+                    ))}
+                  </select>
+                  {trailsState.error ? (
+                    <small className="admin-modal__hint">{trailsState.error}</small>
+                  ) : null}
+                </label>
+                <label>
+                  Sessão existente
+                  <select
+                    value={bookingForm.sessionId}
+                    onChange={(event) => handleBookingFormFieldChange('sessionId', event.target.value)}
+                    disabled={!selectedBookingTrail}
+                  >
+                    <option value="">Criar nova sessão manualmente</option>
+                    {availableSessions.map((session) => (
+                      <option key={session.id} value={session.id}>
+                        {`${formatDateLabel(session.startsAt)} • ${formatTimeLabel(session.startsAt)} (${session.capacity} vagas)`}
+                      </option>
+                    ))}
+                  </select>
+                  <small className="admin-modal__hint">
+                    Ao selecionar uma sessão, o agendamento utilizará as vagas disponíveis automaticamente.
+                  </small>
+                </label>
+                {selectedBookingSession ? (
+                  <p className="admin-modal__hint">
+                    Capacidade da sessão: {selectedBookingSession.capacity} vagas. Status atual: {selectedBookingSession.status.toLowerCase()}.
+                  </p>
+                ) : null}
+                <label>
+                  Guia responsável
+                  <select
+                    value={bookingForm.guideCpf}
+                    onChange={(event) => handleBookingFormFieldChange('guideCpf', event.target.value)}
+                  >
+                    <option value="">Definir posteriormente</option>
+                    {availableGuidesForTrail.map((guide) => (
+                      <option key={guide.cpf} value={guide.cpf}>
+                        {guide.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Nome do responsável
+                  <input
+                    type="text"
+                    value={bookingForm.contactName}
+                    onChange={(event) => handleBookingFormFieldChange('contactName', event.target.value)}
+                    required
+                  />
+                </label>
+                <label>
+                  E-mail de contato
+                  <input
+                    type="email"
+                    value={bookingForm.contactEmail}
+                    onChange={(event) => handleBookingFormFieldChange('contactEmail', event.target.value)}
+                    required
+                  />
+                </label>
+                <label>
+                  Telefone
+                  <input
+                    type="tel"
+                    value={bookingForm.contactPhone}
+                    onChange={(event) => handleBookingFormFieldChange('contactPhone', event.target.value)}
+                    required
+                  />
+                </label>
+                <label>
+                  Data desejada
+                  <input
+                    type="date"
+                    value={bookingForm.scheduledDate}
+                    onChange={(event) => handleBookingFormFieldChange('scheduledDate', event.target.value)}
+                    disabled={Boolean(bookingForm.sessionId)}
+                    required={!bookingForm.sessionId}
+                  />
+                </label>
+                <label>
+                  Horário previsto
+                  <input
+                    type="time"
+                    value={bookingForm.scheduledTime}
+                    onChange={(event) => handleBookingFormFieldChange('scheduledTime', event.target.value)}
+                    disabled={Boolean(bookingForm.sessionId)}
+                  />
+                </label>
+                <label>
+                  Quantidade de participantes
+                  <input
+                    type="number"
+                    min={1}
+                    value={bookingForm.participantsCount}
+                    onChange={(event) => handleBookingFormFieldChange('participantsCount', event.target.value)}
+                    required
+                  />
+                </label>
+                <label>
+                  Observações
+                  <textarea
+                    rows={3}
+                    value={bookingForm.notes}
+                    onChange={(event) => handleBookingFormFieldChange('notes', event.target.value)}
+                    placeholder="Informações relevantes para a equipe operacional"
+                  />
+                </label>
+                <div className="admin-modal__section">
+                  <div className="admin-modal__section-header">
+                    <h3>Acompanhantes</h3>
+                    <button type="button" className="admin-secondary-button" onClick={handleAddBookingParticipant}>
+                      Adicionar participante
+                    </button>
+                  </div>
+                  {bookingForm.participants.length === 0 ? (
+                    <p className="admin-empty-state">Nenhum acompanhante cadastrado.</p>
+                  ) : (
+                    bookingForm.participants.map((participant, index) => (
+                      <div key={participant.id} className="admin-modal__inline-fields">
+                        <label>
+                          Nome completo
+                          <input
+                            type="text"
+                            value={participant.fullName}
+                            onChange={(event) =>
+                              handleUpdateBookingParticipant(index, 'fullName', event.target.value)
+                            }
+                          />
+                        </label>
+                        <label>
+                          CPF
+                          <input
+                            type="text"
+                            value={participant.cpf}
+                            onChange={(event) =>
+                              handleUpdateBookingParticipant(index, 'cpf', event.target.value)
+                            }
+                          />
+                        </label>
+                        <label>
+                          E-mail
+                          <input
+                            type="email"
+                            value={participant.email}
+                            onChange={(event) =>
+                              handleUpdateBookingParticipant(index, 'email', event.target.value)
+                            }
+                          />
+                        </label>
+                        <label>
+                          Telefone
+                          <input
+                            type="tel"
+                            value={participant.phone}
+                            onChange={(event) =>
+                              handleUpdateBookingParticipant(index, 'phone', event.target.value)
+                            }
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          className="admin-secondary-button admin-secondary-button--danger"
+                          onClick={() => handleRemoveBookingParticipant(index)}
+                        >
+                          Remover
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+              <footer className="admin-modal__actions">
+                <button type="button" className="admin-secondary-button" onClick={handleCloseBookingModal}>
+                  Cancelar
+                </button>
+                <button type="submit" className="admin-primary-button" disabled={isSavingBooking}>
+                  {isSavingBooking ? 'Registrando...' : 'Registrar agendamento'}
+                </button>
+              </footer>
+            </form>
+          </div>
+        </div>
+      ) : null}
+      {selectedBookingId ? (
+        <div className="admin-modal" role="dialog" aria-modal="true" aria-labelledby="booking-detail-title">
+          <div className="admin-modal__backdrop" aria-hidden="true" onClick={handleCloseBookingDetail} />
+          <div className="admin-modal__dialog admin-modal__dialog--wide" role="document">
+            <button
+              type="button"
+              className="admin-modal__close"
+              onClick={handleCloseBookingDetail}
+              aria-label="Fechar"
+            >
+              ×
+            </button>
+            <header className="admin-modal__header">
+              <h2 id="booking-detail-title">Detalhes do agendamento</h2>
+              <p>Visualize informações de contato, status e participantes cadastrados.</p>
+            </header>
+            <div className="admin-modal__body admin-modal__body--scroll">
+              {isLoadingBookingDetail ? (
+                <p className="admin-empty-state">Carregando detalhes do agendamento...</p>
+              ) : bookingDetail ? (
+                <>
+                  <div className="admin-detail-list">
+                    <div>
+                      <dt>Protocolo</dt>
+                      <dd>{bookingDetail.protocol}</dd>
+                    </div>
+                    <div>
+                      <dt>Status</dt>
+                      <dd>
+                        <span className={`admin-status admin-status--${bookingDetail.statusTone.tone || 'info'}`}>
+                          {bookingDetail.statusTone.label}
+                        </span>
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Trilha</dt>
+                      <dd>{bookingDetail.trail.name}</dd>
+                    </div>
+                    <div>
+                      <dt>Guia</dt>
+                      <dd>{bookingDetail.guide?.name ?? 'A definir'}</dd>
+                    </div>
+                    <div>
+                      <dt>Data agendada</dt>
+                      <dd>
+                        {formatDateLabel(bookingDetail.scheduledFor)} • {formatTimeLabel(bookingDetail.scheduledFor)}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Contato</dt>
+                      <dd>
+                        {bookingDetail.contactName}
+                        <br />
+                        <small>{bookingDetail.contactEmail}</small>
+                        <br />
+                        <small>{bookingDetail.contactPhone}</small>
+                      </dd>
+                    </div>
+                  </div>
+                  {bookingDetail.notes ? (
+                    <p className="admin-modal__hint">Observações: {bookingDetail.notes}</p>
+                  ) : null}
+                  <div className="admin-modal__section">
+                    <h3>Participantes</h3>
+                    <ul className="admin-modal__list">
+                      {bookingDetail.participants.map((participant) => (
+                        <li key={participant.id} className="admin-modal__list-item">
+                          <strong>{participant.fullName}</strong>
+                          <small>
+                            {participant.email ? `${participant.email} • ` : ''}
+                            {participant.phone ?? 'Sem telefone informado'}
+                          </small>
+                          {participant.isBanned ? (
+                            <span className="admin-status admin-status--danger">Banido</span>
+                          ) : null}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </>
+              ) : (
+                <div className="admin-modal__error">
+                  {bookingDetailError ?? 'Não foi possível carregar o agendamento selecionado.'}
+                </div>
+              )}
+            </div>
+            <footer className="admin-modal__actions">
+              <button type="button" className="admin-secondary-button" onClick={handleCloseBookingDetail}>
+                Fechar
+              </button>
+            </footer>
+          </div>
+        </div>
+      ) : null}
+      {selectedParticipantId ? (
+        <div className="admin-modal" role="dialog" aria-modal="true" aria-labelledby="participant-detail-title">
+          <div
+            className="admin-modal__backdrop"
+            aria-hidden="true"
+            onClick={handleCloseParticipantDetail}
+          />
+          <div className="admin-modal__dialog" role="document">
+            <button
+              type="button"
+              className="admin-modal__close"
+              onClick={handleCloseParticipantDetail}
+              aria-label="Fechar"
+            >
+              ×
+            </button>
+            <header className="admin-modal__header">
+              <h2 id="participant-detail-title">Participante</h2>
+              <p>Gerencie o histórico e o status do visitante selecionado.</p>
+            </header>
+            <div className="admin-modal__body">
+              {isLoadingParticipantDetail ? (
+                <p className="admin-empty-state">Carregando informações do participante...</p>
+              ) : participantDetail ? (
+                <>
+                  <div className="admin-detail-list">
+                    <div>
+                      <dt>Nome</dt>
+                      <dd>{participantDetail.fullName}</dd>
+                    </div>
+                    <div>
+                      <dt>CPF</dt>
+                      <dd>{participantDetail.cpf ?? 'Não informado'}</dd>
+                    </div>
+                    <div>
+                      <dt>Contato</dt>
+                      <dd>
+                        {participantDetail.email ?? 'Sem e-mail registrado'}
+                        <br />
+                        <small>{participantDetail.phone ?? 'Sem telefone registrado'}</small>
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Status</dt>
+                      <dd>
+                        <span className={`admin-status admin-status--${participantDetail.isBanned ? 'danger' : participantDetail.booking.statusTone.tone}`}>
+                          {participantDetail.isBanned ? 'Banido' : participantDetail.booking.statusTone.label}
+                        </span>
+                      </dd>
+                    </div>
+                  </div>
+                  <div className="admin-modal__section">
+                    <h3>Agendamento atual</h3>
+                    <div className="admin-detail-list">
+                      <div>
+                        <dt>Protocolo</dt>
+                        <dd>{participantDetail.booking.protocol}</dd>
+                      </div>
+                      <div>
+                        <dt>Trilha</dt>
+                        <dd>{participantDetail.booking.trail.name}</dd>
+                      </div>
+                      <div>
+                        <dt>Data</dt>
+                        <dd>{participantDetail.booking.scheduledForLabel}</dd>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="admin-modal__error">
+                  {participantDetailError ?? 'Não foi possível carregar o participante selecionado.'}
+                </div>
+              )}
+            </div>
+            <footer className="admin-modal__actions">
+              <button
+                type="button"
+                className="admin-secondary-button"
+                onClick={handleCloseParticipantDetail}
+              >
+                Fechar
+              </button>
+              <button
+                type="button"
+                className="admin-secondary-button"
+                onClick={handleCreateBookingFromParticipant}
+                disabled={!participantDetail}
+              >
+                Novo agendamento
+              </button>
+              <button
+                type="button"
+                className="admin-secondary-button admin-secondary-button--danger"
+                onClick={handleToggleParticipantBan}
+                disabled={!participantDetail || isUpdatingParticipant}
+              >
+                {participantDetail?.isBanned ? 'Reativar participante' : 'Banir participante'}
+              </button>
+            </footer>
+          </div>
+        </div>
+      ) : null}
+      {isEventModalOpen ? (
+        <div className="admin-modal" role="dialog" aria-modal="true" aria-labelledby="event-modal-title">
+          <div className="admin-modal__backdrop" aria-hidden="true" onClick={handleCloseEventModal} />
+          <div className="admin-modal__dialog admin-modal__dialog--wide" role="document">
+            <button
+              type="button"
+              className="admin-modal__close"
+              onClick={handleCloseEventModal}
+              aria-label="Fechar"
+            >
+              ×
+            </button>
+            <header className="admin-modal__header">
+              <h2 id="event-modal-title">Novo evento</h2>
+              <p>Divulgue atividades especiais do parque diretamente no painel administrativo.</p>
+            </header>
+            <form className="admin-modal__form" onSubmit={handleEventSubmit}>
+              <div className="admin-modal__body admin-modal__body--scroll">
+                {eventFormError ? <div className="admin-modal__error">{eventFormError}</div> : null}
+                <label>
+                  Título
+                  <input
+                    type="text"
+                    value={eventForm.title}
+                    onChange={(event) => setEventForm((prev) => ({ ...prev, title: event.target.value }))}
+                    required
+                  />
+                </label>
+                <label>
+                  Identificador (slug)
+                  <input
+                    type="text"
+                    value={eventForm.slug}
+                    onChange={(event) => setEventForm((prev) => ({ ...prev, slug: event.target.value }))}
+                    onBlur={() =>
+                      setEventForm((prev) => ({
+                        ...prev,
+                        slug: prev.slug ? slugify(prev.slug) : slugify(prev.title),
+                      }))
+                    }
+                    placeholder="ex.: festival-de-trilhas"
+                  />
+                </label>
+                <label>
+                  Descrição
+                  <textarea
+                    rows={4}
+                    value={eventForm.description}
+                    onChange={(event) => setEventForm((prev) => ({ ...prev, description: event.target.value }))}
+                    required
+                  />
+                </label>
+                <label>
+                  Local
+                  <input
+                    type="text"
+                    value={eventForm.location}
+                    onChange={(event) => setEventForm((prev) => ({ ...prev, location: event.target.value }))}
+                    placeholder="Centro de visitantes, anfiteatro..."
+                  />
+                </label>
+                <label>
+                  Data de início
+                  <input
+                    type="date"
+                    value={eventForm.startsAtDate}
+                    onChange={(event) => setEventForm((prev) => ({ ...prev, startsAtDate: event.target.value }))}
+                    required
+                  />
+                </label>
+                <label>
+                  Horário de início
+                  <input
+                    type="time"
+                    value={eventForm.startsAtTime}
+                    onChange={(event) => setEventForm((prev) => ({ ...prev, startsAtTime: event.target.value }))}
+                  />
+                </label>
+                <label>
+                  Data de término
+                  <input
+                    type="date"
+                    value={eventForm.endsAtDate}
+                    onChange={(event) => setEventForm((prev) => ({ ...prev, endsAtDate: event.target.value }))}
+                  />
+                </label>
+                <label>
+                  Horário de término
+                  <input
+                    type="time"
+                    value={eventForm.endsAtTime}
+                    onChange={(event) => setEventForm((prev) => ({ ...prev, endsAtTime: event.target.value }))}
+                  />
+                </label>
+                <label>
+                  Capacidade máxima
+                  <input
+                    type="number"
+                    min={1}
+                    value={eventForm.capacity}
+                    onChange={(event) => setEventForm((prev) => ({ ...prev, capacity: event.target.value }))}
+                    placeholder="Opcional"
+                  />
+                </label>
+                <label>
+                  Status
+                  <select
+                    value={eventForm.status}
+                    onChange={(event) =>
+                      setEventForm((prev) => ({ ...prev, status: event.target.value as EventFormState['status'] }))
+                    }
+                  >
+                    <option value="DRAFT">Rascunho</option>
+                    <option value="PUBLISHED">Publicado</option>
+                    <option value="CANCELLED">Cancelado</option>
+                    <option value="ARCHIVED">Arquivado</option>
+                  </select>
+                </label>
+                <label className="admin-modal__checkbox">
+                  <input
+                    type="checkbox"
+                    checked={eventForm.highlight}
+                    onChange={(event) => setEventForm((prev) => ({ ...prev, highlight: event.target.checked }))}
+                  />
+                  Destacar evento no dashboard
+                </label>
+              </div>
+              <footer className="admin-modal__actions">
+                <button type="button" className="admin-secondary-button" onClick={handleCloseEventModal}>
+                  Cancelar
+                </button>
+                <button type="submit" className="admin-primary-button" disabled={isSavingEvent}>
+                  {isSavingEvent ? 'Salvando...' : 'Salvar evento'}
+                </button>
+              </footer>
+            </form>
+          </div>
+        </div>
+      ) : null}
       {isInviteModalOpen ? (
         <div className="admin-modal" role="dialog" aria-modal="true" aria-labelledby="invite-modal-title">
           <div className="admin-modal__backdrop" aria-hidden="true" onClick={handleCloseInviteModal} />

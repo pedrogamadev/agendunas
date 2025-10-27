@@ -68,7 +68,10 @@ export async function fetchParticipantsTable(limit = 12): Promise<ParticipantRow
     contact: participant.phone ?? participant.email ?? participant.booking.contactName,
     trailName: participant.booking.trail.name,
     datetimeLabel: formatDateTimeLabel(participant.booking.scheduledFor),
-    statusTone: createStatusTone(participant.booking.status),
+    statusTone: participant.isBanned
+      ? { label: 'Banido', tone: 'danger' }
+      : createStatusTone(participant.booking.status),
+    isBanned: participant.isBanned,
   }))
 }
 

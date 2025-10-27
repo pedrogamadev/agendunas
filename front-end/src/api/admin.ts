@@ -1,4 +1,5 @@
 import { apiRequest } from './client'
+import type { CreateBookingPayload, CreateBookingResponse } from './public'
 
 export type MetricTrend = {
   value: string
@@ -33,6 +34,7 @@ export type ParticipantRow = {
   trailName: string
   datetimeLabel: string
   statusTone: { label: string; tone: 'success' | 'warning' | 'danger' | 'info' | 'neutral' }
+  isBanned: boolean
 }
 
 export type SessionSummary = {
@@ -106,6 +108,68 @@ export function fetchAdminOverview() {
   return apiRequest<AdminOverview>('/admin/overview')
 }
 
+export type AdminBookingDetail = {
+  id: string
+  protocol: string
+  status: string
+  statusTone: { label: string; tone: string }
+  scheduledFor: string
+  scheduledDateLabel: string
+  scheduledTimeLabel: string
+  scheduledForLabel: string
+  participantsCount: number
+  contactName: string
+  contactEmail: string
+  contactPhone: string
+  notes?: string | null
+  trail: { id: string; name: string }
+  guide: { cpf: string; name: string } | null
+  session: {
+    id: string
+    startsAt: string
+    capacity: number
+    meetingPoint: string | null
+    status: string
+    startsAtLabel: string
+  } | null
+  participants: Array<{
+    id: string
+    fullName: string
+    cpf?: string | null
+    email?: string | null
+    phone?: string | null
+    createdAt: string
+    createdAtLabel: string
+    isBanned: boolean
+  }>
+  createdAt: string
+  createdAtLabel: string
+  updatedAt: string
+}
+
+export function fetchAdminBooking(id: string) {
+  return apiRequest<AdminBookingDetail>(`/admin/bookings/${id}`)
+}
+
+export type UpdateAdminBookingStatusPayload = {
+  status: 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED' | 'RESCHEDULED'
+}
+
+export function updateAdminBookingStatus(id: string, payload: UpdateAdminBookingStatusPayload) {
+  return apiRequest(`/admin/bookings/${id}/status`, { method: 'PATCH', body: payload })
+}
+
+export type CreateAdminBookingPayload = CreateBookingPayload & {
+  source?: 'ADMIN'
+}
+
+export function createAdminBooking(payload: CreateAdminBookingPayload) {
+  return apiRequest<CreateBookingResponse>('/bookings', {
+    method: 'POST',
+    body: { ...payload, source: 'ADMIN' },
+  })
+}
+
 export function fetchAdminBookings(limit?: number) {
   const query = typeof limit === 'number' ? `?limit=${limit}` : ''
   return apiRequest<BookingRow[]>(`/admin/bookings${query}`)
@@ -116,8 +180,61 @@ export function fetchAdminParticipants(limit?: number) {
   return apiRequest<ParticipantRow[]>(`/admin/participants${query}`)
 }
 
+export type AdminParticipantDetail = {
+  id: string
+  fullName: string
+  cpf?: string | null
+  email?: string | null
+  phone?: string | null
+  createdAt: string
+  createdAtLabel: string
+  isBanned: boolean
+  booking: {
+    id: string
+    protocol: string
+    status: string
+    statusTone: { label: string; tone: string }
+    scheduledFor: string
+    scheduledForLabel: string
+    participantsCount: number
+    contactName: string
+    contactEmail: string
+    contactPhone: string
+    trail: { id: string; name: string }
+    guide: { cpf: string; name: string } | null
+  }
+}
+
+export function fetchAdminParticipant(id: string) {
+  return apiRequest<AdminParticipantDetail>(`/admin/participants/${id}`)
+}
+
+export type UpdateAdminParticipantPayload = {
+  isBanned?: boolean
+}
+
+export function updateAdminParticipant(id: string, payload: UpdateAdminParticipantPayload) {
+  return apiRequest(`/admin/participants/${id}`, { method: 'PATCH', body: payload })
+}
+
 export function fetchAdminEvents() {
   return apiRequest<{ cards: EventCard[]; upcoming: EventCard[] }>('/admin/events')
+}
+
+export type CreateAdminEventPayload = {
+  title: string
+  slug: string
+  description: string
+  location?: string
+  startsAt: string
+  endsAt?: string
+  capacity?: number
+  status?: 'DRAFT' | 'PUBLISHED' | 'CANCELLED' | 'ARCHIVED'
+  highlight?: boolean
+}
+
+export function createAdminEvent(payload: CreateAdminEventPayload) {
+  return apiRequest('/admin/events', { method: 'POST', body: payload })
 }
 
 export type TrailStatus = 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE'

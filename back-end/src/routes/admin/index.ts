@@ -14,13 +14,23 @@ import { createInvite } from '../../controllers/admin/create-invite.js'
 import { deleteGuide } from '../../controllers/admin/delete-guide.js'
 import { listGuides } from '../../controllers/admin/list-guides.js'
 import { updateGuide } from '../../controllers/admin/update-guide.js'
+import { getBooking } from '../../controllers/admin/get-booking.js'
+import { updateBookingStatus } from '../../controllers/admin/update-booking-status.js'
+import { getParticipant } from '../../controllers/admin/get-participant.js'
+import { updateParticipant } from '../../controllers/admin/update-participant.js'
+import { createEvent } from '../../controllers/admin/create-event.js'
 
 const router = Router()
 
 router.get('/overview', getOverview)
 router.get('/bookings', listBookings)
+router.get('/bookings/:id', getBooking)
+router.patch('/bookings/:id/status', updateBookingStatus)
 router.get('/participants', listParticipants)
+router.get('/participants/:id', getParticipant)
+router.patch('/participants/:id', updateParticipant)
 router.get('/events', listEvents)
+router.post('/events', createEvent)
 router.get('/trails', listTrails)
 router.post('/trails', createTrail)
 router.put('/trails/:id', updateTrail)

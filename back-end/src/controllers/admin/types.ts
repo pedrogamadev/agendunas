@@ -38,6 +38,7 @@ export type ParticipantRow = {
   trailName: string
   datetimeLabel: string
   statusTone: StatusTone
+  isBanned: boolean
 }
 
 export type SessionSummary = {

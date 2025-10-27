@@ -26,9 +26,13 @@ type AdminTableRow = {
 type AdminTableProps = {
   columns: AdminTableColumn[]
   rows: AdminTableRow[]
+  onAction?: (rowId: string, actionId: string) => void
+  emptyMessage?: string
 }
 
-function AdminTable({ columns, rows }: AdminTableProps) {
+function AdminTable({ columns, rows, onAction, emptyMessage }: AdminTableProps) {
+  const colSpan = columns.length + 1
+
   return (
     <div className="admin-table__container">
       <table className="admin-table">
@@ -43,35 +47,44 @@ function AdminTable({ columns, rows }: AdminTableProps) {
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
-            <tr key={row.id}>
-              {columns.map((column) => (
-                <td key={column.id} style={{ textAlign: column.align ?? 'left' }}>
-                  {row.cells[column.id]}
-                </td>
-              ))}
-              <td className="admin-table__actions">
-                {row.status ? (
-                  <span className={`admin-status admin-status--${row.status.tone ?? 'info'}`}>
-                    {row.status.label}
-                  </span>
-                ) : null}
-                {row.actions?.map((action) => (
-                  <button
-                    key={action.id}
-                    type="button"
-                    className={`admin-table__action-button${
-                      action.tone ? ` is-${action.tone}` : ''
-                    }`}
-                    aria-label={action.label}
-                    title={action.label}
-                  >
-                    {action.icon ? action.icon : <span>{action.label}</span>}
-                  </button>
-                ))}
+          {rows.length === 0 ? (
+            <tr>
+              <td colSpan={colSpan} className="admin-table__empty">
+                {emptyMessage ?? 'Nenhum registro encontrado.'}
               </td>
             </tr>
-          ))}
+          ) : (
+            rows.map((row) => (
+              <tr key={row.id}>
+                {columns.map((column) => (
+                  <td key={column.id} style={{ textAlign: column.align ?? 'left' }}>
+                    {row.cells[column.id]}
+                  </td>
+                ))}
+                <td className="admin-table__actions">
+                  {row.status ? (
+                    <span className={`admin-status admin-status--${row.status.tone ?? 'info'}`}>
+                      {row.status.label}
+                    </span>
+                  ) : null}
+                  {row.actions?.map((action) => (
+                    <button
+                      key={action.id}
+                      type="button"
+                      className={`admin-table__action-button${
+                        action.tone ? ` is-${action.tone}` : ''
+                      }`}
+                      aria-label={action.label}
+                      title={action.label}
+                      onClick={() => onAction?.(row.id, action.id)}
+                    >
+                      {action.icon ? action.icon : <span>{action.label}</span>}
+                    </button>
+                  ))}
+                </td>
+              </tr>
+            ))
+          )}
         </tbody>
       </table>
     </div>
