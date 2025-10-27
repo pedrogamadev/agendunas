@@ -376,6 +376,57 @@ const createIcon = (children: ReactNode) => (
   </svg>
 )
 
+type MessageTemplateId = 'confirmation' | 'reminder' | 'cancellation'
+
+const DEFAULT_MESSAGE_TEMPLATES: Record<MessageTemplateId, string> = {
+  confirmation:
+    'Olá {nome}!\nSeu agendamento está confirmado para {data} às {hora}.\nTrilha: {trilha}\nProtocolo: {protocolo}.',
+  reminder:
+    'Olá {nome}!\nEstamos animados para a sua visita em {data}, às {hora}.\nTrilha: {trilha}. Qualquer dúvida fale com a gente!',
+  cancellation:
+    'Olá {nome}.\nInformamos que o agendamento (protocolo {protocolo}) para {data} às {hora}, na trilha {trilha}, foi cancelado.\nSe precisar, entre em contato conosco.',
+}
+
+const MESSAGE_TEMPLATE_METADATA: Array<{
+  id: MessageTemplateId
+  label: string
+  description: string
+}> = [
+  {
+    id: 'confirmation',
+    label: 'Template de Confirmação',
+    description: 'Utilizado para confirmar data, horário e trilha com o visitante.',
+  },
+  {
+    id: 'reminder',
+    label: 'Template de Lembrete',
+    description: 'Mensagem para relembrar os detalhes do passeio antes da visita.',
+  },
+  {
+    id: 'cancellation',
+    label: 'Template de Cancelamento',
+    description: 'Mensagem para comunicar cancelamentos e próximos passos.',
+  },
+]
+
+type WhatsappDialogState = {
+  participantId: string
+  participantName: string
+  phone: string
+  templateId: MessageTemplateId
+  message: string
+  variables: Record<string, string>
+}
+
+const applyMessageVariables = (template: string, variables: Record<string, string>) => {
+  return Object.entries(variables).reduce((text, [key, value]) => {
+    const pattern = new RegExp(`\\{${key}\\}`, 'gi')
+    return text.replace(pattern, value)
+  }, template)
+}
+
+const sanitizePhoneNumber = (value: string) => value.replace(/\D/g, '')
+
 const sidebarSections = [
   {
     id: 'dashboard',
@@ -1020,13 +1071,30 @@ const buildSection = ({
                                     <small>Protocolo {participant.bookingProtocol}</small>
                                   </td>
                                   <td className="admin-session-card__actions-cell">
-                                    <button
-                                      type="button"
-                                      className="admin-secondary-button"
-                                      onClick={() => onParticipantTableAction(participant.id, 'manage')}
-                                    >
-                                      Detalhes
-                                    </button>
+                                    <div className="admin-session-card__actions">
+                                      <button
+                                        type="button"
+                                        className="admin-secondary-button admin-secondary-button--whatsapp"
+                                        onClick={() => onParticipantTableAction(participant.id, 'whatsapp')}
+                                      >
+                                        <span className="admin-session-card__action-icon" aria-hidden="true">
+                                          <svg viewBox="0 0 24 24">
+                                            <path
+                                              d="M20.52 3.48A11.92 11.92 0 0 0 12 .5 11.5 11.5 0 0 0 .5 11.78a11.22 11.22 0 0 0 1.18 5L.5 23.5l6.9-1.74A11.93 11.93 0 0 0 12 23.5h.05A11.45 11.45 0 0 0 23.5 12a11.9 11.9 0 0 0-2.98-8.52ZM12 21.4a9.83 9.83 0 0 1-5-.86l-.35-.17-4.08 1 1.09-3.92-.2-.4a9.67 9.67 0 0 1-1.22-4.73A9.9 9.9 0 0 1 12 2.61 10 10 0 0 1 21.39 12 9.87 9.87 0 0 1 12 21.4Zm5.27-7.33c-.29-.14-1.7-.84-1.96-.93s-.45-.14-.64.14-.73.93-.89 1.12-.33.21-.62.07a8.03 8.03 0 0 1-4.19-3.65c-.32-.55.32-.51.91-1.69a.56.56 0 0 0-.03-.53c-.07-.14-.64-1.54-.88-2.11s-.47-.47-.64-.48h-.54a1 1 0 0 0-.7.32 2.94 2.94 0 0 0-.93 2.18 5.1 5.1 0 0 0 1.05 2.7 11.66 11.66 0 0 0 4.46 4 15.27 15.27 0 0 0 1.52.56 3.63 3.63 0 0 0 1.66.1 2.74 2.74 0 0 0 1.8-1.27 2.21 2.21 0 0 0 .15-1.27c-.07-.12-.26-.19-.54-.33Z"
+                                              fill="currentColor"
+                                            />
+                                          </svg>
+                                        </span>
+                                        <span className="admin-session-card__action-label">WhatsApp</span>
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="admin-secondary-button"
+                                        onClick={() => onParticipantTableAction(participant.id, 'manage')}
+                                      >
+                                        Detalhes
+                                      </button>
+                                    </div>
                                   </td>
                                 </tr>
                               ))}
@@ -1185,27 +1253,26 @@ const buildSection = ({
                 <span>Configure mensagens enviadas por email e WhatsApp</span>
               </header>
               <div className="admin-card__content admin-settings__grid">
-                <div>
-                  <label>
-                    Template de Confirmação
-                    <textarea defaultValue={`Olá {nome},\nSeu agendamento foi confirmado!\nData: {data}\nTrilha: {trilha}\nGuia: {guia}`} />
-                  </label>
-                  <small>Variáveis disponíveis: {'{nome}'}, {'{data}'}, {'{trilha}'}, {'{guia}'}</small>
-                </div>
-                <div>
-                  <label>
-                    Template de Lembrete
-                    <textarea defaultValue={`Olá {nome},\nEstamos te lembrando do passeio amanhã às {hora}.\nAté breve!`} />
-                  </label>
-                  <small>Configure o envio automático 24h antes do agendamento.</small>
-                </div>
-                <div>
-                  <label>
-                    Template de Cancelamento
-                    <textarea defaultValue={`Olá {nome},\nSeu agendamento foi cancelado.\nQualquer dúvida estamos à disposição.`} />
-                  </label>
-                  <small>Utilize tags para informar motivos e políticas de reembolso.</small>
-                </div>
+                {MESSAGE_TEMPLATE_METADATA.map((template) => (
+                  <div key={template.id} className="admin-settings__field">
+                    <label>
+                      {template.label}
+                      <textarea
+                        value={messageTemplates[template.id]}
+                        onChange={(event) =>
+                          setMessageTemplates((prev) => ({
+                            ...prev,
+                            [template.id]: event.target.value,
+                          }))
+                        }
+                      />
+                    </label>
+                    <small>{template.description}</small>
+                    <small className="admin-settings__hint">
+                      Variáveis disponíveis: {'{nome}'}, {'{data}'}, {'{hora}'}, {'{trilha}'}, {'{protocolo}'}, {'{responsavel}'}
+                    </small>
+                  </div>
+                ))}
               </div>
             </section>
           </div>
@@ -1261,6 +1328,9 @@ function AdminPage() {
   const [bookingActionFeedback, setBookingActionFeedback] = useState<
     { message: string; tone: 'success' | 'error' }
   | null>(null)
+  const [messageTemplates, setMessageTemplates] = useState<Record<MessageTemplateId, string>>(() => ({
+    ...DEFAULT_MESSAGE_TEMPLATES,
+  }))
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null)
   const [bookingDetail, setBookingDetail] = useState<AdminBookingDetail | null>(null)
   const [bookingDetailError, setBookingDetailError] = useState<string | null>(null)
@@ -1270,6 +1340,8 @@ function AdminPage() {
   const [participantDetailError, setParticipantDetailError] = useState<string | null>(null)
   const [isLoadingParticipantDetail, setIsLoadingParticipantDetail] = useState(false)
   const [isUpdatingParticipant, setIsUpdatingParticipant] = useState(false)
+  const [isWhatsappModalOpen, setIsWhatsappModalOpen] = useState(false)
+  const [whatsappDialog, setWhatsappDialog] = useState<WhatsappDialogState | null>(null)
   const [isEventModalOpen, setIsEventModalOpen] = useState(false)
   const [eventForm, setEventForm] = useState<EventFormState>(initialEventFormState)
   const [eventFormError, setEventFormError] = useState<string | null>(null)
@@ -1733,6 +1805,51 @@ function AdminPage() {
 
   const handleParticipantTableAction = useCallback(
     async (rowId: string, actionId: string) => {
+      if (actionId === 'whatsapp') {
+        const session = sessionExplorer.sessions.find((item) =>
+          item.participants.some((participant) => participant.id === rowId),
+        )
+        const participant = session?.participants.find((item) => item.id === rowId)
+
+        if (!participant) {
+          setWhatsappDialog(null)
+          setIsWhatsappModalOpen(false)
+          return
+        }
+
+        const scheduledDate = formatDateLabel(session?.startsAt ?? participant.scheduledFor)
+        const scheduledTime = formatTimeLabel(session?.startsAt ?? participant.scheduledFor)
+        const variables = {
+          nome: participant.fullName || participant.contactName,
+          data: scheduledDate,
+          hora: scheduledTime,
+          trilha: session?.trailName ?? 'Trilha agendada',
+          protocolo: participant.bookingProtocol,
+          responsavel: participant.contactName,
+        }
+
+        let templateId: MessageTemplateId = 'reminder'
+
+        if (participant.bookingStatus === 'CONFIRMED') {
+          templateId = 'confirmation'
+        } else if (participant.bookingStatus === 'CANCELLED') {
+          templateId = 'cancellation'
+        }
+
+        const template = messageTemplates[templateId] ?? DEFAULT_MESSAGE_TEMPLATES[templateId]
+
+        setWhatsappDialog({
+          participantId: participant.id,
+          participantName: participant.fullName,
+          phone: participant.phone ?? participant.contactPhone ?? '',
+          templateId,
+          message: applyMessageVariables(template, variables),
+          variables,
+        })
+        setIsWhatsappModalOpen(true)
+        return
+      }
+
       if (actionId !== 'manage') {
         return
       }
@@ -1755,7 +1872,7 @@ function AdminPage() {
         setIsLoadingParticipantDetail(false)
       }
     },
-    [fetchAdminParticipant],
+    [fetchAdminParticipant, messageTemplates, sessionExplorer.sessions],
   )
 
   const handleToggleParticipantBan = useCallback(async () => {
@@ -2061,6 +2178,13 @@ function AdminPage() {
     return selectedBookingTrail?.sessions ?? []
   }, [selectedBookingTrail])
 
+  const messageTemplateOptions = useMemo(() => {
+    return MESSAGE_TEMPLATE_METADATA.map((metadata) => ({
+      id: metadata.id,
+      label: metadata.label,
+    }))
+  }, [])
+
   const availableGuidesForTrail = useMemo(() => {
     if (!selectedBookingTrail) {
       return trailsState.guides
@@ -2082,6 +2206,56 @@ function AdminPage() {
     setInviteError(null)
     setIsInviteModalOpen(true)
   }, [])
+
+  const handleCloseWhatsappModal = useCallback(() => {
+    setIsWhatsappModalOpen(false)
+    setWhatsappDialog(null)
+  }, [])
+
+  const handleWhatsappPhoneChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    const nextValue = event.target.value
+    setWhatsappDialog((prev) => (prev ? { ...prev, phone: nextValue } : prev))
+  }, [])
+
+  const handleWhatsappTemplateChange = useCallback(
+    (event: ChangeEvent<HTMLSelectElement>) => {
+      const templateId = event.target.value as MessageTemplateId
+      setWhatsappDialog((prev) => {
+        if (!prev) {
+          return prev
+        }
+
+        const template = messageTemplates[templateId] ?? DEFAULT_MESSAGE_TEMPLATES[templateId]
+        return {
+          ...prev,
+          templateId,
+          message: applyMessageVariables(template, prev.variables),
+        }
+      })
+    },
+    [messageTemplates],
+  )
+
+  const handleWhatsappMessageChange = useCallback((event: ChangeEvent<HTMLTextAreaElement>) => {
+    const nextValue = event.target.value
+    setWhatsappDialog((prev) => (prev ? { ...prev, message: nextValue } : prev))
+  }, [])
+
+  const handleOpenWhatsappLink = useCallback(() => {
+    if (!whatsappDialog) {
+      return
+    }
+
+    const phone = sanitizePhoneNumber(whatsappDialog.phone)
+    const text = whatsappDialog.message.trim()
+
+    if (!phone || !text) {
+      return
+    }
+
+    const link = `https://wa.me/${phone}?text=${encodeURIComponent(text)}`
+    window.open(link, '_blank', 'noopener,noreferrer')
+  }, [whatsappDialog])
 
   const handleCloseInviteModal = useCallback(() => {
     setIsInviteModalOpen(false)
@@ -3836,6 +4010,79 @@ function AdminPage() {
                 disabled={!participantDetail || isUpdatingParticipant}
               >
                 {participantDetail?.isBanned ? 'Reativar participante' : 'Banir participante'}
+              </button>
+            </footer>
+          </div>
+        </div>
+      ) : null}
+      {isWhatsappModalOpen && whatsappDialog ? (
+        <div className="admin-modal" role="dialog" aria-modal="true" aria-labelledby="whatsapp-modal-title">
+          <div className="admin-modal__backdrop" aria-hidden="true" onClick={handleCloseWhatsappModal} />
+          <div className="admin-modal__dialog" role="document">
+            <button
+              type="button"
+              className="admin-modal__close"
+              onClick={handleCloseWhatsappModal}
+              aria-label="Fechar"
+            >
+              ×
+            </button>
+            <header className="admin-modal__header">
+              <h2 id="whatsapp-modal-title">Enviar mensagem no WhatsApp</h2>
+              <p>Use os templates configurados para enviar comunicações rápidas aos participantes.</p>
+            </header>
+            <div className="admin-modal__body">
+              <p className="admin-modal__hint">
+                Mensagem preparada para {whatsappDialog.participantName || 'o participante selecionado'}.
+              </p>
+              <label>
+                Número do participante
+                <input
+                  type="tel"
+                  value={whatsappDialog.phone}
+                  onChange={handleWhatsappPhoneChange}
+                  placeholder="Ex.: 5584999999999"
+                />
+                <small>Utilize DDI + DDD para garantir o disparo correto via wa.me.</small>
+              </label>
+              <label>
+                Modelo de mensagem
+                <select value={whatsappDialog.templateId} onChange={handleWhatsappTemplateChange}>
+                  {messageTemplateOptions.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Mensagem
+                <textarea rows={6} value={whatsappDialog.message} onChange={handleWhatsappMessageChange} />
+                <small>
+                  Variáveis disponíveis: {'{nome}'}, {'{data}'}, {'{hora}'}, {'{trilha}'}, {'{protocolo}'}, {'{responsavel}'}
+                </small>
+              </label>
+              <div className="admin-modal__variables">
+                {Object.entries(whatsappDialog.variables).map(([key, value]) => (
+                  <span key={key}>
+                    <strong>{`{${key}}`}</strong>: {value || '—'}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <footer className="admin-modal__actions">
+              <button type="button" className="admin-secondary-button" onClick={handleCloseWhatsappModal}>
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="admin-primary-button"
+                onClick={handleOpenWhatsappLink}
+                disabled={
+                  !sanitizePhoneNumber(whatsappDialog.phone) || !whatsappDialog.message.trim().length
+                }
+              >
+                Abrir WhatsApp
               </button>
             </footer>
           </div>

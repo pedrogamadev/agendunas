@@ -654,6 +654,28 @@
   text-align: right;
 }
 
+.admin-session-card__actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.admin-session-card__action-icon {
+  display: inline-flex;
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.admin-session-card__action-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.admin-secondary-button--whatsapp {
+  color: #0f9752;
+}
+
 @media (max-width: 720px) {
   .admin-session-card__table {
     min-width: 520px;
@@ -816,6 +838,16 @@
   margin-top: 0.4rem;
   font-size: 0.75rem;
   color: rgba(20, 52, 40, 0.6);
+}
+
+.admin-settings__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.admin-settings__hint {
+  margin-top: -0.2rem;
 }
 
 @media (max-width: 880px) {
@@ -1409,13 +1441,19 @@
 }
 
 .admin-modal__body input,
-.admin-modal__body select {
+.admin-modal__body select,
+.admin-modal__body textarea {
   padding: 0.65rem 0.75rem;
   border-radius: 12px;
   border: 1px solid rgba(20, 84, 55, 0.18);
   background: rgba(255, 255, 255, 0.94);
   font-size: 0.95rem;
   color: #143428;
+}
+
+.admin-modal__body textarea {
+  min-height: 140px;
+  resize: vertical;
 }
 
 .admin-modal__body small {
@@ -1468,6 +1506,23 @@
   margin: 0;
   font-size: 0.9rem;
   color: rgba(20, 52, 40, 0.6);
+}
+
+.admin-modal__variables {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  color: rgba(20, 52, 40, 0.65);
+}
+
+.admin-modal__variables span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.3rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(236, 249, 243, 0.9);
 }
 
 .admin-modal__actions {
