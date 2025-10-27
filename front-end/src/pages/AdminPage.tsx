@@ -656,6 +656,7 @@ type SectionBuilderParams = {
     isLoading: boolean
     error: string | null
     expandedSessionId: string | null
+    isInitialized: boolean
   }
   sessionParticipantsError: string | null
   onSelectSessionsTrail: (event: ChangeEvent<HTMLSelectElement>) => void
@@ -857,7 +858,7 @@ const buildSection = ({
               type="button"
               className="admin-primary-button"
               onClick={onRefreshSessions}
-              disabled={!sessionsState.trailId || sessionsState.isLoading}
+              disabled={sessionsState.isLoading}
             >
               Atualizar turmas
             </button>
@@ -869,17 +870,11 @@ const buildSection = ({
               <label>
                 Trilha
                 <select
-                  value={sessionsState.trailId}
+                  value={sessionsState.trailId || 'all'}
                   onChange={onSelectSessionsTrail}
                   disabled={isLoadingTrails || trailOptions.length === 0}
                 >
-                  <option value="">
-                    {isLoadingTrails
-                      ? 'Carregando trilhas...'
-                      : trailOptions.length === 0
-                      ? 'Nenhuma trilha disponível'
-                      : 'Selecione uma trilha'}
-                  </option>
+                  <option value="all">Todas as trilhas</option>
                   {trailOptions.map((trail) => (
                     <option key={trail.id} value={trail.id}>
                       {trail.name}
@@ -895,13 +890,22 @@ const buildSection = ({
               <div className="admin-alert admin-alert--error">{sessionsState.error}</div>
             ) : null}
             {sessionsState.isLoading ? (
-              <p className="admin-placeholder">Carregando turmas desta trilha...</p>
+              <p className="admin-placeholder">Carregando turmas publicadas...</p>
             ) : null}
             {!sessionsState.isLoading && sessionsState.sessions.length === 0 ? (
-              <p className="admin-placeholder">Nenhuma turma encontrada para a trilha selecionada.</p>
+              <p className="admin-placeholder">
+                {sessionsState.trailId === 'all'
+                  ? 'Nenhuma turma encontrada nas trilhas cadastradas.'
+                  : 'Nenhuma turma encontrada para a trilha selecionada.'}
+              </p>
             ) : null}
             <div className="admin-session-list">
-              {sessionsState.sessions.map((session) => {
+              {[...sessionsState.sessions]
+                .sort(
+                  (a, b) =>
+                    new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime(),
+                )
+                .map((session) => {
                 const statusTone =
                   SESSION_STATUS_LABELS[session.status] ?? {
                     label: session.status,
@@ -1276,12 +1280,14 @@ function AdminPage() {
     isLoading: boolean
     error: string | null
     expandedSessionId: string | null
+    isInitialized: boolean
   }>({
-    trailId: '',
+    trailId: 'all',
     sessions: [],
     isLoading: false,
     error: null,
     expandedSessionId: null,
+    isInitialized: false,
   })
   const [sessionParticipantsError, setSessionParticipantsError] = useState<string | null>(null)
 
@@ -1364,52 +1370,122 @@ function AdminPage() {
     }
   }, [sortTrails])
 
-  const loadTrailSessions = useCallback(async (trailId: string) => {
-    if (!trailId) {
-      setSessionExplorer({
-        trailId: '',
-        sessions: [],
-        isLoading: false,
-        error: null,
-        expandedSessionId: null,
-      })
+  const loadTrailSessions = useCallback(
+    async (trailId: string) => {
+      if (!trailId) {
+        setSessionExplorer((state) => ({
+          ...state,
+          trailId: '',
+          sessions: [],
+          isLoading: false,
+          error: null,
+          expandedSessionId: null,
+          isInitialized: true,
+        }))
+        setSessionParticipantsError(null)
+        return
+      }
+
       setSessionParticipantsError(null)
-      return
-    }
-
-    setSessionParticipantsError(null)
-    setSessionExplorer((state) => ({
-      ...state,
-      trailId,
-      isLoading: true,
-      error: null,
-      sessions: state.trailId === trailId ? state.sessions : [],
-      expandedSessionId: null,
-    }))
-
-    try {
-      const payload = await fetchAdminTrailSessions(trailId)
-      setSessionExplorer({
+      setSessionExplorer((state) => ({
+        ...state,
         trailId,
-        sessions: payload,
-        isLoading: false,
+        isLoading: true,
         error: null,
+        sessions: state.trailId === trailId ? state.sessions : [],
         expandedSessionId: null,
-      })
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : 'Não foi possível carregar as sessões da trilha selecionada.'
-      setSessionExplorer({
-        trailId,
-        sessions: [],
-        isLoading: false,
-        error: message,
-        expandedSessionId: null,
-      })
-    }
-  }, [])
+      }))
+
+      try {
+        if (trailId === 'all') {
+          if (trailsState.items.length === 0) {
+            setSessionExplorer({
+              trailId,
+              sessions: [],
+              isLoading: false,
+              error: null,
+              expandedSessionId: null,
+              isInitialized: true,
+            })
+            return
+          }
+
+          const results = await Promise.allSettled(
+            trailsState.items.map((trail) =>
+              fetchAdminTrailSessions(trail.id).then((sessions) =>
+                sessions.map((session) => ({
+                  ...session,
+                  trailName: session.trailName ?? trail.name,
+                })),
+              ),
+            ),
+          )
+
+          const sessions: AdminTrailSession[] = []
+          const failedTrails: string[] = []
+
+          results.forEach((result, index) => {
+            if (result.status === 'fulfilled') {
+              sessions.push(...result.value)
+            } else {
+              failedTrails.push(trailsState.items[index]?.name ?? 'trilha')
+            }
+          })
+
+          sessions.sort(
+            (a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime(),
+          )
+
+          setSessionExplorer({
+            trailId,
+            sessions,
+            isLoading: false,
+            error:
+              failedTrails.length > 0
+                ? `Não foi possível carregar as sessões das seguintes trilhas: ${failedTrails.join(
+                    ', ',
+                  )}.`
+                : null,
+            expandedSessionId: null,
+            isInitialized: true,
+          })
+          return
+        }
+
+        const payload = await fetchAdminTrailSessions(trailId)
+        const sessions = payload
+          .slice()
+          .sort(
+            (a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime(),
+          )
+
+        setSessionExplorer({
+          trailId,
+          sessions,
+          isLoading: false,
+          error: null,
+          expandedSessionId: null,
+          isInitialized: true,
+        })
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : trailId === 'all'
+            ? 'Não foi possível carregar as sessões das trilhas selecionadas.'
+            : 'Não foi possível carregar as sessões da trilha selecionada.'
+        setSessionExplorer({
+          trailId,
+          sessions: [],
+          isLoading: false,
+          error: message,
+          expandedSessionId: null,
+          isInitialized: true,
+        })
+      }
+    },
+    [trailsState.items],
+  )
 
   useEffect(() => {
     if (activeSection === 'guias' && !guidesState.isInitialized) {
@@ -1433,11 +1509,17 @@ function AdminPage() {
     if (
       activeSection === 'participantes' &&
       trailsState.isInitialized &&
-      trailsState.items.length > 0 &&
-      !sessionExplorer.trailId &&
+      !sessionExplorer.isInitialized &&
       !sessionExplorer.isLoading
     ) {
-      void loadTrailSessions(trailsState.items[0].id)
+      const nextTrailId =
+        sessionExplorer.trailId || (trailsState.items.length > 0 ? 'all' : '')
+
+      if (nextTrailId) {
+        void loadTrailSessions(nextTrailId)
+      } else {
+        setSessionExplorer((state) => ({ ...state, isInitialized: true }))
+      }
     }
   }, [
     activeSection,
@@ -1445,7 +1527,9 @@ function AdminPage() {
     trailsState.items,
     sessionExplorer.trailId,
     sessionExplorer.isLoading,
+    sessionExplorer.isInitialized,
     loadTrailSessions,
+    setSessionExplorer,
   ])
 
   const resetGuideForm = useCallback(() => {
@@ -1704,6 +1788,7 @@ function AdminPage() {
           isLoading: false,
           error: null,
           expandedSessionId: null,
+          isInitialized: true,
         })
         setSessionParticipantsError(null)
         return
@@ -1715,10 +1800,13 @@ function AdminPage() {
   )
 
   const handleRefreshTrailSessions = useCallback(() => {
-    if (sessionExplorer.trailId) {
-      void loadTrailSessions(sessionExplorer.trailId)
+    const targetTrailId =
+      sessionExplorer.trailId || (trailsState.items.length > 0 ? 'all' : '')
+
+    if (targetTrailId) {
+      void loadTrailSessions(targetTrailId)
     }
-  }, [sessionExplorer.trailId, loadTrailSessions])
+  }, [sessionExplorer.trailId, loadTrailSessions, trailsState.items.length])
 
   const handleToggleSessionParticipants = useCallback(
     async (sessionId: string) => {
