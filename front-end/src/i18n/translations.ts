@@ -126,6 +126,12 @@ type BookingTranslation = {
     changeMessage: string
     emptyMessage: string
   }
+  authPrompt: {
+    title: string
+    description: string
+    cta: string
+    animationLabel: string
+  }
   form: {
     title: string
     name: string
@@ -134,6 +140,14 @@ type BookingTranslation = {
     emailPlaceholder: string
     phone: string
     phonePlaceholder: string
+    documentLabel: string
+    originCityLabel: string
+    birthDateLabel: string
+    customerSummaryTitle: string
+    customerSummaryDescription: string
+    customerSummaryHint: string
+    customerSummaryManage: string
+    customerSummaryIncomplete: string
     trail: string
     selectPlaceholder: string
     date: string
@@ -525,6 +539,13 @@ const translations: Record<Language, TranslationContent> = {
         changeMessage: 'Para alterar, volte à página de guias e escolha outro profissional.',
         emptyMessage: 'Escolha seu guia favorito na página de guias para vê-lo aqui.',
       },
+      authPrompt: {
+        title: 'Faça login para reservar sua trilha',
+        description:
+          'Para garantir sua vaga e usar seus dados cadastrados automaticamente, entre na sua conta e finalize o agendamento em poucos cliques.',
+        cta: 'Fazer login',
+        animationLabel: 'Animação de bússola flutuante convidando para login',
+      },
       form: {
         title: 'Formulário de Agendamento',
         name: 'Nome Completo',
@@ -533,6 +554,16 @@ const translations: Record<Language, TranslationContent> = {
         emailPlaceholder: 'nome@email.com',
         phone: 'Telefone/WhatsApp',
         phonePlaceholder: '(84) 90000-0000',
+        documentLabel: 'CPF',
+        originCityLabel: 'Cidade de origem',
+        birthDateLabel: 'Data de nascimento',
+        customerSummaryTitle: 'Seus dados cadastrados',
+        customerSummaryDescription:
+          'Usaremos automaticamente as informações abaixo para identificar você no agendamento.',
+        customerSummaryHint: 'Precisa atualizar alguma informação?',
+        customerSummaryManage: 'Ir para área do cliente',
+        customerSummaryIncomplete:
+          'Complete seu cadastro na área do cliente para agilizar futuros agendamentos.',
         trail: 'Trilha desejada',
         selectPlaceholder: 'Selecione uma opção',
         date: 'Data preferida',
@@ -1166,6 +1197,13 @@ const translations: Record<Language, TranslationContent> = {
         changeMessage: 'To change, return to the guides page and pick another expert.',
         emptyMessage: 'Choose your favourite guide on the guides page to see them here.',
       },
+      authPrompt: {
+        title: 'Log in to book your trail',
+        description:
+          'Sign in so we can automatically fill in your details and secure your spot in just a few steps.',
+        cta: 'Go to login',
+        animationLabel: 'Animated compass inviting the user to sign in',
+      },
       form: {
         title: 'Booking Form',
         name: 'Full Name',
@@ -1174,6 +1212,16 @@ const translations: Record<Language, TranslationContent> = {
         emailPlaceholder: 'name@email.com',
         phone: 'Phone/WhatsApp',
         phonePlaceholder: '(84) 90000-0000',
+        documentLabel: 'CPF',
+        originCityLabel: 'Home city',
+        birthDateLabel: 'Birth date',
+        customerSummaryTitle: 'Your registered information',
+        customerSummaryDescription:
+          'We will automatically use the details below to identify you in this booking.',
+        customerSummaryHint: 'Need to update anything?',
+        customerSummaryManage: 'Open customer area',
+        customerSummaryIncomplete:
+          'Complete your profile in the customer area to speed up future bookings.',
         trail: 'Desired trail',
         selectPlaceholder: 'Select an option',
         date: 'Preferred date',

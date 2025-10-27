@@ -16,6 +16,7 @@ import {
   fetchPublicTrails,
   type CreateBookingPayload,
 } from '../api/public'
+import { useAuth } from '../context/AuthContext'
 
 type WeatherConditionKey =
   | 'clear'
@@ -47,10 +48,20 @@ type WeatherState =
   | { status: 'empty' }
   | { status: 'success'; summary: WeatherSummary }
 
-function BookingPage({ navigation, searchParams }: PageProps) {
+const formatCpf = (value: string) => {
+  const digits = value.replace(/\D/g, '')
+  if (digits.length !== 11) {
+    return value
+  }
+
+  return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
+}
+
+function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
   const { content, language } = useTranslation()
   const booking = content.booking
   const guidesContent = content.guides
+  const { user, isAuthenticating } = useAuth()
   type GuideOption = (typeof guidesContent.guides)[number] & { databaseCpf?: string }
   type TrailOption = (typeof booking.trails)[number] & { databaseId?: string }
   const [guideOptions, setGuideOptions] = useState<GuideOption[]>(
@@ -85,6 +96,85 @@ function BookingPage({ navigation, searchParams }: PageProps) {
   const heroStyle = {
     '--hero-background-image': `url(${booking.hero.photo})`,
   } as CSSProperties
+  const isLoggedIn = Boolean(user)
+  const needsIdentityForm = !isLoggedIn || !user?.email || (!user?.nome && !user?.sobrenome)
+  const contactNameFromProfile = useMemo(() => {
+    if (!user) {
+      return ''
+    }
+
+    const parts: string[] = []
+    if (typeof user.nome === 'string' && user.nome.trim()) {
+      parts.push(user.nome.trim())
+    }
+    if (typeof user.sobrenome === 'string' && user.sobrenome.trim()) {
+      parts.push(user.sobrenome.trim())
+    }
+
+    if (parts.length > 0) {
+      return parts.join(' ')
+    }
+
+    return ''
+  }, [user])
+  const contactEmailFromProfile = typeof user?.email === 'string' ? user.email.trim() : ''
+  const formattedBirthDate = useMemo(() => {
+    if (!user?.dataNascimento) {
+      return ''
+    }
+
+    const date = new Date(user.dataNascimento)
+    if (Number.isNaN(date.getTime())) {
+      return user.dataNascimento
+    }
+
+    const locale = language === 'pt' ? 'pt-BR' : 'en-US'
+    return new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(date)
+  }, [language, user?.dataNascimento])
+  const customerSummaryItems = useMemo(() => {
+    if (!user) {
+      return [] as { label: string; value: string }[]
+    }
+
+    const items: { label: string; value: string }[] = []
+    if (contactNameFromProfile) {
+      items.push({ label: booking.form.name, value: contactNameFromProfile })
+    }
+    if (contactEmailFromProfile) {
+      items.push({ label: booking.form.email, value: contactEmailFromProfile })
+    }
+    if (user.cpf) {
+      items.push({ label: booking.form.documentLabel, value: formatCpf(user.cpf) })
+    }
+    if (user.cidadeOrigem) {
+      items.push({ label: booking.form.originCityLabel, value: user.cidadeOrigem })
+    }
+    if (formattedBirthDate) {
+      items.push({ label: booking.form.birthDateLabel, value: formattedBirthDate })
+    }
+
+    return items
+  }, [
+    booking.form.birthDateLabel,
+    booking.form.documentLabel,
+    booking.form.email,
+    booking.form.name,
+    booking.form.originCityLabel,
+    contactEmailFromProfile,
+    contactNameFromProfile,
+    formattedBirthDate,
+    user,
+  ])
+  const showCustomerSummary = isLoggedIn && !needsIdentityForm && customerSummaryItems.length > 0
+  const shouldShowAuthPrompt = !isLoggedIn && !isAuthenticating
+  const shouldShowAuthLoading = !isLoggedIn && isAuthenticating
+  const authLoadingMessage = language === 'pt' ? 'Verificando sessão...' : 'Checking session...'
+  const handleNavigateToLogin = useCallback(() => {
+    onNavigate('/login', { search: 'redirect=/agendamento' })
+  }, [onNavigate])
+  const handleNavigateToCustomerArea = useCallback(() => {
+    onNavigate('/area-cliente')
+  }, [onNavigate])
 
   useEffect(() => {
     let isMounted = true
@@ -374,12 +464,26 @@ function BookingPage({ navigation, searchParams }: PageProps) {
 
       const participantsRaw = Number.parseInt(String(formData.get('participants') ?? '1'), 10)
       const participantsCount = Number.isNaN(participantsRaw) ? 1 : participantsRaw
+      const shouldUseProfileIdentity = isLoggedIn && !needsIdentityForm
+      const contactName = shouldUseProfileIdentity
+        ? contactNameFromProfile
+        : String(formData.get('name') ?? '').trim()
+      const contactEmail = shouldUseProfileIdentity
+        ? contactEmailFromProfile
+        : String(formData.get('email') ?? '').trim()
+      const contactPhone = String(formData.get('phone') ?? '').trim()
+
+      if (!contactName || !contactEmail) {
+        setSubmissionResult({ type: 'error', message: booking.form.customerSummaryIncomplete })
+        setIsSubmitting(false)
+        return
+      }
 
       const payload: CreateBookingPayload = {
         trailId: trailSelection.databaseId ?? trailSelection.id,
-        contactName: String(formData.get('name') ?? ''),
-        contactEmail: String(formData.get('email') ?? ''),
-        contactPhone: String(formData.get('phone') ?? ''),
+        contactName,
+        contactEmail,
+        contactPhone,
         scheduledDate: String(formData.get('date') ?? ''),
         scheduledTime: String(formData.get('time') ?? '') || undefined,
         participantsCount,
@@ -414,10 +518,15 @@ function BookingPage({ navigation, searchParams }: PageProps) {
       }
     },
     [
+      booking.form.customerSummaryIncomplete,
+      contactEmailFromProfile,
+      contactNameFromProfile,
       guideParam,
       guideOptions,
       isHighRainProbability,
+      isLoggedIn,
       isSubmitting,
+      needsIdentityForm,
       trailOptions,
     ],
   )
@@ -456,96 +565,175 @@ function BookingPage({ navigation, searchParams }: PageProps) {
 
       <main className="page-main booking-main">
         <section className="booking-layout">
-          <form ref={formRef} className="booking-form" onSubmit={handleSubmit}>
-            <h2>{booking.form.title}</h2>
-            <div className="booking-grid">
-              <label className="input-field">
-                <span>{booking.form.name}</span>
-                <input type="text" name="name" placeholder={booking.form.namePlaceholder} required />
-              </label>
-              <label className="input-field">
-                <span>{booking.form.email}</span>
-                <input type="email" name="email" placeholder={booking.form.emailPlaceholder} required />
-              </label>
-              <label className="input-field">
-                <span>{booking.form.phone}</span>
-                <input type="tel" name="phone" placeholder={booking.form.phonePlaceholder} required />
-              </label>
-              <label className="input-field">
-                <span>{booking.form.trail}</span>
-                <select name="trail" required defaultValue={selectedTrail?.id ?? ''}>
-                  <option value="" disabled>
-                    {booking.form.selectPlaceholder}
-                  </option>
-                  {trailOptions.map((trail) => (
-                    <option key={trail.id} value={trail.id}>
-                      {trail.label} · {trail.duration}
-                    </option>
-                  ))}
-                </select>
-                <small className="field-help">{booking.form.helpText}</small>
-              </label>
-              <label className="input-field">
-                <span>{booking.form.date}</span>
-                <input type="date" name="date" value={selectedDate} onChange={handleDateChange} required />
-              </label>
-              <label className="input-field">
-                <span>{booking.form.time}</span>
-                <input type="time" name="time" required />
-              </label>
-              <label className="input-field">
-                <span>{booking.form.participants}</span>
-                <input type="number" name="participants" min={1} max={20} defaultValue={1} required />
-              </label>
-              <label className="input-field input-full">
-                <span>{booking.form.notes}</span>
-                <textarea
-                  name="notes"
-                  rows={4}
-                  placeholder={booking.form.notesPlaceholder}
-                />
-              </label>
-            </div>
-            <div className="terms-consent">
-              <label className="terms-consent__checkbox">
-                <input
-                  type="checkbox"
-                  name="termsConsent"
-                  required
-                  checked={hasAcceptedTerms}
-                  onChange={handleTermsChange}
-                />
-                <span>{booking.terms.checkboxLabel}</span>
-              </label>
-              <button type="button" className="terms-consent__open" onClick={handleOpenTermsModal}>
-                {booking.terms.openModal}
-              </button>
-            </div>
-            {submissionResult && (
-              <div
-                className={`form-feedback form-feedback--${submissionResult.type}`}
-                role="status"
-                aria-live="polite"
-              >
-                <p>
-                  {submissionResult.message}
-                  {submissionResult.type === 'success' && submissionResult.protocol ? (
-                    <>
-                      <br />
-                      <strong>Protocolo:</strong> {submissionResult.protocol}
-                    </>
-                  ) : null}
-                </p>
+          {shouldShowAuthPrompt ? (
+            <div className="booking-auth-card">
+              <div className="booking-auth-card__content">
+                <h2>{booking.authPrompt.title}</h2>
+                <p>{booking.authPrompt.description}</p>
+                <div className="booking-auth-card__actions">
+                  <button type="button" className="btn solid" onClick={handleNavigateToLogin}>
+                    {booking.authPrompt.cta}
+                  </button>
+                </div>
               </div>
-            )}
-            <div className="form-actions">
-              <button type="submit" className="btn solid" disabled={!hasAcceptedTerms || isSubmitting}>
-                {booking.form.submit}
-              </button>
-              <p className="form-disclaimer">{booking.form.disclaimer}</p>
+              <div
+                className="booking-auth-animation"
+                role="img"
+                aria-label={booking.authPrompt.animationLabel}
+              >
+                <span className="booking-auth-animation__orb booking-auth-animation__orb--lg" />
+                <span className="booking-auth-animation__orb booking-auth-animation__orb--md" />
+                <span className="booking-auth-animation__orb booking-auth-animation__orb--sm" />
+              </div>
             </div>
-          </form>
-
+          ) : shouldShowAuthLoading ? (
+            <div className="booking-auth-card booking-auth-card--loading" role="status" aria-live="polite">
+              <div className="booking-auth-spinner" aria-hidden="true" />
+              <p>{authLoadingMessage}</p>
+            </div>
+          ) : (
+            <form ref={formRef} className="booking-form" onSubmit={handleSubmit}>
+              <h2>{booking.form.title}</h2>
+              {showCustomerSummary ? (
+                <section className="customer-summary">
+                  <div className="customer-summary__header">
+                    <h3>{booking.form.customerSummaryTitle}</h3>
+                    <p>{booking.form.customerSummaryDescription}</p>
+                  </div>
+                  <dl className="customer-summary__list">
+                    {customerSummaryItems.map((item) => (
+                      <div key={`${item.label}-${item.value}`} className="customer-summary__item">
+                        <dt>{item.label}</dt>
+                        <dd>{item.value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                  {booking.form.customerSummaryHint ? (
+                    <p className="customer-summary__hint">
+                      {booking.form.customerSummaryHint}{' '}
+                      <button
+                        type="button"
+                        className="customer-summary__manage"
+                        onClick={handleNavigateToCustomerArea}
+                      >
+                        {booking.form.customerSummaryManage}
+                      </button>
+                    </p>
+                  ) : null}
+                </section>
+              ) : null}
+              <div className="booking-grid">
+                {isLoggedIn && needsIdentityForm ? (
+                  <div className="customer-summary-notice input-full">
+                    <p>{booking.form.customerSummaryIncomplete}</p>
+                    <button type="button" onClick={handleNavigateToCustomerArea}>
+                      {booking.form.customerSummaryManage}
+                    </button>
+                  </div>
+                ) : null}
+                {needsIdentityForm ? (
+                  <>
+                    <label className="input-field">
+                      <span>{booking.form.name}</span>
+                      <input
+                        type="text"
+                        name="name"
+                        placeholder={booking.form.namePlaceholder}
+                        required
+                        defaultValue={contactNameFromProfile}
+                      />
+                    </label>
+                    <label className="input-field">
+                      <span>{booking.form.email}</span>
+                      <input
+                        type="email"
+                        name="email"
+                        placeholder={booking.form.emailPlaceholder}
+                        required
+                        defaultValue={contactEmailFromProfile}
+                      />
+                    </label>
+                  </>
+                ) : null}
+                <label className="input-field">
+                  <span>{booking.form.phone}</span>
+                  <input type="tel" name="phone" placeholder={booking.form.phonePlaceholder} required />
+                </label>
+                <label className="input-field">
+                  <span>{booking.form.trail}</span>
+                  <select name="trail" required defaultValue={selectedTrail?.id ?? ''}>
+                    <option value="" disabled>
+                      {booking.form.selectPlaceholder}
+                    </option>
+                    {trailOptions.map((trail) => (
+                      <option key={trail.id} value={trail.id}>
+                        {trail.label} · {trail.duration}
+                      </option>
+                    ))}
+                  </select>
+                  <small className="field-help">{booking.form.helpText}</small>
+                </label>
+                <label className="input-field">
+                  <span>{booking.form.date}</span>
+                  <input type="date" name="date" value={selectedDate} onChange={handleDateChange} required />
+                </label>
+                <label className="input-field">
+                  <span>{booking.form.time}</span>
+                  <input type="time" name="time" required />
+                </label>
+                <label className="input-field">
+                  <span>{booking.form.participants}</span>
+                  <input type="number" name="participants" min={1} max={20} defaultValue={1} required />
+                </label>
+                <label className="input-field input-full">
+                  <span>{booking.form.notes}</span>
+                  <textarea
+                    name="notes"
+                    rows={4}
+                    placeholder={booking.form.notesPlaceholder}
+                  />
+                </label>
+              </div>
+              <div className="terms-consent">
+                <label className="terms-consent__checkbox">
+                  <input
+                    type="checkbox"
+                    name="termsConsent"
+                    required
+                    checked={hasAcceptedTerms}
+                    onChange={handleTermsChange}
+                  />
+                  <span>{booking.terms.checkboxLabel}</span>
+                </label>
+                <button type="button" className="terms-consent__open" onClick={handleOpenTermsModal}>
+                  {booking.terms.openModal}
+                </button>
+              </div>
+              {submissionResult && (
+                <div
+                  className={`form-feedback form-feedback--${submissionResult.type}`}
+                  role="status"
+                  aria-live="polite"
+                >
+                  <p>
+                    {submissionResult.message}
+                    {submissionResult.type === 'success' && submissionResult.protocol ? (
+                      <>
+                        <br />
+                        <strong>Protocolo:</strong> {submissionResult.protocol}
+                      </>
+                    ) : null}
+                  </p>
+                </div>
+              )}
+              <div className="form-actions">
+                <button type="submit" className="btn solid" disabled={!hasAcceptedTerms || isSubmitting}>
+                  {booking.form.submit}
+                </button>
+                <p className="form-disclaimer">{booking.form.disclaimer}</p>
+              </div>
+            </form>
+          )}
           <aside className="booking-sidebar">
             <div className="selected-guide-card">
               <h3>{booking.guideSummary.title}</h3>
