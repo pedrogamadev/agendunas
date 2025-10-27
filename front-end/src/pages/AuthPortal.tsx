@@ -2,16 +2,13 @@ import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import type { PageProps } from '../App'
 import { useAuth } from '../context/AuthContext'
+import { formatCpfForInput, sanitizeCpf } from '../utils/cpf'
 import './AuthPortal.css'
 
 type AuthMode = 'login' | 'register'
 
 type AuthPortalProps = PageProps & {
   initialMode: AuthMode
-}
-
-function sanitizeCpf(value: string) {
-  return value.replace(/\D/g, '').slice(0, 11)
 }
 
 function EyeIcon({ hidden }: { hidden: boolean }) {
@@ -197,9 +194,10 @@ function AuthPortal({ navigation, onNavigate, searchParams, initialMode }: AuthP
                   name="cpf"
                   inputMode="numeric"
                   autoComplete="username"
-                  placeholder="00000000000"
-                  value={loginCpf}
+                  placeholder="000.000.000-00"
+                  value={formatCpfForInput(loginCpf)}
                   onChange={(event) => setLoginCpf(sanitizeCpf(event.target.value))}
+                  maxLength={14}
                   required
                 />
               </div>
@@ -279,9 +277,10 @@ function AuthPortal({ navigation, onNavigate, searchParams, initialMode }: AuthP
                     id="register-cpf"
                     name="cpf"
                     inputMode="numeric"
-                    placeholder="00000000000"
-                    value={registerCpf}
+                    placeholder="000.000.000-00"
+                    value={formatCpfForInput(registerCpf)}
                     onChange={(event) => setRegisterCpf(sanitizeCpf(event.target.value))}
+                    maxLength={14}
                     required
                     disabled={!isRegisterFirstStep}
                   />

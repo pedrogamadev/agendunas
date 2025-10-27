@@ -31,6 +31,7 @@ import {
   type TrailDifficulty,
   type TrailStatus,
 } from '../api/admin'
+import { formatCpf, formatCpfForInput, sanitizeCpf } from '../utils/cpf'
 import './AdminPage.css'
 
 type SectionKey =
@@ -181,17 +182,6 @@ const currencyFormatter = new Intl.NumberFormat('pt-BR', {
   style: 'currency',
   currency: 'BRL',
 })
-
-const sanitizeCpf = (value: string) => value.replace(/\D/g, '').slice(0, 11)
-
-const formatCpf = (value: string) => {
-  const digits = sanitizeCpf(value)
-  if (digits.length !== 11) {
-    return digits
-  }
-
-  return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`
-}
 
 const formatTrailDuration = (minutes: number) => {
   if (!Number.isFinite(minutes) || minutes <= 0) {
@@ -2384,8 +2374,8 @@ function AdminPage() {
                 <input
                   type="text"
                   inputMode="numeric"
-                  placeholder="00000000000"
-                  value={guideForm.cpf}
+                  placeholder="000.000.000-00"
+                  value={formatCpfForInput(guideForm.cpf)}
                   onChange={(event) =>
                     setGuideForm((prev) => ({ ...prev, cpf: sanitizeCpf(event.target.value) }))
                   }
@@ -2697,8 +2687,8 @@ function AdminPage() {
                   <input
                     type="text"
                     inputMode="numeric"
-                    placeholder="00000000000"
-                    value={inviteCpf}
+                    placeholder="000.000.000-00"
+                    value={formatCpfForInput(inviteCpf)}
                     onChange={(event) => setInviteCpf(sanitizeCpf(event.target.value))}
                     disabled={isGeneratingInvite}
                     required

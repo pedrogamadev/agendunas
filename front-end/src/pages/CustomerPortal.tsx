@@ -2,16 +2,13 @@ import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import type { PageProps } from '../App'
 import { useAuth } from '../context/AuthContext'
+import { formatCpfForInput, sanitizeCpf } from '../utils/cpf'
 import './AuthPortal.css'
 
 type AuthMode = 'login' | 'register'
 
 type CustomerPortalProps = PageProps & {
   initialMode?: AuthMode
-}
-
-function sanitizeCpf(value: string) {
-  return value.replace(/\D/g, '').slice(0, 11)
 }
 
 function EyeIcon({ hidden }: { hidden: boolean }) {
@@ -222,9 +219,9 @@ function CustomerPortal({ navigation, onNavigate, searchParams, initialMode = 'l
                   name="cpf"
                   inputMode="numeric"
                   autoComplete="username"
-                  placeholder="00000000000"
-                  value={loginCpf}
-                  onChange={(event) => setLoginCpf(event.target.value)}
+                  placeholder="000.000.000-00"
+                  value={formatCpfForInput(loginCpf)}
+                  onChange={(event) => setLoginCpf(sanitizeCpf(event.target.value))}
                   maxLength={14}
                   required
                 />
@@ -296,9 +293,9 @@ function CustomerPortal({ navigation, onNavigate, searchParams, initialMode = 'l
                   id="customer-register-cpf"
                   name="cpf"
                   inputMode="numeric"
-                  placeholder="00000000000"
-                  value={registerCpf}
-                  onChange={(event) => setRegisterCpf(event.target.value)}
+                  placeholder="000.000.000-00"
+                  value={formatCpfForInput(registerCpf)}
+                  onChange={(event) => setRegisterCpf(sanitizeCpf(event.target.value))}
                   maxLength={14}
                   required
                 />

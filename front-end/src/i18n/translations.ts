@@ -153,6 +153,13 @@ type BookingTranslation = {
     date: string
     time: string
     participants: string
+    participantsListTitle: string
+    participantsListDescription: string
+    participantNameLabel: string
+    participantNamePlaceholder: string
+    participantCpfLabel: string
+    participantCpfPlaceholder: string
+    participantsValidationError: string
     notes: string
     notesPlaceholder: string
     submit: string
@@ -569,6 +576,14 @@ const translations: Record<Language, TranslationContent> = {
         date: 'Data preferida',
         time: 'Horário',
         participants: 'Quantidade de participantes',
+        participantsListTitle: 'Dados dos participantes',
+        participantsListDescription:
+          'Informe o nome completo e o CPF de cada pessoa que participará da experiência.',
+        participantNameLabel: 'Participante {index} · Nome completo',
+        participantNamePlaceholder: 'Nome completo',
+        participantCpfLabel: 'Participante {index} · CPF',
+        participantCpfPlaceholder: '000.000.000-00',
+        participantsValidationError: 'Informe nome e CPF válidos para o participante {index}.',
         notes: 'Observações (opcional)',
         notesPlaceholder: 'Alguma informação adicional, necessidades especiais ou preferências?',
         submit: 'Enviar Solicitação de Agendamento',
@@ -1227,6 +1242,14 @@ const translations: Record<Language, TranslationContent> = {
         date: 'Preferred date',
         time: 'Time',
         participants: 'Number of participants',
+        participantsListTitle: 'Participant details',
+        participantsListDescription:
+          'Provide the full name and CPF for every person joining the experience.',
+        participantNameLabel: 'Participant {index} · Full name',
+        participantNamePlaceholder: 'Full name',
+        participantCpfLabel: 'Participant {index} · CPF',
+        participantCpfPlaceholder: '000.000.000-00',
+        participantsValidationError: 'Enter a full name and valid CPF for participant {index}.',
         notes: 'Notes (optional)',
         notesPlaceholder: 'Any additional information, special needs, or preferences?',
         submit: 'Send Booking Request',

@@ -16,6 +16,7 @@ import {
   fetchPublicTrails,
   type CreateBookingPayload,
 } from '../api/public'
+import { formatCpf, formatCpfForInput, sanitizeCpf } from '../utils/cpf'
 import { useAuth } from '../context/AuthContext'
 
 type WeatherConditionKey =
@@ -47,15 +48,6 @@ type WeatherState =
   | { status: 'error' }
   | { status: 'empty' }
   | { status: 'success'; summary: WeatherSummary }
-
-const formatCpf = (value: string) => {
-  const digits = value.replace(/\D/g, '')
-  if (digits.length !== 11) {
-    return value
-  }
-
-  return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
-}
 
 function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
   const { content, language } = useTranslation()
@@ -90,6 +82,10 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
     | { type: 'error'; message: string }
     | null
   >(null)
+  const [participantsCount, setParticipantsCount] = useState(1)
+  const [participants, setParticipants] = useState<Array<{ fullName: string; cpf: string }>>([
+    { fullName: '', cpf: '' },
+  ])
   const abortControllerRef = useRef<AbortController | null>(null)
   const allowRainySubmitRef = useRef(false)
   const formRef = useRef<HTMLFormElement | null>(null)
@@ -175,6 +171,35 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
   const handleNavigateToCustomerArea = useCallback(() => {
     onNavigate('/area-cliente')
   }, [onNavigate])
+
+  useEffect(() => {
+    if (!contactNameFromProfile && !user?.cpf) {
+      return
+    }
+
+    setParticipants((previous) => {
+      if (previous.length === 0) {
+        return [
+          {
+            fullName: contactNameFromProfile || '',
+            cpf: user?.cpf ? sanitizeCpf(user.cpf) : '',
+          },
+        ]
+      }
+
+      const firstParticipant = previous[0]
+      if (firstParticipant.fullName || firstParticipant.cpf) {
+        return previous
+      }
+
+      const next = previous.slice()
+      next[0] = {
+        fullName: contactNameFromProfile || '',
+        cpf: user?.cpf ? sanitizeCpf(user.cpf) : '',
+      }
+      return next
+    })
+  }, [contactNameFromProfile, sanitizeCpf, user?.cpf])
 
   useEffect(() => {
     let isMounted = true
@@ -416,6 +441,34 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
     setShowTermsModal(false)
   }, [])
 
+  const handleParticipantsCountChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    const parsed = Number.parseInt(event.target.value, 10)
+    const clamped = Number.isNaN(parsed) ? 1 : Math.min(20, Math.max(1, parsed))
+    setParticipantsCount(clamped)
+    setParticipants((previous) => {
+      const next = previous.slice(0, clamped)
+      while (next.length < clamped) {
+        next.push({ fullName: '', cpf: '' })
+      }
+      return next
+    })
+  }, [])
+
+  const handleParticipantFieldChange = useCallback(
+    (index: number, field: 'fullName' | 'cpf', value: string) => {
+      setParticipants((previous) => {
+        const next = previous.slice()
+        const current = next[index] ?? { fullName: '', cpf: '' }
+        next[index] =
+          field === 'cpf'
+            ? { ...current, cpf: sanitizeCpf(value) }
+            : { ...current, fullName: value }
+        return next
+      })
+    },
+    [sanitizeCpf],
+  )
+
   const isHighRainProbability =
     weatherState.status === 'success' &&
     typeof weatherState.summary.precipitationProbability === 'number' &&
@@ -462,8 +515,6 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
         return
       }
 
-      const participantsRaw = Number.parseInt(String(formData.get('participants') ?? '1'), 10)
-      const participantsCount = Number.isNaN(participantsRaw) ? 1 : participantsRaw
       const shouldUseProfileIdentity = isLoggedIn && !needsIdentityForm
       const contactName = shouldUseProfileIdentity
         ? contactNameFromProfile
@@ -479,6 +530,25 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
         return
       }
 
+      const normalizedParticipants: NonNullable<CreateBookingPayload['participants']> = []
+      for (let index = 0; index < participants.length; index += 1) {
+        const participant = participants[index]
+        const trimmedName = participant.fullName.trim()
+        const cpfDigits = sanitizeCpf(participant.cpf)
+
+        if (!trimmedName || cpfDigits.length !== 11) {
+          const message = booking.form.participantsValidationError.replace(
+            '{index}',
+            String(index + 1),
+          )
+          setSubmissionResult({ type: 'error', message })
+          setIsSubmitting(false)
+          return
+        }
+
+        normalizedParticipants.push({ fullName: trimmedName, cpf: cpfDigits })
+      }
+
       const payload: CreateBookingPayload = {
         trailId: trailSelection.databaseId ?? trailSelection.id,
         contactName,
@@ -486,8 +556,9 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
         contactPhone,
         scheduledDate: String(formData.get('date') ?? ''),
         scheduledTime: String(formData.get('time') ?? '') || undefined,
-        participantsCount,
+        participantsCount: normalizedParticipants.length,
         notes: (formData.get('notes') as string | null) ?? undefined,
+        participants: normalizedParticipants,
       }
 
       const guideSelection = guideParam
@@ -507,6 +578,13 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
         form.reset()
         setHasAcceptedTerms(false)
         setSelectedDate('')
+        setParticipantsCount(1)
+        setParticipants([
+          {
+            fullName: contactNameFromProfile || '',
+            cpf: user?.cpf ? sanitizeCpf(user.cpf) : '',
+          },
+        ])
       } catch (error) {
         const message =
           error instanceof Error
@@ -519,6 +597,7 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
     },
     [
       booking.form.customerSummaryIncomplete,
+      booking.form.participantsValidationError,
       contactEmailFromProfile,
       contactNameFromProfile,
       guideParam,
@@ -527,6 +606,8 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
       isLoggedIn,
       isSubmitting,
       needsIdentityForm,
+      participants,
+      sanitizeCpf,
       trailOptions,
     ],
   )
@@ -683,8 +764,60 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
                 </label>
                 <label className="input-field">
                   <span>{booking.form.participants}</span>
-                  <input type="number" name="participants" min={1} max={20} defaultValue={1} required />
+                  <input
+                    type="number"
+                    name="participants"
+                    min={1}
+                    max={20}
+                    inputMode="numeric"
+                    value={participantsCount}
+                    onChange={handleParticipantsCountChange}
+                    required
+                  />
                 </label>
+                <div className="participants-details input-full">
+                  <div className="participants-details__header">
+                    <strong>{booking.form.participantsListTitle}</strong>
+                    <span>{booking.form.participantsListDescription}</span>
+                  </div>
+                  <div className="participants-details__list">
+                    {participants.map((participant, index) => (
+                      <div key={`participant-${index}`} className="participants-details__item">
+                        <label className="input-field">
+                          <span>
+                            {booking.form.participantNameLabel.replace('{index}', String(index + 1))}
+                          </span>
+                          <input
+                            type="text"
+                            name={`participant-name-${index}`}
+                            required
+                            value={participant.fullName}
+                            placeholder={booking.form.participantNamePlaceholder}
+                            onChange={(event) =>
+                              handleParticipantFieldChange(index, 'fullName', event.target.value)
+                            }
+                          />
+                        </label>
+                        <label className="input-field">
+                          <span>
+                            {booking.form.participantCpfLabel.replace('{index}', String(index + 1))}
+                          </span>
+                          <input
+                            type="text"
+                            name={`participant-cpf-${index}`}
+                            inputMode="numeric"
+                            required
+                            value={formatCpfForInput(participant.cpf)}
+                            placeholder={booking.form.participantCpfPlaceholder}
+                            onChange={(event) =>
+                              handleParticipantFieldChange(index, 'cpf', event.target.value)
+                            }
+                          />
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
                 <label className="input-field input-full">
                   <span>{booking.form.notes}</span>
                   <textarea
