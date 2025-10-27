@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import './AdminLayout.css'
+import { useAuth } from '../../context/AuthContext'
 
 type AdminSection = {
   id: string
@@ -22,6 +24,79 @@ type AdminLayoutProps = {
 }
 
 function AdminLayout({ sections, activeSection, onSelectSection, header, children }: AdminLayoutProps) {
+  const { user, logout, refresh } = useAuth()
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement | null>(null)
+
+  const userName = user?.nome?.trim() || 'Usuário'
+  const userInitials = useMemo(() => {
+    if (!userName) {
+      return '??'
+    }
+
+    const nameParts = userName.split(/\s+/)
+    const [first = '', second = ''] = [nameParts[0] ?? '', nameParts[1] ?? '']
+    const initials = `${first.charAt(0)}${second.charAt(0)}`.toUpperCase()
+    return initials || userName.charAt(0).toUpperCase()
+  }, [userName])
+
+  const userRole = useMemo(() => {
+    const roleMap: Record<string, string> = {
+      A: 'Administrador',
+      G: 'Guia',
+      C: 'Suporte',
+    }
+
+    return roleMap[user?.tipo ?? ''] ?? 'Usuário'
+  }, [user?.tipo])
+
+  const toggleMenu = useCallback(() => {
+    setIsMenuOpen((previous) => !previous)
+  }, [])
+
+  const closeMenu = useCallback(() => {
+    setIsMenuOpen(false)
+  }, [])
+
+  const handleLogout = useCallback(() => {
+    logout()
+    closeMenu()
+  }, [closeMenu, logout])
+
+  const handleRefreshProfile = useCallback(() => {
+    refresh()
+      .catch(() => undefined)
+      .finally(() => {
+        closeMenu()
+      })
+  }, [closeMenu, refresh])
+
+  useEffect(() => {
+    if (!isMenuOpen) {
+      return
+    }
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        closeMenu()
+      }
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        closeMenu()
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [closeMenu, isMenuOpen])
+
   return (
     <div className="admin-shell">
       <aside className="admin-sidebar">
@@ -92,14 +167,58 @@ function AdminLayout({ sections, activeSection, onSelectSection, header, childre
                 />
               </svg>
             </button>
-            <div className="admin-user-chip" role="button" tabIndex={0} aria-label="Abrir menu do usuário">
-              <div className="admin-user-chip__avatar" aria-hidden="true">
-                <span>DS</span>
-              </div>
-              <div className="admin-user-chip__meta">
-                <span className="admin-user-chip__name">Dora Silva</span>
-                <span className="admin-user-chip__role">Coordenadora</span>
-              </div>
+            <div className="admin-user" ref={menuRef}>
+              <button
+                type="button"
+                className={`admin-user-chip${isMenuOpen ? ' is-open' : ''}`}
+                onClick={toggleMenu}
+                aria-haspopup="menu"
+                aria-expanded={isMenuOpen}
+                aria-label="Abrir menu do usuário"
+              >
+                <div className="admin-user-chip__avatar" aria-hidden="true">
+                  {user?.fotoUrl ? (
+                    <img src={user.fotoUrl} alt="Avatar do usuário" />
+                  ) : (
+                    <span>{userInitials}</span>
+                  )}
+                </div>
+                <div className="admin-user-chip__meta">
+                  <span className="admin-user-chip__name">{userName}</span>
+                  <span className="admin-user-chip__role">{userRole}</span>
+                </div>
+              </button>
+              {isMenuOpen ? (
+                <div className="admin-user-menu" role="menu">
+                  <div className="admin-user-menu__profile">
+                    <div className="admin-user-menu__avatar" aria-hidden="true">
+                      {user?.fotoUrl ? (
+                        <img src={user.fotoUrl} alt="Avatar do usuário" />
+                      ) : (
+                        <span>{userInitials}</span>
+                      )}
+                    </div>
+                    <div className="admin-user-menu__info">
+                      <span className="admin-user-menu__name">{userName}</span>
+                      <span className="admin-user-menu__role">{userRole}</span>
+                      {user?.cpf ? <span className="admin-user-menu__id">CPF: {user.cpf}</span> : null}
+                    </div>
+                  </div>
+                  <div className="admin-user-menu__actions">
+                    <button type="button" className="admin-user-menu__action" onClick={handleRefreshProfile}>
+                      Atualizar perfil
+                    </button>
+                    {user?.guia?.nome ? (
+                      <button type="button" className="admin-user-menu__action" onClick={closeMenu}>
+                        Guia: {user.guia.nome}
+                      </button>
+                    ) : null}
+                    <button type="button" className="admin-user-menu__action admin-user-menu__action--danger" onClick={handleLogout}>
+                      Sair da conta
+                    </button>
+                  </div>
+                </div>
+              ) : null}
             </div>
           </div>
         </header>

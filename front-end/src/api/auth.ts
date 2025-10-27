@@ -5,6 +5,7 @@ export type AuthUser = {
   nome: string | null
   tipo: 'A' | 'C' | 'G'
   guia: { slug: string; nome: string | null } | null
+  fotoUrl?: string | null
 }
 
 export type AuthResponse = {
