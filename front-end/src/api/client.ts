@@ -1,6 +1,15 @@
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 
-const DEFAULT_BASE_URL = 'http://localhost:3001/api'
+function getDefaultBaseUrl() {
+  if (typeof window !== 'undefined') {
+    if (!import.meta.env.DEV) {
+      const origin = window.location.origin.replace(/\/$/, '')
+      return `${origin}/api`
+    }
+  }
+
+  return 'http://localhost:3001/api'
+}
 
 let authToken: string | null = null
 
@@ -17,7 +26,7 @@ function getBaseUrl() {
   if (configured && typeof configured === 'string') {
     return configured.replace(/\/$/, '')
   }
-  return DEFAULT_BASE_URL
+  return getDefaultBaseUrl()
 }
 
 async function parseResponse<T>(response: Response): Promise<T> {
