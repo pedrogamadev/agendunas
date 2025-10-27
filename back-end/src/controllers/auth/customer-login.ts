@@ -5,30 +5,38 @@ import { verifyPassword } from '../../lib/password.js'
 import { signToken } from '../../lib/token.js'
 import { buildUserPayload, usuarioAuthSelect } from './user-payload.js'
 
-const loginSchema = z.object({
+const customerLoginSchema = z.object({
   cpf: z.string().min(11, 'Informe um CPF válido.'),
   senha: z.string().min(8, 'Informe a senha.'),
 })
 
-type LoginBody = z.infer<typeof loginSchema>
+function sanitizeCpf(value: string) {
+  return value.replace(/\D/g, '')
+}
 
-export async function login(
-  request: Request<unknown, unknown, LoginBody>,
+export async function customerLogin(
+  request: Request,
   response: Response,
   next: NextFunction,
 ): Promise<void> {
   try {
-    const payload = loginSchema.parse(request.body)
+    const payload = customerLoginSchema.parse(request.body)
+    const normalizedCpf = sanitizeCpf(payload.cpf)
+
+    if (normalizedCpf.length !== 11) {
+      response.status(400).json({ message: 'Informe um CPF válido com 11 dígitos.' })
+      return
+    }
 
     const usuario = await prisma.usuario.findUnique({
-      where: { cpf: payload.cpf },
+      where: { cpf: normalizedCpf },
       select: {
         ...usuarioAuthSelect,
         senhaHash: true,
       },
     })
 
-    if (!usuario) {
+    if (!usuario || usuario.tipo !== 'C') {
       response.status(401).json({ message: 'CPF ou senha inválidos.' })
       return
     }

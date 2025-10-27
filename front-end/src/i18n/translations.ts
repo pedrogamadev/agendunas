@@ -249,8 +249,16 @@ type NavigationTranslation = {
   }
 }
 
+type FooterLink = {
+  label: string
+  href: string
+}
+
 type FooterTranslation = {
   text: string
+  linksLabel: string
+  links: FooterLink[]
+  adminArea: { label: string; href: string }
 }
 
 type TranslationContent = {
@@ -287,6 +295,13 @@ const translations: Record<Language, TranslationContent> = {
     },
     footer: {
       text: '© {year} AgenDunas. Todos os direitos reservados.',
+      linksLabel: 'Links institucionais',
+      links: [
+        { label: 'Trilhas e agendamento', href: '/agendamento' },
+        { label: 'Guias credenciados', href: '/guias' },
+        { label: 'Fauna & Flora', href: '/fauna-e-flora' },
+      ],
+      adminArea: { label: 'Área ADM', href: '/login?redirect=/admin' },
     },
     home: {
       hero: {
@@ -921,6 +936,13 @@ const translations: Record<Language, TranslationContent> = {
     },
     footer: {
       text: '© {year} AgenDunas. All rights reserved.',
+      linksLabel: 'Institutional links',
+      links: [
+        { label: 'Book a trail', href: '/agendamento' },
+        { label: 'Meet our guides', href: '/guias' },
+        { label: 'Fauna & Flora', href: '/fauna-e-flora' },
+      ],
+      adminArea: { label: 'Admin area', href: '/login?redirect=/admin' },
     },
     home: {
       hero: {

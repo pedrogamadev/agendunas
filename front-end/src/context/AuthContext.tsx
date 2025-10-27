@@ -1,7 +1,20 @@
 import type { ReactNode } from 'react'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import type { AuthResponse, AuthUser, LoginPayload, RegisterPayload } from '../api/auth'
-import { fetchProfile, login as loginRequest, register as registerRequest } from '../api/auth'
+import type {
+  AdminLoginPayload,
+  AdminRegisterPayload,
+  AuthResponse,
+  AuthUser,
+  CustomerLoginPayload,
+  CustomerRegisterPayload,
+} from '../api/auth'
+import {
+  adminLogin as adminLoginRequest,
+  adminRegister as adminRegisterRequest,
+  customerLogin as customerLoginRequest,
+  customerRegister as customerRegisterRequest,
+  fetchProfile,
+} from '../api/auth'
 import { getAuthToken, setAuthToken } from '../api/client'
 
 type AuthContextValue = {
@@ -9,8 +22,10 @@ type AuthContextValue = {
   token: string | null
   isAuthenticating: boolean
   error: string | null
-  login: (payload: LoginPayload) => Promise<AuthResponse>
-  register: (payload: RegisterPayload) => Promise<AuthResponse>
+  adminLogin: (payload: AdminLoginPayload) => Promise<AuthResponse>
+  adminRegister: (payload: AdminRegisterPayload) => Promise<AuthResponse>
+  customerLogin: (payload: CustomerLoginPayload) => Promise<AuthResponse>
+  customerRegister: (payload: CustomerRegisterPayload) => Promise<AuthResponse>
   logout: () => void
   refresh: () => Promise<void>
 }
@@ -83,11 +98,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return response
   }, [])
 
-  const login = useCallback(
-    async (payload: LoginPayload) => {
+  const adminLogin = useCallback(
+    async (payload: AdminLoginPayload) => {
       setIsAuthenticating(true)
       try {
-        const result = await loginRequest(payload)
+        const result = await adminLoginRequest(payload)
         return handleSuccess(result)
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Não foi possível entrar no sistema.'
@@ -100,11 +115,45 @@ export function AuthProvider({ children }: AuthProviderProps) {
     [handleSuccess],
   )
 
-  const register = useCallback(
-    async (payload: RegisterPayload) => {
+  const adminRegister = useCallback(
+    async (payload: AdminRegisterPayload) => {
       setIsAuthenticating(true)
       try {
-        const result = await registerRequest(payload)
+        const result = await adminRegisterRequest(payload)
+        return handleSuccess(result)
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Não foi possível concluir o cadastro.'
+        setError(message)
+        throw err
+      } finally {
+        setIsAuthenticating(false)
+      }
+    },
+    [handleSuccess],
+  )
+
+  const customerLogin = useCallback(
+    async (payload: CustomerLoginPayload) => {
+      setIsAuthenticating(true)
+      try {
+        const result = await customerLoginRequest(payload)
+        return handleSuccess(result)
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Não foi possível entrar no sistema.'
+        setError(message)
+        throw err
+      } finally {
+        setIsAuthenticating(false)
+      }
+    },
+    [handleSuccess],
+  )
+
+  const customerRegister = useCallback(
+    async (payload: CustomerRegisterPayload) => {
+      setIsAuthenticating(true)
+      try {
+        const result = await customerRegisterRequest(payload)
         return handleSuccess(result)
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Não foi possível concluir o cadastro.'
@@ -144,8 +193,30 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [logout, token])
 
   const value = useMemo<AuthContextValue>(
-    () => ({ user, token, isAuthenticating, error, login, register, logout, refresh }),
-    [user, token, isAuthenticating, error, login, register, logout, refresh],
+    () => ({
+      user,
+      token,
+      isAuthenticating,
+      error,
+      adminLogin,
+      adminRegister,
+      customerLogin,
+      customerRegister,
+      logout,
+      refresh,
+    }),
+    [
+      user,
+      token,
+      isAuthenticating,
+      error,
+      adminLogin,
+      adminRegister,
+      customerLogin,
+      customerRegister,
+      logout,
+      refresh,
+    ],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

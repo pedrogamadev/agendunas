@@ -3,6 +3,7 @@ import { z } from 'zod'
 import prisma from '../../lib/prisma.js'
 import { hashPassword } from '../../lib/password.js'
 import { signToken } from '../../lib/token.js'
+import { buildUserPayload, usuarioAuthSelect } from './user-payload.js'
 
 const registerSchema = z.object({
   cpf: z.string().min(11, 'Informe um CPF válido.'),
@@ -13,24 +14,6 @@ const registerSchema = z.object({
 })
 
 type RegisterBody = z.infer<typeof registerSchema>
-
-function buildUserPayload(usuario: Awaited<ReturnType<typeof prisma.usuario.findUnique>>) {
-  if (!usuario) {
-    return null
-  }
-
-  return {
-    cpf: usuario.cpf,
-    nome: usuario.nome,
-    tipo: usuario.tipo,
-    guia: usuario.guia
-      ? {
-          slug: usuario.guia.slug,
-          nome: usuario.guia.name,
-        }
-      : null,
-  }
-}
 
 export async function register(
   request: Request<unknown, unknown, RegisterBody>,
@@ -113,12 +96,7 @@ export async function register(
 
     const usuario = await prisma.usuario.findUnique({
       where: { cpf: payload.cpf },
-      select: {
-        cpf: true,
-        nome: true,
-        tipo: true,
-        guia: { select: { slug: true, name: true } },
-      },
+      select: usuarioAuthSelect,
     })
 
     const token = signToken({ cpf: payload.cpf, tipo: convite.tipo })

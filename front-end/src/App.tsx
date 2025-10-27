@@ -1,10 +1,12 @@
 import './App.css'
 import type { JSX, ReactNode } from 'react'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import Footer from './components/Footer'
 import { useTranslation } from './i18n/TranslationProvider'
 import { useAuth } from './context/AuthContext'
 import AdminPage from './pages/AdminPage'
 import BookingPage from './pages/BookingPage'
+import CustomerAuthPage from './pages/CustomerAuthPage'
 import FaunaFloraPage from './pages/FaunaFloraPage'
 import GuidesPage from './pages/GuidesPage'
 import HomePage from './pages/HomePage'
@@ -20,7 +22,7 @@ type RouteConfig = {
   requireAdmin?: boolean
 }
 
-type NavigateOptions = {
+export type NavigateOptions = {
   search?: string
 }
 
@@ -38,6 +40,7 @@ const routes: RouteConfig[] = [
   { path: '/admin', labelKey: 'admin', component: AdminPage, requireAdmin: true },
   { path: '/login', component: LoginPage },
   { path: '/cadastro', component: RegisterPage },
+  { path: '/area-cliente', component: CustomerAuthPage },
 ]
 
 const normalizePath = (value: string) => {
@@ -321,7 +324,7 @@ function App() {
                 className="btn ghost"
                 onClick={() => {
                   setIsMenuOpen(false)
-                  navigate('/login', { search: 'redirect=/admin' })
+                  navigate('/area-cliente')
                 }}
               >
                 Entrar
@@ -353,9 +356,7 @@ function App() {
   return (
     <div className={`app route-${activeRoute.path.replace('/', '') || 'home'}`}>
       <Page navigation={navigation} onNavigate={navigate} searchParams={searchParams} />
-      <footer className="footer">
-        <p>{content.footer.text.replace('{year}', new Date().getFullYear().toString())}</p>
-      </footer>
+      <Footer onNavigate={navigate} />
     </div>
   )
 }

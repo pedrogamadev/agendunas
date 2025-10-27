@@ -6,8 +6,8 @@ import './AuthPortal.css'
 
 type AuthMode = 'login' | 'register'
 
-type AuthPortalProps = PageProps & {
-  initialMode: AuthMode
+type CustomerPortalProps = PageProps & {
+  initialMode?: AuthMode
 }
 
 function sanitizeCpf(value: string) {
@@ -24,7 +24,7 @@ function EyeIcon({ hidden }: { hidden: boolean }) {
       focusable="false"
     >
       <path
-        d="M12 5C6.5 5 2 9.5 2 12s4.5 7 10 7 10-4.5 10-7-4.5-7-10-7Zm0 12c-3.3 0-6.5-2.9-7.9-5 .8-1.3 2-2.5 3.4-3.4L6 7.1l1.1-1.1 12 12-1.1 1.1-1.7-1.7c-1.3.7-2.7 1.1-4.3 1.1Zm5.3-2.1-2.1-2.1a3.5 3.5 0 0 0-4.1-4.1L9 6.8c.9-.3 1.9-.5 3-.5 3.3 0 6.5 2.9 7.9 5-.6 1.1-1.6 2.2-2.6 3.1Z"
+        d="M12 5C6.5 5 2 9.5 2 12s4.5 7 10 7 10-4.5 10-7-4.5-7-10-7Zm0 12c-3.3 0-6.5-2.9-7.9-5 .8-1.3 2-2.5 3.4-3.4L6 7.1l1.1-1.1 12 12-1.1 1.1-1.7-1.7c-1.3.7-2.7 1.1-4.3 1.1Zm5.3-2.1-2.1-2.1a3.5 3.5 0 0 0-4.1-4.1L9 6.8c.9-.3 1.9-.5 3-.5 3.3 0 6.5 2.9 7.95-.6 1.1-1.6 2.2-2.6 3.1Z"
         opacity={hidden ? 0.25 : 1}
       />
       {hidden && (
@@ -39,23 +39,24 @@ function EyeIcon({ hidden }: { hidden: boolean }) {
   )
 }
 
-function AuthPortal({ navigation, onNavigate, searchParams, initialMode }: AuthPortalProps) {
-  const { adminLogin, adminRegister, error, isAuthenticating, user } = useAuth()
+function CustomerPortal({ navigation, onNavigate, searchParams, initialMode = 'login' }: CustomerPortalProps) {
+  const { customerLogin, customerRegister, error, isAuthenticating, user } = useAuth()
   const [activeMode, setActiveMode] = useState<AuthMode>(initialMode)
   const [formError, setFormError] = useState<string | null>(null)
   const [lastSubmission, setLastSubmission] = useState<AuthMode | null>(null)
-  const [registerStep, setRegisterStep] = useState<0 | 1>(0)
 
   const [loginCpf, setLoginCpf] = useState('')
   const [loginSenha, setLoginSenha] = useState('')
   const [isLoginPasswordVisible, setIsLoginPasswordVisible] = useState(false)
 
   const [registerCpf, setRegisterCpf] = useState('')
-  const [registerToken, setRegisterToken] = useState('')
   const [registerNome, setRegisterNome] = useState('')
+  const [registerSobrenome, setRegisterSobrenome] = useState('')
+  const [registerNascimento, setRegisterNascimento] = useState('')
+  const [registerEmail, setRegisterEmail] = useState('')
+  const [registerCidade, setRegisterCidade] = useState('')
   const [registerSenha, setRegisterSenha] = useState('')
   const [registerConfirmacao, setRegisterConfirmacao] = useState('')
-  const [isRegisterTokenVisible, setIsRegisterTokenVisible] = useState(false)
   const [isRegisterPasswordVisible, setIsRegisterPasswordVisible] = useState(false)
   const [isRegisterConfirmVisible, setIsRegisterConfirmVisible] = useState(false)
 
@@ -64,7 +65,7 @@ function AuthPortal({ navigation, onNavigate, searchParams, initialMode }: AuthP
     if (redirect && redirect.startsWith('/')) {
       return redirect
     }
-    return '/admin'
+    return '/'
   }, [searchParams])
 
   useEffect(() => {
@@ -72,16 +73,21 @@ function AuthPortal({ navigation, onNavigate, searchParams, initialMode }: AuthP
   }, [initialMode])
 
   useEffect(() => {
-    if (user) {
-      const destination = user.tipo === 'A' ? redirectTarget : '/'
-      onNavigate(destination)
+    if (!user) {
+      return
     }
+
+    if (user.tipo === 'A') {
+      onNavigate('/admin')
+      return
+    }
+
+    onNavigate(redirectTarget)
   }, [user, redirectTarget, onNavigate])
 
   useEffect(() => {
     setFormError(null)
     setLastSubmission(null)
-    setRegisterStep(0)
   }, [activeMode])
 
   const displayedError = formError ?? (lastSubmission === activeMode ? error : null)
@@ -104,8 +110,8 @@ function AuthPortal({ navigation, onNavigate, searchParams, initialMode }: AuthP
     }
 
     try {
-      const response = await adminLogin({ cpf: normalizedCpf, senha: loginSenha })
-      const destination = response.usuario?.tipo === 'A' ? redirectTarget : '/'
+      const response = await customerLogin({ cpf: normalizedCpf, senha: loginSenha })
+      const destination = response.usuario?.tipo === 'A' ? '/admin' : redirectTarget
       onNavigate(destination)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Não foi possível entrar. Tente novamente.'
@@ -116,34 +122,52 @@ function AuthPortal({ navigation, onNavigate, searchParams, initialMode }: AuthP
   const handleRegisterSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setFormError(null)
+    setLastSubmission('register')
 
     const normalizedCpf = sanitizeCpf(registerCpf)
+    const trimmedNome = registerNome.trim()
+    const trimmedSobrenome = registerSobrenome.trim()
+    const trimmedCidade = registerCidade.trim()
+    const trimmedEmail = registerEmail.trim()
 
-    if (registerStep === 0) {
-      if (!registerNome.trim()) {
-        setFormError('Informe seu nome completo para continuar.')
-        return
-      }
-
-      if (normalizedCpf.length !== 11) {
-        setFormError('Informe um CPF válido com 11 dígitos.')
-        return
-      }
-
-      setRegisterStep(1)
+    if (trimmedNome.length < 2) {
+      setFormError('Informe seu nome.')
       return
     }
 
-    setLastSubmission('register')
+    if (trimmedSobrenome.length < 2) {
+      setFormError('Informe seu sobrenome.')
+      return
+    }
 
     if (normalizedCpf.length !== 11) {
       setFormError('Informe um CPF válido com 11 dígitos.')
-      setRegisterStep(0)
       return
     }
 
-    if (!registerToken.trim()) {
-      setFormError('Informe o token fornecido pelo administrador.')
+    if (!registerNascimento) {
+      setFormError('Informe sua data de nascimento.')
+      return
+    }
+
+    const birthDate = new Date(registerNascimento)
+    if (Number.isNaN(birthDate.getTime())) {
+      setFormError('Informe uma data de nascimento válida.')
+      return
+    }
+
+    if (birthDate > new Date()) {
+      setFormError('A data de nascimento não pode estar no futuro.')
+      return
+    }
+
+    if (!/^\S+@\S+\.\S+$/.test(trimmedEmail)) {
+      setFormError('Informe um e-mail válido.')
+      return
+    }
+
+    if (trimmedCidade.length < 2) {
+      setFormError('Informe sua cidade de origem.')
       return
     }
 
@@ -158,23 +182,24 @@ function AuthPortal({ navigation, onNavigate, searchParams, initialMode }: AuthP
     }
 
     try {
-      const response = await adminRegister({
+      const response = await customerRegister({
         cpf: normalizedCpf,
-        token: registerToken.trim(),
+        nome: trimmedNome,
+        sobrenome: trimmedSobrenome,
+        dataNascimento: registerNascimento,
+        email: trimmedEmail,
+        cidadeOrigem: trimmedCidade,
         senha: registerSenha,
         confirmacaoSenha: registerConfirmacao,
-        nome: registerNome.trim() || undefined,
       })
 
-      const destination = response.usuario?.tipo === 'A' ? redirectTarget : '/'
+      const destination = response.usuario?.tipo === 'A' ? '/admin' : redirectTarget
       onNavigate(destination)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Não foi possível concluir o cadastro.'
       setFormError(message)
     }
   }
-
-  const isRegisterFirstStep = registerStep === 0
 
   return (
     <div className={`auth-portal auth-portal--${activeMode}`}>
@@ -186,64 +211,49 @@ function AuthPortal({ navigation, onNavigate, searchParams, initialMode }: AuthP
           aria-hidden={activeMode !== 'login'}
         >
           <div className="auth-portal__form-surface auth-portal__form-surface--login">
-            <h2>Faça login</h2>
-            <p>Entre com suas credenciais para continuar o trabalho.</p>
+            <h2>Bem-vindo de volta</h2>
+            <p>Entre com seu CPF e senha para acessar o espaço do cliente.</p>
             {displayedError && <div className="auth-portal__error" role="alert">{displayedError}</div>}
             <form className="auth-portal__form" onSubmit={handleLoginSubmit}>
               <div className="auth-portal__field">
-                <label htmlFor="login-cpf">CPF</label>
+                <label htmlFor="customer-login-cpf">CPF</label>
                 <input
-                  id="login-cpf"
+                  id="customer-login-cpf"
                   name="cpf"
                   inputMode="numeric"
                   autoComplete="username"
                   placeholder="00000000000"
                   value={loginCpf}
-                  onChange={(event) => setLoginCpf(sanitizeCpf(event.target.value))}
+                  onChange={(event) => setLoginCpf(event.target.value)}
+                  maxLength={14}
                   required
                 />
               </div>
               <div className="auth-portal__field auth-portal__field--password">
-                <label htmlFor="login-senha">Senha</label>
-                <div className="auth-portal__input-wrapper">
+                <label htmlFor="customer-login-password">Senha</label>
+                <div className="auth-portal__password-wrapper">
                   <input
-                    id="login-senha"
+                    id="customer-login-password"
                     name="senha"
                     type={isLoginPasswordVisible ? 'text' : 'password'}
                     autoComplete="current-password"
-                    placeholder="********"
                     value={loginSenha}
                     onChange={(event) => setLoginSenha(event.target.value)}
                     required
                   />
                   <button
                     type="button"
-                    className="auth-portal__toggle-visibility"
-                    onClick={() => setIsLoginPasswordVisible((state) => !state)}
+                    className="auth-portal__password-toggle"
                     aria-label={isLoginPasswordVisible ? 'Ocultar senha' : 'Mostrar senha'}
+                    onClick={() => setIsLoginPasswordVisible((current) => !current)}
                   >
                     <EyeIcon hidden={!isLoginPasswordVisible} />
                   </button>
                 </div>
               </div>
-              <div className="auth-portal__form-actions">
-                <label className="auth-portal__remember">
-                  <input type="checkbox" disabled />
-                  <span>Lembrar-me</span>
-                </label>
-                <button type="button" className="auth-portal__link" disabled>
-                  Esqueci minha senha
-                </button>
-              </div>
-              <button type="submit" className="auth-portal__submit" disabled={isAuthenticating}>
+              <button className="auth-portal__submit" type="submit" disabled={isAuthenticating}>
                 {isAuthenticating && lastSubmission === 'login' ? 'Entrando…' : 'Entrar'}
               </button>
-              <p className="auth-portal__switch">
-                Quer fazer parte da equipe?{' '}
-                <button type="button" onClick={() => setActiveMode('register')}>
-                  Criar conta
-                </button>
-              </p>
             </form>
           </div>
         </section>
@@ -252,157 +262,150 @@ function AuthPortal({ navigation, onNavigate, searchParams, initialMode }: AuthP
           aria-hidden={activeMode !== 'register'}
         >
           <div className="auth-portal__form-surface auth-portal__form-surface--register">
-            <h2>Crie sua conta fácil</h2>
-            <p>Preencha seus dados para liberar o acesso ao painel do AgenDunas de forma simples.</p>
-            <div className="auth-portal__stepper" aria-live="polite">
-              <span className={isRegisterFirstStep ? 'is-active' : ''}>1. Dados pessoais</span>
-              <span className={!isRegisterFirstStep ? 'is-active' : ''}>2. Segurança</span>
-            </div>
+            <h2>Crie sua conta</h2>
+            <p>Cadastre-se para acompanhar agendamentos e novidades do parque.</p>
             {displayedError && <div className="auth-portal__error" role="alert">{displayedError}</div>}
             <form className="auth-portal__form" onSubmit={handleRegisterSubmit}>
-              <div className={`auth-portal__step ${isRegisterFirstStep ? 'is-active' : ''}`}>
+              <div className="auth-portal__field-group">
                 <div className="auth-portal__field">
-                  <label htmlFor="register-nome">Nome completo</label>
+                  <label htmlFor="customer-register-nome">Nome</label>
                   <input
-                    id="register-nome"
+                    id="customer-register-nome"
                     name="nome"
-                    placeholder="Seu nome"
                     value={registerNome}
                     onChange={(event) => setRegisterNome(event.target.value)}
-                    disabled={!isRegisterFirstStep}
+                    autoComplete="given-name"
                     required
                   />
                 </div>
                 <div className="auth-portal__field">
-                  <label htmlFor="register-cpf">CPF</label>
+                  <label htmlFor="customer-register-sobrenome">Sobrenome</label>
                   <input
-                    id="register-cpf"
-                    name="cpf"
-                    inputMode="numeric"
-                    placeholder="00000000000"
-                    value={registerCpf}
-                    onChange={(event) => setRegisterCpf(sanitizeCpf(event.target.value))}
+                    id="customer-register-sobrenome"
+                    name="sobrenome"
+                    value={registerSobrenome}
+                    onChange={(event) => setRegisterSobrenome(event.target.value)}
+                    autoComplete="family-name"
                     required
-                    disabled={!isRegisterFirstStep}
                   />
                 </div>
               </div>
-              <div className={`auth-portal__step ${!isRegisterFirstStep ? 'is-active' : ''}`}>
-                <div className="auth-portal__field auth-portal__field--password">
-                  <label htmlFor="register-token">Token do administrador</label>
-                  <div className="auth-portal__input-wrapper">
-                    <input
-                      id="register-token"
-                      name="token"
-                      type={isRegisterTokenVisible ? 'text' : 'password'}
-                      placeholder="Cole o código recebido"
-                      value={registerToken}
-                      onChange={(event) => setRegisterToken(event.target.value.trimStart())}
-                      required
-                      disabled={isRegisterFirstStep}
-                    />
-                    <button
-                      type="button"
-                      className="auth-portal__toggle-visibility"
-                      onClick={() => setIsRegisterTokenVisible((state) => !state)}
-                      aria-label={isRegisterTokenVisible ? 'Ocultar token' : 'Mostrar token'}
-                    >
-                      <EyeIcon hidden={!isRegisterTokenVisible} />
-                    </button>
-                  </div>
+              <div className="auth-portal__field">
+                <label htmlFor="customer-register-cpf">CPF</label>
+                <input
+                  id="customer-register-cpf"
+                  name="cpf"
+                  inputMode="numeric"
+                  placeholder="00000000000"
+                  value={registerCpf}
+                  onChange={(event) => setRegisterCpf(event.target.value)}
+                  maxLength={14}
+                  required
+                />
+              </div>
+              <div className="auth-portal__field-group">
+                <div className="auth-portal__field">
+                  <label htmlFor="customer-register-birth">Data de nascimento</label>
+                  <input
+                    id="customer-register-birth"
+                    name="dataNascimento"
+                    type="date"
+                    value={registerNascimento}
+                    onChange={(event) => setRegisterNascimento(event.target.value)}
+                    required
+                  />
                 </div>
+                <div className="auth-portal__field">
+                  <label htmlFor="customer-register-email">E-mail</label>
+                  <input
+                    id="customer-register-email"
+                    name="email"
+                    type="email"
+                    value={registerEmail}
+                    onChange={(event) => setRegisterEmail(event.target.value)}
+                    autoComplete="email"
+                    required
+                  />
+                </div>
+              </div>
+              <div className="auth-portal__field">
+                <label htmlFor="customer-register-cidade">Cidade de origem</label>
+                <input
+                  id="customer-register-cidade"
+                  name="cidadeOrigem"
+                  value={registerCidade}
+                  onChange={(event) => setRegisterCidade(event.target.value)}
+                  autoComplete="address-level2"
+                  required
+                />
+              </div>
+              <div className="auth-portal__field-group">
                 <div className="auth-portal__field auth-portal__field--password">
-                  <label htmlFor="register-senha">Senha</label>
-                  <div className="auth-portal__input-wrapper">
+                  <label htmlFor="customer-register-senha">Senha</label>
+                  <div className="auth-portal__password-wrapper">
                     <input
-                      id="register-senha"
+                      id="customer-register-senha"
                       name="senha"
                       type={isRegisterPasswordVisible ? 'text' : 'password'}
-                      placeholder="Crie uma senha segura"
+                      autoComplete="new-password"
                       value={registerSenha}
                       onChange={(event) => setRegisterSenha(event.target.value)}
                       required
-                      disabled={isRegisterFirstStep}
                     />
                     <button
                       type="button"
-                      className="auth-portal__toggle-visibility"
-                      onClick={() => setIsRegisterPasswordVisible((state) => !state)}
+                      className="auth-portal__password-toggle"
                       aria-label={isRegisterPasswordVisible ? 'Ocultar senha' : 'Mostrar senha'}
+                      onClick={() => setIsRegisterPasswordVisible((current) => !current)}
                     >
                       <EyeIcon hidden={!isRegisterPasswordVisible} />
                     </button>
                   </div>
                 </div>
                 <div className="auth-portal__field auth-portal__field--password">
-                  <label htmlFor="register-confirmacao">Confirmar senha</label>
-                  <div className="auth-portal__input-wrapper">
+                  <label htmlFor="customer-register-confirmacao">Confirmar senha</label>
+                  <div className="auth-portal__password-wrapper">
                     <input
-                      id="register-confirmacao"
+                      id="customer-register-confirmacao"
                       name="confirmacaoSenha"
                       type={isRegisterConfirmVisible ? 'text' : 'password'}
-                      placeholder="Repita a senha"
+                      autoComplete="new-password"
                       value={registerConfirmacao}
                       onChange={(event) => setRegisterConfirmacao(event.target.value)}
                       required
-                      disabled={isRegisterFirstStep}
                     />
                     <button
                       type="button"
-                      className="auth-portal__toggle-visibility"
-                      onClick={() => setIsRegisterConfirmVisible((state) => !state)}
+                      className="auth-portal__password-toggle"
                       aria-label={isRegisterConfirmVisible ? 'Ocultar confirmação de senha' : 'Mostrar confirmação de senha'}
+                      onClick={() => setIsRegisterConfirmVisible((current) => !current)}
                     >
                       <EyeIcon hidden={!isRegisterConfirmVisible} />
                     </button>
                   </div>
                 </div>
               </div>
-              <div className="auth-portal__step-actions">
-                {!isRegisterFirstStep && (
-                  <button
-                    type="button"
-                    className="auth-portal__ghost"
-                    onClick={() => {
-                      setFormError(null)
-                      setRegisterStep(0)
-                    }}
-                  >
-                    Voltar
-                  </button>
-                )}
-                <button type="submit" className="auth-portal__submit" disabled={isAuthenticating}>
-                  {isRegisterFirstStep
-                    ? 'Próximo'
-                    : isAuthenticating && lastSubmission === 'register'
-                      ? 'Criando conta…'
-                      : 'Criar conta'}
-                </button>
-              </div>
-              <p className="auth-portal__switch">
-                Já possui credenciais?{' '}
-                <button type="button" onClick={() => setActiveMode('login')}>
-                  Fazer login
-                </button>
-              </p>
+              <button className="auth-portal__submit" type="submit" disabled={isAuthenticating}>
+                {isAuthenticating && lastSubmission === 'register' ? 'Cadastrando…' : 'Criar conta'}
+              </button>
             </form>
           </div>
         </section>
-        <aside className={`auth-portal__overlay auth-portal__overlay--${activeMode}`}>
+        <aside className={`auth-portal__overlay auth-portal__overlay--${activeMode}`} aria-hidden="true">
           <div className="auth-portal__overlay-content">
-            <img src="/agendunaslogo.png" alt="Agendunas" className="auth-portal__overlay-logo" />
-            <h2>{activeMode === 'login' ? 'Seja bem vindo de volta' : 'Crie sua conta agora'}</h2>
+            <img className="auth-portal__overlay-logo" src="/agendunaslogo.png" alt="Logo AgenDunas" />
+            <h2>{activeMode === 'login' ? 'Ainda não tem conta?' : 'Já possui cadastro?'}</h2>
             <p>
               {activeMode === 'login'
-                ? 'Use suas credenciais para retomar a organização dos atendimentos e manter o fluxo em dia.'
-                : 'Basta alguns passos para fazer parte do Agendunas e administrar seus atendimentos com agilidade.'}
+                ? 'Crie uma conta para aproveitar ao máximo as experiências da AgenDunas.'
+                : 'Acesse o espaço do cliente e continue explorando com a gente.'}
             </p>
             <button
               type="button"
               className="auth-portal__overlay-cta"
-              onClick={() => setActiveMode(activeMode === 'login' ? 'register' : 'login')}
+              onClick={() => setActiveMode((mode) => (mode === 'login' ? 'register' : 'login'))}
             >
-              {activeMode === 'login' ? 'Criar conta' : 'Fazer login'}
+              {activeMode === 'login' ? 'Quero me cadastrar' : 'Já tenho conta'}
             </button>
           </div>
         </aside>
@@ -411,4 +414,4 @@ function AuthPortal({ navigation, onNavigate, searchParams, initialMode }: AuthP
   )
 }
 
-export default AuthPortal
+export default CustomerPortal

@@ -206,9 +206,15 @@
   display: grid;
 }
 
-.auth-portal__field {
+.auth-portal__field { 
   display: grid;
   gap: 0.5rem;
+}
+
+.auth-portal__field-group {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
 }
 
 .auth-portal__field label {
@@ -218,6 +224,12 @@
 }
 
 .auth-portal__input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.auth-portal__field--password .auth-portal__password-wrapper {
   position: relative;
   display: flex;
   align-items: center;
@@ -245,6 +257,10 @@
   background: #ffffff;
 }
 
+.auth-portal__password-wrapper input {
+  padding-right: 3rem;
+}
+
 .auth-portal__field input:disabled {
   opacity: 0.65;
   background: rgba(241, 245, 249, 0.7);
@@ -266,6 +282,27 @@
   align-items: center;
   justify-content: center;
   transition: background-color 150ms ease;
+}
+
+.auth-portal__password-toggle {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: none;
+  padding: 0.35rem;
+  border-radius: 999px;
+  color: #1d4ed8;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.auth-portal__password-toggle:hover {
+  background-color: rgba(37, 99, 235, 0.12);
 }
 
 .auth-portal__toggle-visibility:hover {
@@ -432,6 +469,10 @@
   .auth-portal__pane {
     padding: clamp(1.5rem, 7vw, 2rem);
     transform: none !important;
+  }
+
+  .auth-portal__field-group {
+    grid-template-columns: 1fr;
   }
 
   .auth-portal__step-actions {

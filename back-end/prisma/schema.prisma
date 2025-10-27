@@ -74,9 +74,12 @@ enum TipoUsuario {
 model Usuario {
   cpf             String      @id
   nome            String?
+  sobrenome       String?
   email           String?     @unique
   senhaHash       String
   tipo            TipoUsuario
+  dataNascimento  DateTime?
+  cidadeOrigem    String?
   criadoEm        DateTime    @default(now())
   atualizadoEm    DateTime    @updatedAt
   guia            Guide?

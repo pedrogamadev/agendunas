@@ -1,23 +1,6 @@
 import type { NextFunction, Request, Response } from 'express'
 import prisma from '../../lib/prisma.js'
-
-function buildUserPayload(usuario: Awaited<ReturnType<typeof prisma.usuario.findUnique>>) {
-  if (!usuario) {
-    return null
-  }
-
-  return {
-    cpf: usuario.cpf,
-    nome: usuario.nome,
-    tipo: usuario.tipo,
-    guia: usuario.guia
-      ? {
-          slug: usuario.guia.slug,
-          nome: usuario.guia.name,
-        }
-      : null,
-  }
-}
+import { buildUserPayload, usuarioAuthSelect } from './user-payload.js'
 
 export async function me(request: Request, response: Response, next: NextFunction): Promise<void> {
   try {
@@ -30,12 +13,7 @@ export async function me(request: Request, response: Response, next: NextFunctio
 
     const usuario = await prisma.usuario.findUnique({
       where: { cpf: authenticated.cpf },
-      select: {
-        cpf: true,
-        nome: true,
-        tipo: true,
-        guia: { select: { slug: true, name: true } },
-      },
+      select: usuarioAuthSelect,
     })
 
     if (!usuario) {
