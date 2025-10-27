@@ -181,213 +181,231 @@ function AuthPortal({ navigation, onNavigate, searchParams, initialMode }: AuthP
       {navigation}
       <div className="auth-portal__backdrop" aria-hidden="true" />
       <div className="auth-portal__card">
-        <div className="auth-portal__panes">
-          <section
-            className={`auth-portal__pane auth-portal__pane--login ${activeMode === 'login' ? 'is-active' : ''}`}
-          >
-            <div className="auth-portal__form-surface auth-portal__form-surface--login">
-              <h2>Faça login</h2>
-              <p>Entre com suas credenciais para continuar o trabalho.</p>
-              {displayedError && <div className="auth-portal__error" role="alert">{displayedError}</div>}
-              <form className="auth-portal__form" onSubmit={handleLoginSubmit}>
-                <div className="auth-portal__field">
-                  <label htmlFor="login-cpf">CPF</label>
+        <section
+          className={`auth-portal__pane auth-portal__pane--login ${activeMode === 'login' ? 'is-active' : ''}`}
+          aria-hidden={activeMode !== 'login'}
+        >
+          <div className="auth-portal__form-surface auth-portal__form-surface--login">
+            <h2>Faça login</h2>
+            <p>Entre com suas credenciais para continuar o trabalho.</p>
+            {displayedError && <div className="auth-portal__error" role="alert">{displayedError}</div>}
+            <form className="auth-portal__form" onSubmit={handleLoginSubmit}>
+              <div className="auth-portal__field">
+                <label htmlFor="login-cpf">CPF</label>
+                <input
+                  id="login-cpf"
+                  name="cpf"
+                  inputMode="numeric"
+                  autoComplete="username"
+                  placeholder="00000000000"
+                  value={loginCpf}
+                  onChange={(event) => setLoginCpf(sanitizeCpf(event.target.value))}
+                  required
+                />
+              </div>
+              <div className="auth-portal__field auth-portal__field--password">
+                <label htmlFor="login-senha">Senha</label>
+                <div className="auth-portal__input-wrapper">
                   <input
-                    id="login-cpf"
-                    name="cpf"
-                    inputMode="numeric"
-                    autoComplete="username"
-                    placeholder="00000000000"
-                    value={loginCpf}
-                    onChange={(event) => setLoginCpf(sanitizeCpf(event.target.value))}
+                    id="login-senha"
+                    name="senha"
+                    type={isLoginPasswordVisible ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    placeholder="********"
+                    value={loginSenha}
+                    onChange={(event) => setLoginSenha(event.target.value)}
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="auth-portal__toggle-visibility"
+                    onClick={() => setIsLoginPasswordVisible((state) => !state)}
+                    aria-label={isLoginPasswordVisible ? 'Ocultar senha' : 'Mostrar senha'}
+                  >
+                    <EyeIcon hidden={!isLoginPasswordVisible} />
+                  </button>
+                </div>
+              </div>
+              <div className="auth-portal__form-actions">
+                <label className="auth-portal__remember">
+                  <input type="checkbox" disabled />
+                  <span>Lembrar-me</span>
+                </label>
+                <button type="button" className="auth-portal__link" disabled>
+                  Esqueci minha senha
+                </button>
+              </div>
+              <button type="submit" className="auth-portal__submit" disabled={isAuthenticating}>
+                {isAuthenticating && lastSubmission === 'login' ? 'Entrando…' : 'Entrar'}
+              </button>
+              <p className="auth-portal__switch">
+                Quer fazer parte da equipe?{' '}
+                <button type="button" onClick={() => setActiveMode('register')}>
+                  Criar conta
+                </button>
+              </p>
+            </form>
+          </div>
+        </section>
+        <section
+          className={`auth-portal__pane auth-portal__pane--register ${activeMode === 'register' ? 'is-active' : ''}`}
+          aria-hidden={activeMode !== 'register'}
+        >
+          <div className="auth-portal__form-surface auth-portal__form-surface--register">
+            <h2>Crie sua conta fácil</h2>
+            <p>Preencha seus dados para liberar o acesso ao painel do AgenDunas de forma simples.</p>
+            <div className="auth-portal__stepper" aria-live="polite">
+              <span className={isRegisterFirstStep ? 'is-active' : ''}>1. Dados pessoais</span>
+              <span className={!isRegisterFirstStep ? 'is-active' : ''}>2. Segurança</span>
+            </div>
+            {displayedError && <div className="auth-portal__error" role="alert">{displayedError}</div>}
+            <form className="auth-portal__form" onSubmit={handleRegisterSubmit}>
+              <div className={`auth-portal__step ${isRegisterFirstStep ? 'is-active' : ''}`}>
+                <div className="auth-portal__field">
+                  <label htmlFor="register-nome">Nome completo</label>
+                  <input
+                    id="register-nome"
+                    name="nome"
+                    placeholder="Seu nome"
+                    value={registerNome}
+                    onChange={(event) => setRegisterNome(event.target.value)}
+                    disabled={!isRegisterFirstStep}
                     required
                   />
                 </div>
+                <div className="auth-portal__field">
+                  <label htmlFor="register-cpf">CPF</label>
+                  <input
+                    id="register-cpf"
+                    name="cpf"
+                    inputMode="numeric"
+                    placeholder="00000000000"
+                    value={registerCpf}
+                    onChange={(event) => setRegisterCpf(sanitizeCpf(event.target.value))}
+                    required
+                    disabled={!isRegisterFirstStep}
+                  />
+                </div>
+              </div>
+              <div className={`auth-portal__step ${!isRegisterFirstStep ? 'is-active' : ''}`}>
                 <div className="auth-portal__field auth-portal__field--password">
-                  <label htmlFor="login-senha">Senha</label>
+                  <label htmlFor="register-token">Token do administrador</label>
                   <div className="auth-portal__input-wrapper">
                     <input
-                      id="login-senha"
-                      name="senha"
-                      type={isLoginPasswordVisible ? 'text' : 'password'}
-                      autoComplete="current-password"
-                      placeholder="********"
-                      value={loginSenha}
-                      onChange={(event) => setLoginSenha(event.target.value)}
+                      id="register-token"
+                      name="token"
+                      type={isRegisterTokenVisible ? 'text' : 'password'}
+                      placeholder="Cole o código recebido"
+                      value={registerToken}
+                      onChange={(event) => setRegisterToken(event.target.value.trimStart())}
                       required
+                      disabled={isRegisterFirstStep}
                     />
                     <button
                       type="button"
                       className="auth-portal__toggle-visibility"
-                      onClick={() => setIsLoginPasswordVisible((state) => !state)}
-                      aria-label={isLoginPasswordVisible ? 'Ocultar senha' : 'Mostrar senha'}
+                      onClick={() => setIsRegisterTokenVisible((state) => !state)}
+                      aria-label={isRegisterTokenVisible ? 'Ocultar token' : 'Mostrar token'}
                     >
-                      <EyeIcon hidden={!isLoginPasswordVisible} />
+                      <EyeIcon hidden={!isRegisterTokenVisible} />
                     </button>
                   </div>
                 </div>
-                <div className="auth-portal__form-actions">
-                  <label className="auth-portal__remember">
-                    <input type="checkbox" disabled />
-                    <span>Lembrar-me</span>
-                  </label>
-                  <button type="button" className="auth-portal__link" disabled>
-                    Esqueci minha senha
-                  </button>
-                </div>
-                <button type="submit" className="auth-portal__submit" disabled={isAuthenticating}>
-                  {isAuthenticating && lastSubmission === 'login' ? 'Entrando…' : 'Entrar'}
-                </button>
-                <p className="auth-portal__switch">
-                  Quer fazer parte da equipe?{' '}
-                  <button type="button" onClick={() => setActiveMode('register')}>
-                    Criar conta
-                  </button>
-                </p>
-              </form>
-            </div>
-          </section>
-          <section
-            className={`auth-portal__pane auth-portal__pane--register ${activeMode === 'register' ? 'is-active' : ''}`}
-          >
-            <div className="auth-portal__form-surface auth-portal__form-surface--register">
-              <h2>Crie sua conta</h2>
-              <p>Preencha seus dados para liberar o acesso ao painel do AgenDunas.</p>
-              <div className="auth-portal__stepper" aria-live="polite">
-                <span className={isRegisterFirstStep ? 'is-active' : ''}>1. Dados pessoais</span>
-                <span className={!isRegisterFirstStep ? 'is-active' : ''}>2. Segurança</span>
-              </div>
-              {displayedError && <div className="auth-portal__error" role="alert">{displayedError}</div>}
-              <form className="auth-portal__form" onSubmit={handleRegisterSubmit}>
-                <div className={`auth-portal__step ${isRegisterFirstStep ? 'is-active' : ''}`}>
-                  <div className="auth-portal__field">
-                    <label htmlFor="register-nome">Nome completo</label>
+                <div className="auth-portal__field auth-portal__field--password">
+                  <label htmlFor="register-senha">Senha</label>
+                  <div className="auth-portal__input-wrapper">
                     <input
-                      id="register-nome"
-                      name="nome"
-                      placeholder="Seu nome"
-                      value={registerNome}
-                      onChange={(event) => setRegisterNome(event.target.value)}
-                      disabled={!isRegisterFirstStep}
+                      id="register-senha"
+                      name="senha"
+                      type={isRegisterPasswordVisible ? 'text' : 'password'}
+                      placeholder="Crie uma senha segura"
+                      value={registerSenha}
+                      onChange={(event) => setRegisterSenha(event.target.value)}
                       required
+                      disabled={isRegisterFirstStep}
                     />
-                  </div>
-                  <div className="auth-portal__field">
-                    <label htmlFor="register-cpf">CPF</label>
-                    <input
-                      id="register-cpf"
-                      name="cpf"
-                      inputMode="numeric"
-                      placeholder="00000000000"
-                      value={registerCpf}
-                      onChange={(event) => setRegisterCpf(sanitizeCpf(event.target.value))}
-                      required
-                      disabled={!isRegisterFirstStep}
-                    />
-                  </div>
-                </div>
-                <div className={`auth-portal__step ${!isRegisterFirstStep ? 'is-active' : ''}`}>
-                  <div className="auth-portal__field auth-portal__field--password">
-                    <label htmlFor="register-token">Token do administrador</label>
-                    <div className="auth-portal__input-wrapper">
-                      <input
-                        id="register-token"
-                        name="token"
-                        type={isRegisterTokenVisible ? 'text' : 'password'}
-                        placeholder="Cole o código recebido"
-                        value={registerToken}
-                        onChange={(event) => setRegisterToken(event.target.value.trimStart())}
-                        required
-                        disabled={isRegisterFirstStep}
-                      />
-                      <button
-                        type="button"
-                        className="auth-portal__toggle-visibility"
-                        onClick={() => setIsRegisterTokenVisible((state) => !state)}
-                        aria-label={isRegisterTokenVisible ? 'Ocultar token' : 'Mostrar token'}
-                      >
-                        <EyeIcon hidden={!isRegisterTokenVisible} />
-                      </button>
-                    </div>
-                  </div>
-                  <div className="auth-portal__field auth-portal__field--password">
-                    <label htmlFor="register-senha">Senha</label>
-                    <div className="auth-portal__input-wrapper">
-                      <input
-                        id="register-senha"
-                        name="senha"
-                        type={isRegisterPasswordVisible ? 'text' : 'password'}
-                        placeholder="Crie uma senha segura"
-                        value={registerSenha}
-                        onChange={(event) => setRegisterSenha(event.target.value)}
-                        required
-                        disabled={isRegisterFirstStep}
-                      />
-                      <button
-                        type="button"
-                        className="auth-portal__toggle-visibility"
-                        onClick={() => setIsRegisterPasswordVisible((state) => !state)}
-                        aria-label={isRegisterPasswordVisible ? 'Ocultar senha' : 'Mostrar senha'}
-                      >
-                        <EyeIcon hidden={!isRegisterPasswordVisible} />
-                      </button>
-                    </div>
-                  </div>
-                  <div className="auth-portal__field auth-portal__field--password">
-                    <label htmlFor="register-confirmacao">Confirmar senha</label>
-                    <div className="auth-portal__input-wrapper">
-                      <input
-                        id="register-confirmacao"
-                        name="confirmacaoSenha"
-                        type={isRegisterConfirmVisible ? 'text' : 'password'}
-                        placeholder="Repita a senha"
-                        value={registerConfirmacao}
-                        onChange={(event) => setRegisterConfirmacao(event.target.value)}
-                        required
-                        disabled={isRegisterFirstStep}
-                      />
-                      <button
-                        type="button"
-                        className="auth-portal__toggle-visibility"
-                        onClick={() => setIsRegisterConfirmVisible((state) => !state)}
-                        aria-label={isRegisterConfirmVisible ? 'Ocultar confirmação de senha' : 'Mostrar confirmação de senha'}
-                      >
-                        <EyeIcon hidden={!isRegisterConfirmVisible} />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-                <div className="auth-portal__step-actions">
-                  {!isRegisterFirstStep && (
                     <button
                       type="button"
-                      className="auth-portal__ghost"
-                      onClick={() => {
-                        setFormError(null)
-                        setRegisterStep(0)
-                      }}
+                      className="auth-portal__toggle-visibility"
+                      onClick={() => setIsRegisterPasswordVisible((state) => !state)}
+                      aria-label={isRegisterPasswordVisible ? 'Ocultar senha' : 'Mostrar senha'}
                     >
-                      Voltar
+                      <EyeIcon hidden={!isRegisterPasswordVisible} />
                     </button>
-                  )}
-                  <button type="submit" className="auth-portal__submit" disabled={isAuthenticating}>
-                    {isRegisterFirstStep
-                      ? 'Próximo'
-                      : isAuthenticating && lastSubmission === 'register'
-                        ? 'Criando conta…'
-                        : 'Criar conta'}
-                  </button>
+                  </div>
                 </div>
-                <p className="auth-portal__switch">
-                  Já possui credenciais?{' '}
-                  <button type="button" onClick={() => setActiveMode('login')}>
-                    Fazer login
+                <div className="auth-portal__field auth-portal__field--password">
+                  <label htmlFor="register-confirmacao">Confirmar senha</label>
+                  <div className="auth-portal__input-wrapper">
+                    <input
+                      id="register-confirmacao"
+                      name="confirmacaoSenha"
+                      type={isRegisterConfirmVisible ? 'text' : 'password'}
+                      placeholder="Repita a senha"
+                      value={registerConfirmacao}
+                      onChange={(event) => setRegisterConfirmacao(event.target.value)}
+                      required
+                      disabled={isRegisterFirstStep}
+                    />
+                    <button
+                      type="button"
+                      className="auth-portal__toggle-visibility"
+                      onClick={() => setIsRegisterConfirmVisible((state) => !state)}
+                      aria-label={isRegisterConfirmVisible ? 'Ocultar confirmação de senha' : 'Mostrar confirmação de senha'}
+                    >
+                      <EyeIcon hidden={!isRegisterConfirmVisible} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div className="auth-portal__step-actions">
+                {!isRegisterFirstStep && (
+                  <button
+                    type="button"
+                    className="auth-portal__ghost"
+                    onClick={() => {
+                      setFormError(null)
+                      setRegisterStep(0)
+                    }}
+                  >
+                    Voltar
                   </button>
-                </p>
-              </form>
-            </div>
-          </section>
-        </div>
+                )}
+                <button type="submit" className="auth-portal__submit" disabled={isAuthenticating}>
+                  {isRegisterFirstStep
+                    ? 'Próximo'
+                    : isAuthenticating && lastSubmission === 'register'
+                      ? 'Criando conta…'
+                      : 'Criar conta'}
+                </button>
+              </div>
+              <p className="auth-portal__switch">
+                Já possui credenciais?{' '}
+                <button type="button" onClick={() => setActiveMode('login')}>
+                  Fazer login
+                </button>
+              </p>
+            </form>
+          </div>
+        </section>
+        <aside className={`auth-portal__overlay auth-portal__overlay--${activeMode}`}>
+          <div className="auth-portal__overlay-content">
+            <img src="/agendunaslogo.png" alt="Agendunas" className="auth-portal__overlay-logo" />
+            <h2>{activeMode === 'login' ? 'Seja bem vindo de volta' : 'Crie sua conta agora'}</h2>
+            <p>
+              {activeMode === 'login'
+                ? 'Use suas credenciais para retomar a organização dos atendimentos e manter o fluxo em dia.'
+                : 'Basta alguns passos para fazer parte do Agendunas e administrar seus atendimentos com agilidade.'}
+            </p>
+            <button
+              type="button"
+              className="auth-portal__overlay-cta"
+              onClick={() => setActiveMode(activeMode === 'login' ? 'register' : 'login')}
+            >
+              {activeMode === 'login' ? 'Criar conta' : 'Fazer login'}
+            </button>
+          </div>
+        </aside>
       </div>
     </div>
   )
