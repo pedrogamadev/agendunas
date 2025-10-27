@@ -5,7 +5,7 @@ import prisma from '../../lib/prisma.js'
 import { guideInclude, normalizeGuide } from './guide-service.js'
 
 const paramsSchema = z.object({
-  id: z.string().min(1),
+  cpf: z.string().min(11),
 })
 
 const guideSchema = z.object({
@@ -47,7 +47,7 @@ export async function updateGuide(
   next: NextFunction,
 ): Promise<void> {
   try {
-    const { id } = paramsSchema.parse(request.params)
+    const { cpf } = paramsSchema.parse(request.params)
     const payload = guideSchema.parse(request.body)
 
     const languages = payload.languages !== undefined ? normalizeStringList(payload.languages) : undefined
@@ -75,10 +75,10 @@ export async function updateGuide(
       }
     }
 
-    await prisma.trailGuide.deleteMany({ where: { guideId: id } })
+    await prisma.trailGuide.deleteMany({ where: { guideCpf: cpf } })
 
     const updated = await prisma.guide.update({
-      where: { id },
+      where: { cpf },
       data: {
         name: payload.name,
         slug: payload.slug,

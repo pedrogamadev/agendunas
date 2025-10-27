@@ -3,7 +3,7 @@ import prisma from '../../lib/prisma.js'
 import { calculateOccupancy, formatDateTimeLabel } from '../admin/formatters.js'
 
 type GuideSummary = {
-  id: string
+  cpf: string
   name: string
   speciality: string | null
   photoUrl: string | null
@@ -14,7 +14,7 @@ type TrailSessionSummary = {
   startsAt: Date
   endsAt: Date
   capacity: number
-  primaryGuide: { id: string; name: string } | null
+  primaryGuide: { cpf: string; name: string } | null
   label: string
   occupancyPercentage: number
 }
@@ -54,7 +54,7 @@ export async function getTrails(_request: Request, response: Response, next: Nex
             },
             primaryGuide: {
               select: {
-                id: true,
+                cpf: true,
                 name: true,
               },
             },
@@ -64,7 +64,7 @@ export async function getTrails(_request: Request, response: Response, next: Nex
           include: {
             guide: {
               select: {
-                id: true,
+                cpf: true,
                 name: true,
                 speciality: true,
                 photoUrl: true,
@@ -111,7 +111,7 @@ export async function getTrails(_request: Request, response: Response, next: Nex
               capacity: upcomingSession.capacity,
               primaryGuide: upcomingSession.primaryGuide
                 ? {
-                    id: upcomingSession.primaryGuide.id,
+                    cpf: upcomingSession.primaryGuide.cpf,
                     name: upcomingSession.primaryGuide.name,
                   }
                 : null,
@@ -120,7 +120,7 @@ export async function getTrails(_request: Request, response: Response, next: Nex
             }
           : null,
         guides: trail.guides.map((assignment: GuideAssignment) => ({
-          id: assignment.guide.id,
+          cpf: assignment.guide.cpf,
           name: assignment.guide.name,
           speciality: assignment.guide.speciality,
           photoUrl: assignment.guide.photoUrl,

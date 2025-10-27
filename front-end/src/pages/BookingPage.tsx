@@ -51,16 +51,20 @@ function BookingPage({ navigation, searchParams }: PageProps) {
   const { content, language } = useTranslation()
   const booking = content.booking
   const guidesContent = content.guides
-  type GuideOption = (typeof guidesContent.guides)[number] & { databaseId?: string }
+  type GuideOption = (typeof guidesContent.guides)[number] & { databaseCpf?: string }
   type TrailOption = (typeof booking.trails)[number] & { databaseId?: string }
   const [guideOptions, setGuideOptions] = useState<GuideOption[]>(
-    guidesContent.guides.map((guide) => ({ ...guide, databaseId: guide.id })),
+    guidesContent.guides.map((guide) => ({ ...guide, databaseCpf: undefined })),
   )
   const [trailOptions, setTrailOptions] = useState<TrailOption[]>(
     booking.trails.map((trail) => ({ ...trail, databaseId: trail.id })),
   )
-  const guideId = searchParams.get('guide')
-  const selectedGuide = guideId ? guideOptions.find((guide) => guide.id === guideId) : undefined
+  const guideParam = searchParams.get('guide')
+  const selectedGuide = guideParam
+    ? guideOptions.find(
+        (guide) => guide.databaseCpf === guideParam || guide.id === guideParam,
+      )
+    : undefined
   const selectedTrail = selectedGuide
     ? trailOptions.find((trail) => trail.id === selectedGuide.featuredTrailId)
     : undefined
@@ -136,7 +140,7 @@ function BookingPage({ navigation, searchParams }: PageProps) {
 
         const mapped: GuideOption[] = data.map((guide) => ({
           id: guide.slug,
-          databaseId: guide.id,
+          databaseCpf: guide.cpf,
           name: guide.name,
           photo: guide.photoUrl ?? guidesContent.guides[0]?.photo ?? '',
           speciality: guide.speciality ?? guidesContent.guides[0]?.speciality ?? '',
@@ -382,9 +386,11 @@ function BookingPage({ navigation, searchParams }: PageProps) {
         notes: (formData.get('notes') as string | null) ?? undefined,
       }
 
-      const guideSelection = guideId ? guideOptions.find((guide) => guide.id === guideId) : undefined
-      if (guideSelection) {
-        payload.guideId = guideSelection.databaseId ?? guideSelection.id
+      const guideSelection = guideParam
+        ? guideOptions.find((guide) => guide.databaseCpf === guideParam || guide.id === guideParam)
+        : undefined
+      if (guideSelection?.databaseCpf) {
+        payload.guideCpf = guideSelection.databaseCpf
       }
 
       try {
@@ -408,7 +414,7 @@ function BookingPage({ navigation, searchParams }: PageProps) {
       }
     },
     [
-      guideId,
+      guideParam,
       guideOptions,
       isHighRainProbability,
       isSubmitting,

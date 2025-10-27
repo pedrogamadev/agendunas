@@ -1,19 +1,23 @@
 import './App.css'
 import type { JSX, ReactNode } from 'react'
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from './i18n/TranslationProvider'
+import { useAuth } from './context/AuthContext'
 import AdminPage from './pages/AdminPage'
 import BookingPage from './pages/BookingPage'
 import FaunaFloraPage from './pages/FaunaFloraPage'
 import GuidesPage from './pages/GuidesPage'
 import HomePage from './pages/HomePage'
+import LoginPage from './pages/LoginPage'
+import RegisterPage from './pages/RegisterPage'
 
 type RouteComponent = (props: PageProps) => JSX.Element
 
 type RouteConfig = {
   path: string
-  labelKey: 'home' | 'guides' | 'booking' | 'faunaFlora' | 'admin'
   component: RouteComponent
+  labelKey?: 'home' | 'guides' | 'booking' | 'faunaFlora' | 'admin'
+  requireAdmin?: boolean
 }
 
 type NavigateOptions = {
@@ -31,7 +35,9 @@ const routes: RouteConfig[] = [
   { path: '/guias', labelKey: 'guides', component: GuidesPage },
   { path: '/agendamento', labelKey: 'booking', component: BookingPage },
   { path: '/fauna-e-flora', labelKey: 'faunaFlora', component: FaunaFloraPage },
-  { path: '/admin', labelKey: 'admin', component: AdminPage },
+  { path: '/admin', labelKey: 'admin', component: AdminPage, requireAdmin: true },
+  { path: '/login', component: LoginPage },
+  { path: '/cadastro', component: RegisterPage },
 ]
 
 const normalizePath = (value: string) => {
@@ -54,6 +60,8 @@ function App() {
   const [navHeight, setNavHeight] = useState(0)
   const navRef = useRef<HTMLElement | null>(null)
   const { content, toggleLanguage } = useTranslation()
+  const { user, isAuthenticating, logout } = useAuth()
+  const isAdmin = user?.tipo === 'A'
 
   useEffect(() => {
     const handlePopState = () => {
@@ -150,7 +158,7 @@ function App() {
     }
   }, [isMenuOpen])
 
-  const navigate = (path: string, options?: NavigateOptions) => {
+  const navigate = useCallback((path: string, options?: NavigateOptions) => {
     const nextPath = normalizePath(path)
     const rawSearch = options?.search ?? ''
     const normalizedSearch = rawSearch
@@ -159,22 +167,40 @@ function App() {
         : `?${rawSearch}`
       : ''
 
-    if (nextPath === location.path && normalizedSearch === location.search) {
-      return
-    }
+    setLocation((current) => {
+      if (current.path === nextPath && current.search === normalizedSearch) {
+        return current
+      }
 
-    const fullPath = `${nextPath}${normalizedSearch}`
-    window.history.pushState({}, '', fullPath)
-    setLocation({ path: nextPath, search: normalizedSearch })
-    window.scrollTo({ top: 0, behavior: 'auto' })
-  }
+      const fullPath = `${nextPath}${normalizedSearch}`
+      window.history.pushState({}, '', fullPath)
+      window.scrollTo({ top: 0, behavior: 'auto' })
+      return { path: nextPath, search: normalizedSearch }
+    })
+  }, [])
 
   useEffect(() => {
     if (!routes.some((route) => route.path === location.path)) {
       navigate('/')
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.path])
+  }, [location.path, navigate])
+
+  useEffect(() => {
+    if (isAuthenticating) {
+      return
+    }
+
+    if (location.path === '/admin') {
+      if (!user) {
+        navigate('/login', { search: 'redirect=/admin' })
+        return
+      }
+
+      if (!isAdmin) {
+        navigate('/')
+      }
+    }
+  }, [isAdmin, isAuthenticating, location.path, navigate, user])
 
   const activeRoute = useMemo(
     () => routes.find((route) => route.path === location.path) ?? routes[0],
@@ -184,6 +210,20 @@ function App() {
   const searchParams = useMemo(
     () => new URLSearchParams(location.search),
     [location.search],
+  )
+
+  const navRoutes = useMemo(
+    () =>
+      routes.filter((route) => {
+        if (!route.labelKey) {
+          return false
+        }
+        if (route.requireAdmin && !isAdmin) {
+          return false
+        }
+        return true
+      }),
+    [isAdmin],
   )
 
   const navigation = (
@@ -220,7 +260,7 @@ function App() {
         </button>
         <div className={`top-nav__content${isMenuOpen ? ' is-open' : ''}`} id="primary-navigation">
           <div className="nav-links">
-            {routes.map((link) => (
+            {navRoutes.map((link) => (
               <a
                 key={link.path}
                 href={link.path}
@@ -231,7 +271,7 @@ function App() {
                 }}
                 className={`nav-link ${activeRoute.path === link.path ? 'active' : ''}`}
               >
-                {content.navigation.links[link.labelKey]}
+                {link.labelKey ? content.navigation.links[link.labelKey]! : link.path}
               </a>
             ))}
           </div>
@@ -263,6 +303,30 @@ function App() {
               </svg>
               <span className="translation-toggle__label">{content.navigation.translationToggle.label}</span>
             </button>
+            {user ? (
+              <button
+                type="button"
+                className="btn ghost"
+                onClick={() => {
+                  setIsMenuOpen(false)
+                  logout()
+                  navigate('/')
+                }}
+              >
+                Sair
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="btn ghost"
+                onClick={() => {
+                  setIsMenuOpen(false)
+                  navigate('/login', { search: 'redirect=/admin' })
+                }}
+              >
+                Entrar
+              </button>
+            )}
             <button
               type="button"
               className="btn primary"

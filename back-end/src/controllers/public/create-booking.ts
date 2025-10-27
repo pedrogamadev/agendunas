@@ -6,7 +6,7 @@ import { formatDateTimeLabel } from '../admin/formatters.js'
 
 const participantSchema = z.object({
   fullName: z.string().min(1, 'Informe o nome do participante'),
-  documentId: z.string().min(3).max(32).optional(),
+  cpf: z.string().min(11).max(14).optional(),
   email: z.string().email().optional(),
   phone: z.string().min(8).optional(),
 })
@@ -14,7 +14,7 @@ const participantSchema = z.object({
 const bookingSchema = z.object({
   trailId: z.string().min(1),
   sessionId: z.string().min(1).optional(),
-  guideId: z.string().min(1).optional(),
+  guideCpf: z.string().min(11).optional(),
   contactName: z.string().min(3),
   contactEmail: z.string().email(),
   contactPhone: z.string().min(8),
@@ -63,8 +63,8 @@ export async function createBooking(
       return
     }
 
-    const guideIdInput = data.guideId ?? null
-    let resolvedGuideId: string | null = guideIdInput
+    const guideCpfInput = data.guideCpf ?? null
+    let resolvedGuideCpf: string | null = guideCpfInput
     let scheduledFor: Date
 
     const session = data.sessionId
@@ -93,7 +93,7 @@ export async function createBooking(
       }
 
       scheduledFor = session.startsAt
-      resolvedGuideId = resolvedGuideId ?? session.primaryGuideId
+      resolvedGuideCpf = resolvedGuideCpf ?? session.primaryGuideCpf
     } else {
       const isoDate = `${data.scheduledDate}T${data.scheduledTime ?? '08:00'}:00`
       const parsedDate = new Date(isoDate)
@@ -110,13 +110,13 @@ export async function createBooking(
       return
     }
 
-    if (resolvedGuideId) {
+    if (resolvedGuideCpf) {
       const guideRecord = await prisma.guide.findFirst({
         where: {
           isActive: true,
-          OR: [{ id: resolvedGuideId }, { slug: resolvedGuideId }],
+          cpf: resolvedGuideCpf,
         },
-        select: { id: true },
+        select: { cpf: true },
       })
 
       if (!guideRecord) {
@@ -124,10 +124,10 @@ export async function createBooking(
         return
       }
 
-      resolvedGuideId = guideRecord.id
+      resolvedGuideCpf = guideRecord.cpf
     }
 
-    if (guideIdInput && !resolvedGuideId) {
+    if (guideCpfInput && !resolvedGuideCpf) {
       response.status(400).json({ message: 'Não foi possível identificar o guia informado.' })
       return
     }
@@ -139,7 +139,7 @@ export async function createBooking(
         protocol,
         trailId: trail.id,
         sessionId: session?.id ?? null,
-        guideId: resolvedGuideId,
+        guideCpf: resolvedGuideCpf,
         status: 'PENDING',
         scheduledFor,
         participantsCount: data.participantsCount,
@@ -152,7 +152,7 @@ export async function createBooking(
           ? {
               create: data.participants.map((participant) => ({
                 fullName: participant.fullName,
-                documentId: participant.documentId,
+                cpf: participant.cpf,
                 email: participant.email,
                 phone: participant.phone,
               })),

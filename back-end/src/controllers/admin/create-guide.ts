@@ -5,6 +5,7 @@ import prisma from '../../lib/prisma.js'
 import { guideInclude, normalizeGuide } from './guide-service.js'
 
 const guideSchema = z.object({
+  cpf: z.string().min(11, 'Informe o CPF do guia.'),
   name: z.string().min(3, 'Informe o nome do guia.'),
   slug: z.string().min(3).max(120),
   speciality: z.string().min(1).max(160).optional().nullable(),
@@ -43,6 +44,18 @@ export async function createGuide(
   try {
     const payload = guideSchema.parse(request.body)
 
+    const usuario = await prisma.usuario.findUnique({ where: { cpf: payload.cpf } })
+
+    if (!usuario) {
+      response.status(404).json({ message: 'Usuário associado ao CPF informado não foi encontrado.' })
+      return
+    }
+
+    if (usuario.tipo !== 'G') {
+      response.status(400).json({ message: 'O CPF informado não pertence a um guia.' })
+      return
+    }
+
     const languages = normalizeStringList(payload.languages)
     const certifications = normalizeStringList(payload.certifications)
     const curiosities = normalizeStringList(payload.curiosities)
@@ -66,8 +79,11 @@ export async function createGuide(
       }
     }
 
-    const created = await prisma.guide.create({
-      data: {
+    await prisma.trailGuide.deleteMany({ where: { guideCpf: payload.cpf } })
+
+    const created = await prisma.guide.upsert({
+      where: { cpf: payload.cpf },
+      update: {
         name: payload.name,
         slug: payload.slug,
         speciality: payload.speciality ?? null,
@@ -76,12 +92,37 @@ export async function createGuide(
         experienceYears: payload.experienceYears ?? undefined,
         toursCompleted: payload.toursCompleted ?? undefined,
         rating: payload.rating ?? undefined,
+        languages: payload.languages !== undefined ? { set: languages } : undefined,
+        certifications: payload.certifications !== undefined ? { set: certifications } : undefined,
+        curiosities: payload.curiosities !== undefined ? { set: curiosities } : undefined,
+        photoUrl: payload.photoUrl ?? null,
+        isFeatured: payload.isFeatured ?? undefined,
+        isActive: payload.isActive ?? undefined,
+        featuredTrailId,
+        trails: uniqueTrailIds.length
+          ? {
+              create: uniqueTrailIds.map((trailId) => ({
+                trail: { connect: { id: trailId } },
+              })),
+            }
+          : undefined,
+      },
+      create: {
+        cpf: payload.cpf,
+        name: payload.name,
+        slug: payload.slug,
+        speciality: payload.speciality ?? null,
+        summary: payload.summary ?? null,
+        biography: payload.biography ?? null,
+        experienceYears: payload.experienceYears ?? 0,
+        toursCompleted: payload.toursCompleted ?? 0,
+        rating: payload.rating ?? 0,
         languages,
         certifications,
         curiosities,
         photoUrl: payload.photoUrl ?? null,
-        isFeatured: payload.isFeatured ?? undefined,
-        isActive: payload.isActive ?? undefined,
+        isFeatured: payload.isFeatured ?? false,
+        isActive: payload.isActive ?? true,
         featuredTrailId,
         trails: uniqueTrailIds.length
           ? {

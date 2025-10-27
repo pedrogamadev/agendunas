@@ -4,7 +4,7 @@ import { z } from 'zod'
 import prisma from '../../lib/prisma.js'
 
 const paramsSchema = z.object({
-  id: z.string().min(1),
+  cpf: z.string().min(11),
 })
 
 type DeleteGuideParams = z.infer<typeof paramsSchema>
@@ -15,11 +15,11 @@ export async function deleteGuide(
   next: NextFunction,
 ): Promise<void> {
   try {
-    const { id } = paramsSchema.parse(request.params)
+    const { cpf } = paramsSchema.parse(request.params)
 
-    await prisma.guide.delete({ where: { id } })
+    await prisma.guide.delete({ where: { cpf } })
 
-    response.json({ data: { id }, message: 'Guia removido com sucesso.' })
+    response.json({ data: { cpf }, message: 'Guia removido com sucesso.' })
   } catch (error) {
     if (error instanceof PrismaClientKnownRequestError && error.code === 'P2025') {
       response.status(404).json({ message: 'Guia informado não foi encontrado.' })

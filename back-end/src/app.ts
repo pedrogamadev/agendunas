@@ -2,7 +2,10 @@ import cors from 'cors'
 import express, { type Application, type Request, type Response } from 'express'
 import morgan from 'morgan'
 import adminRouter from './routes/admin/index.js'
+import authRouter from './routes/auth.js'
 import publicRouter from './routes/public.js'
+import { authenticate } from './middlewares/authenticate.js'
+import { authorizeAdmin } from './middlewares/authorize-admin.js'
 import { errorHandler } from './middlewares/error-handler.js'
 import { notFoundHandler } from './middlewares/not-found-handler.js'
 
@@ -28,8 +31,9 @@ app.get('/health', (_request: Request, response: Response) => {
   response.json({ status: 'ok' })
 })
 
+app.use('/api/auth', authRouter)
 app.use('/api', publicRouter)
-app.use('/api/admin', adminRouter)
+app.use('/api/admin', authenticate, authorizeAdmin, adminRouter)
 
 app.use(notFoundHandler)
 app.use(errorHandler)

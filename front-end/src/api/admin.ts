@@ -127,7 +127,7 @@ export type TrailDifficulty = 'EASY' | 'MODERATE' | 'HARD'
 export type TrailSessionStatus = 'SCHEDULED' | 'CANCELLED' | 'COMPLETED'
 
 export type AdminTrailGuideAssignment = {
-  id: string
+  cpf: string
   slug: string
   name: string
   speciality: string | null
@@ -138,7 +138,7 @@ export type AdminTrailGuideAssignment = {
 }
 
 export type AdminTrailGuideOption = {
-  id: string
+  cpf: string
   slug: string
   name: string
   speciality: string | null
@@ -154,7 +154,7 @@ export type AdminTrailSession = {
   capacity: number
   meetingPoint: string | null
   status: TrailSessionStatus
-  primaryGuide: { id: string; name: string } | null
+  primaryGuide: { cpf: string; name: string } | null
 }
 
 export type AdminTrail = {
@@ -210,7 +210,7 @@ export type CreateAdminTrailPayload = {
   basePrice?: number | null
   highlight?: boolean
   meetingPoint?: string | null
-  guideIds?: string[]
+  guideCpfs?: string[]
 }
 
 export type UpdateAdminTrailPayload = {
@@ -227,7 +227,7 @@ export type UpdateAdminTrailPayload = {
   basePrice?: number | null
   highlight: boolean
   meetingPoint?: string | null
-  guideIds?: string[]
+  guideCpfs?: string[]
 }
 
 export function fetchAdminTrails() {
@@ -261,7 +261,7 @@ export type AdminGuideTrail = {
 }
 
 export type AdminGuide = {
-  id: string
+  cpf: string
   slug: string
   name: string
   speciality: string | null
@@ -284,6 +284,7 @@ export type AdminGuide = {
 }
 
 export type AdminGuidePayload = {
+  cpf: string
   name: string
   slug: string
   speciality?: string | null
@@ -315,10 +316,26 @@ export function createAdminGuide(payload: AdminGuidePayload) {
   return apiRequest<AdminGuide>('/admin/guides', { method: 'POST', body: payload })
 }
 
-export function updateAdminGuide(id: string, payload: AdminGuidePayload) {
-  return apiRequest<AdminGuide>(`/admin/guides/${id}`, { method: 'PUT', body: payload })
+export function updateAdminGuide(cpf: string, payload: AdminGuidePayload) {
+  return apiRequest<AdminGuide>(`/admin/guides/${cpf}`, { method: 'PUT', body: payload })
 }
 
-export function deleteAdminGuide(id: string) {
-  return apiRequest<{ id: string }>(`/admin/guides/${id}`, { method: 'DELETE' })
+export function deleteAdminGuide(cpf: string) {
+  return apiRequest<{ cpf: string }>(`/admin/guides/${cpf}`, { method: 'DELETE' })
+}
+
+export type AdminInvitePayload = {
+  cpf: string
+  tipo: 'A' | 'C' | 'G'
+}
+
+export type AdminInviteResponse = {
+  token: string
+  cpf: string
+  tipo: 'A' | 'C' | 'G'
+  validoAte: string
+}
+
+export function createAdminInvite(payload: AdminInvitePayload) {
+  return apiRequest<AdminInviteResponse>('/admin/convites', { method: 'POST', body: payload })
 }

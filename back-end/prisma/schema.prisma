@@ -65,8 +65,44 @@ enum ConservationStatus {
   CRITICALLY_ENDANGERED
 }
 
+enum TipoUsuario {
+  A
+  C
+  G
+}
+
+model Usuario {
+  cpf             String      @id
+  nome            String?
+  email           String?     @unique
+  senhaHash       String
+  tipo            TipoUsuario
+  criadoEm        DateTime    @default(now())
+  atualizadoEm    DateTime    @updatedAt
+  guia            Guide?
+  convitesCriados Convite[]   @relation("ConvitesCriados")
+
+  @@map("usuarios")
+}
+
+model Convite {
+  token        String      @id
+  cpfConvidado String
+  tipo         TipoUsuario
+  criadoPorCpf String
+  validoAte    DateTime
+  utilizadoEm  DateTime?
+  criadoEm     DateTime    @default(now())
+
+  criadoPor Usuario @relation("ConvitesCriados", fields: [criadoPorCpf], references: [cpf], onDelete: Cascade)
+
+  @@index([cpfConvidado])
+  @@map("convites")
+}
+
 model Guide {
-  id              String         @id @default(cuid())
+  cpf             String         @id
+  usuario         Usuario        @relation(fields: [cpf], references: [cpf], onDelete: Cascade)
   slug            String         @unique
   name            String
   photoUrl        String?
@@ -88,6 +124,8 @@ model Guide {
   trails          TrailGuide[]
   sessions        TrailSession[]
   bookings        Booking[]
+
+  @@map("guias")
 }
 
 model Trail {
@@ -112,35 +150,40 @@ model Trail {
   bookings         Booking[]
   featuredInGuides Guide[]         @relation("FeaturedGuideTrail")
   activityLogs     ActivityLog[]
+
+  @@map("trilhas")
 }
 
 model TrailGuide {
   trailId  String
-  guideId  String
+  guideCpf String
   assigned DateTime @default(now())
 
   trail Trail @relation(fields: [trailId], references: [id], onDelete: Cascade)
-  guide Guide @relation(fields: [guideId], references: [id], onDelete: Cascade)
+  guide Guide @relation(fields: [guideCpf], references: [cpf], onDelete: Cascade)
 
-  @@id([trailId, guideId])
+  @@id([trailId, guideCpf])
+  @@map("trilhas_guias")
 }
 
 model TrailSession {
-  id             String             @id @default(cuid())
-  trailId        String
-  primaryGuideId String?
-  startsAt       DateTime
-  endsAt         DateTime?
-  capacity       Int
-  meetingPoint   String?
-  notes          String?
-  status         TrailSessionStatus @default(SCHEDULED)
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
+  id              String             @id @default(cuid())
+  trailId         String
+  primaryGuideCpf String?
+  startsAt        DateTime
+  endsAt          DateTime?
+  capacity        Int
+  meetingPoint    String?
+  notes           String?
+  status          TrailSessionStatus @default(SCHEDULED)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
 
   trail        Trail     @relation(fields: [trailId], references: [id])
-  primaryGuide Guide?    @relation(fields: [primaryGuideId], references: [id])
+  primaryGuide Guide?    @relation(fields: [primaryGuideCpf], references: [cpf])
   bookings     Booking[]
+
+  @@map("sessoes_trilhas")
 }
 
 model Booking {
@@ -148,7 +191,7 @@ model Booking {
   protocol          String        @unique
   trailId           String
   sessionId         String?
-  guideId           String?
+  guideCpf          String?
   status            BookingStatus @default(PENDING)
   scheduledFor      DateTime
   participantsCount Int           @default(1)
@@ -162,16 +205,18 @@ model Booking {
 
   trail        Trail         @relation(fields: [trailId], references: [id])
   session      TrailSession? @relation(fields: [sessionId], references: [id])
-  guide        Guide?        @relation(fields: [guideId], references: [id])
+  guide        Guide?        @relation(fields: [guideCpf], references: [cpf])
   participants Participant[]
   activityLogs ActivityLog[]
+
+  @@map("agendamentos")
 }
 
 model Participant {
   id               String    @id @default(cuid())
   bookingId        String
   fullName         String
-  documentId       String?
+  cpf              String?
   email            String?
   phone            String?
   birthDate        DateTime?
@@ -182,6 +227,7 @@ model Participant {
   booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
 
   @@index([bookingId])
+  @@map("participantes")
 }
 
 model Event {
@@ -200,6 +246,8 @@ model Event {
 
   registrations EventRegistration[]
   activityLogs  ActivityLog[]
+
+  @@map("eventos")
 }
 
 model EventRegistration {
@@ -215,6 +263,7 @@ model EventRegistration {
   event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
   @@index([eventId])
+  @@map("inscricoes_eventos")
 }
 
 model FaunaFloraRecord {
@@ -229,6 +278,8 @@ model FaunaFloraRecord {
   tags           String[]           @default([])
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
+
+  @@map("registros_fauna_flora")
 }
 
 model ActivityLog {
@@ -246,4 +297,5 @@ model ActivityLog {
   trail   Trail?   @relation(fields: [trailId], references: [id], onDelete: SetNull)
 
   @@index([loggedAt])
+  @@map("registros_atividade")
 }

@@ -17,7 +17,7 @@ type FeaturedTrailSummary = {
 }
 
 type GuideProfile = {
-  id: string
+  cpf: string
   slug: string
   name: string
   speciality: string | null
@@ -74,7 +74,7 @@ export async function getGuides(_request: Request, response: Response, next: Nex
       type GuideTrailAssignment = (typeof guide.trails)[number]
 
       return {
-        id: guide.id,
+        cpf: guide.cpf,
         slug: guide.slug,
         name: guide.name,
         speciality: guide.speciality,

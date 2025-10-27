@@ -1,7 +1,7 @@
 import { apiRequest } from './client'
 
 export type PublicGuide = {
-  id: string
+  cpf: string
   slug: string
   name: string
   speciality: string | null
@@ -49,10 +49,10 @@ export type PublicTrail = {
     capacity: number
     label: string
     occupancyPercentage: number
-    primaryGuide: { id: string; name: string } | null
+    primaryGuide: { cpf: string; name: string } | null
   } | null
   guides: {
-    id: string
+    cpf: string
     name: string
     speciality: string | null
     photoUrl: string | null
@@ -74,7 +74,7 @@ export type FaunaFloraRecord = {
 export type CreateBookingPayload = {
   trailId: string
   sessionId?: string
-  guideId?: string
+  guideCpf?: string
   contactName: string
   contactEmail: string
   contactPhone: string
@@ -84,7 +84,7 @@ export type CreateBookingPayload = {
   notes?: string
   participants?: Array<{
     fullName: string
-    documentId?: string
+    cpf?: string
     email?: string
     phone?: string
   }>

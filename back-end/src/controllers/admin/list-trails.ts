@@ -20,7 +20,7 @@ export async function listTrails(
       prisma.guide.findMany({
         orderBy: { name: 'asc' },
         select: {
-          id: true,
+          cpf: true,
           slug: true,
           name: true,
           speciality: true,
@@ -65,7 +65,7 @@ export async function listTrails(
     stats.averageCapacity = trails.length > 0 ? Math.round(totalCapacity / trails.length) : 0
 
     const guides: AdminTrailListResponse['guides'] = guideRecords.map((guide) => ({
-      id: guide.id,
+      cpf: guide.cpf,
       slug: guide.slug,
       name: guide.name,
       speciality: guide.speciality ?? null,

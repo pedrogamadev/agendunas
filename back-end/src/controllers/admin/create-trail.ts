@@ -18,7 +18,7 @@ const createTrailSchema = z.object({
   basePrice: z.union([z.coerce.number().min(0), z.null()]).optional(),
   highlight: z.boolean().optional(),
   meetingPoint: z.string().min(1).max(240).optional().nullable(),
-  guideIds: z.array(z.string().min(1)).optional().default([]),
+  guideCpfs: z.array(z.string().min(11)).optional().default([]),
 })
 
 type CreateTrailBody = z.infer<typeof createTrailSchema>
@@ -31,15 +31,15 @@ export async function createTrail(
   try {
     const payload = createTrailSchema.parse(request.body)
 
-    const uniqueGuideIds = Array.from(new Set(payload.guideIds ?? []))
+    const uniqueGuideCpfs = Array.from(new Set(payload.guideCpfs ?? []))
 
-    if (uniqueGuideIds.length > 0) {
+    if (uniqueGuideCpfs.length > 0) {
       const guides = await prisma.guide.findMany({
-        where: { id: { in: uniqueGuideIds } },
-        select: { id: true },
+        where: { cpf: { in: uniqueGuideCpfs } },
+        select: { cpf: true },
       })
 
-      if (guides.length !== uniqueGuideIds.length) {
+      if (guides.length !== uniqueGuideCpfs.length) {
         response.status(400).json({ message: 'Alguns guias informados não foram encontrados.' })
         return
       }
@@ -64,10 +64,10 @@ export async function createTrail(
         highlight: payload.highlight ?? undefined,
         meetingPoint: payload.meetingPoint ?? null,
         guides:
-          uniqueGuideIds.length > 0
+          uniqueGuideCpfs.length > 0
             ? {
-                create: uniqueGuideIds.map((guideId) => ({
-                  guide: { connect: { id: guideId } },
+                create: uniqueGuideCpfs.map((cpf) => ({
+                  guide: { connect: { cpf } },
                 })),
               }
             : undefined,

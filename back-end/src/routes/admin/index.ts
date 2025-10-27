@@ -10,6 +10,7 @@ import { createTrail } from '../../controllers/admin/create-trail.js'
 import { updateTrail } from '../../controllers/admin/update-trail.js'
 import { deleteTrail } from '../../controllers/admin/delete-trail.js'
 import { createGuide } from '../../controllers/admin/create-guide.js'
+import { createInvite } from '../../controllers/admin/create-invite.js'
 import { deleteGuide } from '../../controllers/admin/delete-guide.js'
 import { listGuides } from '../../controllers/admin/list-guides.js'
 import { updateGuide } from '../../controllers/admin/update-guide.js'
@@ -28,7 +29,8 @@ router.get('/calendar', getCalendar)
 router.get('/reports', getReports)
 router.get('/guides', listGuides)
 router.post('/guides', createGuide)
-router.put('/guides/:id', updateGuide)
-router.delete('/guides/:id', deleteGuide)
+router.put('/guides/:cpf', updateGuide)
+router.delete('/guides/:cpf', deleteGuide)
+router.post('/convites', createInvite)
 
 export default router

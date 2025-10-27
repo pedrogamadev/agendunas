@@ -103,7 +103,7 @@ export type GuideTrailSummary = {
 }
 
 export type AdminTrailGuideAssignment = {
-  id: string
+  cpf: string
   slug: string
   name: string
   speciality: string | null
@@ -114,7 +114,7 @@ export type AdminTrailGuideAssignment = {
 }
 
 export type AdminTrailGuideOption = {
-  id: string
+  cpf: string
   slug: string
   name: string
   speciality: string | null
@@ -130,7 +130,7 @@ export type AdminTrailSession = {
   capacity: number
   meetingPoint: string | null
   status: TrailSessionStatus
-  primaryGuide: { id: string; name: string } | null
+  primaryGuide: { cpf: string; name: string } | null
 }
 
 export type AdminTrail = {
@@ -173,7 +173,7 @@ export type AdminTrailListResponse = {
 }
 
 export type AdminGuide = {
-  id: string
+  cpf: string
   slug: string
   name: string
   speciality: string | null

@@ -6,7 +6,7 @@ export const trailGuideInclude = {
   include: {
     guide: {
       select: {
-        id: true,
+        cpf: true,
         slug: true,
         name: true,
         speciality: true,
@@ -21,7 +21,7 @@ export const trailGuideInclude = {
 export const trailSessionsInclude = {
   orderBy: { startsAt: 'desc' as const },
   include: {
-    primaryGuide: { select: { id: true, name: true } },
+    primaryGuide: { select: { cpf: true, name: true } },
   },
 } as const
 
@@ -75,14 +75,14 @@ export function normalizeTrail(trail: TrailRecord): AdminTrail {
       meetingPoint: session.meetingPoint ?? null,
       status: session.status as TrailSessionStatus,
       primaryGuide: session.primaryGuide
-        ? { id: (session.primaryGuide as PrimaryGuide).id, name: (session.primaryGuide as PrimaryGuide).name }
+        ? { cpf: (session.primaryGuide as PrimaryGuide).cpf, name: (session.primaryGuide as PrimaryGuide).name }
         : null,
     }
   })
 
   const guides: AdminTrailGuideAssignment[] = trail.guides
     .map((assignment: TrailGuideRecord) => ({
-      id: assignment.guide.id,
+      cpf: assignment.guide.cpf,
       slug: assignment.guide.slug,
       name: assignment.guide.name,
       speciality: assignment.guide.speciality ?? null,

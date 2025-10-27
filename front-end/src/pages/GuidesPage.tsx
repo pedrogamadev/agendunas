@@ -6,9 +6,9 @@ import { fetchPublicGuides } from '../api/public'
 function GuidesPage({ navigation, onNavigate }: PageProps) {
   const { content } = useTranslation()
   const guidesContent = content.guides
-  type Guide = (typeof guidesContent.guides)[number] & { databaseId?: string }
+  type Guide = (typeof guidesContent.guides)[number] & { databaseCpf?: string }
   const [guides, setGuides] = useState<Guide[]>(
-    guidesContent.guides.map((guide) => ({ ...guide, databaseId: guide.id })),
+    guidesContent.guides.map((guide) => ({ ...guide, databaseCpf: undefined })),
   )
   const [selectedGuide, setSelectedGuide] = useState<Guide | null>(null)
 
@@ -27,7 +27,7 @@ function GuidesPage({ navigation, onNavigate }: PageProps) {
 
         const mapped: Guide[] = data.map((guide) => ({
           id: guide.slug,
-          databaseId: guide.id,
+          databaseCpf: guide.cpf,
           name: guide.name,
           photo: guide.photoUrl ?? guidesContent.guides[0]?.photo ?? '',
           speciality: guide.speciality ?? guidesContent.guides[0]?.speciality ?? '',
@@ -86,7 +86,8 @@ function GuidesPage({ navigation, onNavigate }: PageProps) {
 
   const handleRequestGuide = (guide: Guide) => {
     setSelectedGuide(null)
-    onNavigate('/agendamento', { search: `guide=${guide.id}` })
+    const guideParam = guide.databaseCpf ?? guide.id
+    onNavigate('/agendamento', { search: `guide=${guideParam}` })
   }
 
   const getShortDescription = (description: string) => {
@@ -109,7 +110,7 @@ function GuidesPage({ navigation, onNavigate }: PageProps) {
       <main className="page-main guides-main">
         <section className="guide-grid" aria-label={guidesContent.gridAriaLabel}>
           {guides.map((guide) => (
-            <article key={guide.id} className="guide-card">
+            <article key={guide.databaseCpf ?? guide.id} className="guide-card">
               <div className="guide-card-header">
                 <button
                   type="button"

@@ -2,6 +2,16 @@ export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 
 const DEFAULT_BASE_URL = 'http://localhost:3001/api'
 
+let authToken: string | null = null
+
+export function setAuthToken(token: string | null) {
+  authToken = token
+}
+
+export function getAuthToken() {
+  return authToken
+}
+
 function getBaseUrl() {
   const configured = import.meta.env.VITE_API_BASE_URL
   if (configured && typeof configured === 'string') {
@@ -40,11 +50,17 @@ export async function apiRequest<T>(path: string, options: { method?: HttpMethod
   const url = `${baseUrl}${path.startsWith('/') ? path : `/${path}`}`
   const { method = 'GET', body } = options
 
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  }
+
+  if (authToken) {
+    headers.Authorization = `Bearer ${authToken}`
+  }
+
   const response = await fetch(url, {
     method,
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers,
     body: body ? JSON.stringify(body) : undefined,
   })
 

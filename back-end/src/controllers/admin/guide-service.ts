@@ -30,7 +30,7 @@ type FeaturedTrail = NonNullable<GuideRecord['featuredTrail']>
 
 export function normalizeGuide(guide: GuideRecord): AdminGuide {
   return {
-    id: guide.id,
+    cpf: guide.cpf,
     slug: guide.slug,
     name: guide.name,
     speciality: guide.speciality,

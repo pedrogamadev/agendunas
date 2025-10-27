@@ -1,4 +1,14 @@
-import { PrismaClient, BookingSource, BookingStatus, ConservationStatus, EventStatus, FaunaFloraCategory, TrailDifficulty } from '@prisma/client'
+import {
+  PrismaClient,
+  BookingSource,
+  BookingStatus,
+  ConservationStatus,
+  EventStatus,
+  FaunaFloraCategory,
+  TrailDifficulty,
+  TipoUsuario,
+} from '@prisma/client'
+import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
@@ -13,6 +23,8 @@ async function main() {
   await prisma.trail.deleteMany()
   await prisma.faunaFloraRecord.deleteMany()
   await prisma.event.deleteMany()
+  await prisma.convite.deleteMany()
+  await prisma.usuario.deleteMany()
 
   const trails = await Promise.all([
     prisma.trail.create({
@@ -84,77 +96,148 @@ async function main() {
 
   const [perobinha, ubaudoce, aroeira, fozDoSol] = trails
 
-  const guides = await Promise.all([
-    prisma.guide.create({
+  const [
+    adminPasswordHash,
+    daviPasswordHash,
+    matheusPasswordHash,
+    carraraPasswordHash,
+    colaboradorPasswordHash,
+  ] = await Promise.all([
+    bcrypt.hash('Adm@123456', 10),
+    bcrypt.hash('Davi@123456', 10),
+    bcrypt.hash('Matheus@123456', 10),
+    bcrypt.hash('Carrara@123456', 10),
+    bcrypt.hash('Colab@123456', 10),
+  ])
+
+  await prisma.usuario.create({
+    data: {
+      cpf: '00000000000',
+      nome: 'Administrador Parque',
+      email: 'admin@agendunas.com',
+      senhaHash: adminPasswordHash,
+      tipo: TipoUsuario.A,
+    },
+  })
+
+  const guiaUsuarios = await Promise.all([
+    prisma.usuario.create({
       data: {
-        slug: 'davi-brito',
-        name: 'Davi Brito',
-        speciality: 'Resiliência & Culinária Baiana',
-        biography:
-          'Autêntico soteropolitano que transforma desafios em histórias de superação servidas com os sabores da Bahia.',
-        summary:
-          'Conecta trilhas com experiências gastronômicas sustentáveis, engajando comunidades locais.',
-        experienceYears: 5,
-        rating: 4.9,
-        toursCompleted: 420,
-        languages: ['Português'],
-        certifications: ['Culinária Baiana Profissional', 'Atendimento ao Cliente'],
-        curiosities: ['Cria receitas inspiradas nas plantas do parque', 'Organiza rodas de samba pós-trilha'],
-        featuredTrailId: perobinha.id,
-        photoUrl:
-          'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=800&q=80',
-        isFeatured: true,
+        cpf: '12345678901',
+        nome: 'Davi Brito',
+        email: 'davi@agendunas.com',
+        senhaHash: daviPasswordHash,
+        tipo: TipoUsuario.G,
+        guia: {
+          create: {
+            slug: 'davi-brito',
+            name: 'Davi Brito',
+            speciality: 'Resiliência & Culinária Baiana',
+            biography:
+              'Autêntico soteropolitano que transforma desafios em histórias de superação servidas com os sabores da Bahia.',
+            summary:
+              'Conecta trilhas com experiências gastronômicas sustentáveis, engajando comunidades locais.',
+            experienceYears: 5,
+            rating: 4.9,
+            toursCompleted: 420,
+            languages: ['Português'],
+            certifications: ['Culinária Baiana Profissional', 'Atendimento ao Cliente'],
+            curiosities: ['Cria receitas inspiradas nas plantas do parque', 'Organiza rodas de samba pós-trilha'],
+            featuredTrailId: perobinha.id,
+            photoUrl:
+              'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=800&q=80',
+            isFeatured: true,
+          },
+        },
       },
+      include: { guia: true },
     }),
-    prisma.guide.create({
+    prisma.usuario.create({
       data: {
-        slug: 'matheus-brasileiro',
-        name: 'Matheus Brasileiro',
-        speciality: 'Ervas naturais e músicas na trilha',
-        biography:
-          'Pesquisador dedicado às propriedades das plantas medicinais, conduz trilhas interpretativas com trilha sonora autoral.',
-        summary: 'Une fitoterapia e música para experiências multissensoriais.',
-        experienceYears: 10,
-        rating: 4.8,
-        toursCompleted: 720,
-        languages: ['Português', 'Inglês'],
-        certifications: ['Fitoterapia Aplicada', 'Cultivo Sustentável'],
-        curiosities: ['Compõe canções exclusivas para cada trilha', 'Mantém um herbário vivo no parque'],
-        featuredTrailId: ubaudoce.id,
-        photoUrl:
-          'https://images.unsplash.com/photo-1544723795-3fb6469f5b39?auto=format&fit=crop&w=800&q=80',
+        cpf: '23456789012',
+        nome: 'Matheus Brasileiro',
+        email: 'matheus@agendunas.com',
+        senhaHash: matheusPasswordHash,
+        tipo: TipoUsuario.G,
+        guia: {
+          create: {
+            slug: 'matheus-brasileiro',
+            name: 'Matheus Brasileiro',
+            speciality: 'Ervas naturais e músicas na trilha',
+            biography:
+              'Pesquisador dedicado às propriedades das plantas medicinais, conduz trilhas interpretativas com trilha sonora autoral.',
+            summary: 'Une fitoterapia e música para experiências multissensoriais.',
+            experienceYears: 10,
+            rating: 4.8,
+            toursCompleted: 720,
+            languages: ['Português', 'Inglês'],
+            certifications: ['Fitoterapia Aplicada', 'Cultivo Sustentável'],
+            curiosities: ['Compõe canções exclusivas para cada trilha', 'Mantém um herbário vivo no parque'],
+            featuredTrailId: ubaudoce.id,
+            photoUrl:
+              'https://images.unsplash.com/photo-1544723795-3fb6469f5b39?auto=format&fit=crop&w=800&q=80',
+          },
+        },
       },
+      include: { guia: true },
     }),
-    prisma.guide.create({
+    prisma.usuario.create({
       data: {
-        slug: 'carrara-luis',
-        name: 'Carrara Luis',
-        speciality: 'Logística Urbana & Otimização de Rotas',
-        biography:
-          'Especialista em transformar o caos urbano em oportunidade, conduzindo tours cheios de histórias e atalhos improváveis.',
-        summary: 'Responsável por operações especiais e grupos corporativos.',
-        experienceYears: 20,
-        rating: 5,
-        toursCompleted: 1300,
-        languages: ['Português'],
-        certifications: ['Condução Defensiva Avançada', 'Negociação Estratégica'],
-        curiosities: ['Já guiou mais de 1.300 expedições', 'Conhece todas as linhas de ônibus que atendem o parque'],
-        featuredTrailId: aroeira.id,
-        photoUrl:
-          'https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?auto=format&fit=crop&w=800&q=80',
+        cpf: '34567890123',
+        nome: 'Carrara Luis',
+        email: 'carrara@agendunas.com',
+        senhaHash: carraraPasswordHash,
+        tipo: TipoUsuario.G,
+        guia: {
+          create: {
+            slug: 'carrara-luis',
+            name: 'Carrara Luis',
+            speciality: 'Logística Urbana & Otimização de Rotas',
+            biography:
+              'Especialista em transformar o caos urbano em oportunidade, conduzindo tours cheios de histórias e atalhos improváveis.',
+            summary: 'Responsável por operações especiais e grupos corporativos.',
+            experienceYears: 20,
+            rating: 5,
+            toursCompleted: 1300,
+            languages: ['Português'],
+            certifications: ['Condução Defensiva Avançada', 'Negociação Estratégica'],
+            curiosities: ['Já guiou mais de 1.300 expedições', 'Conhece todas as linhas de ônibus que atendem o parque'],
+            featuredTrailId: aroeira.id,
+            photoUrl:
+              'https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?auto=format&fit=crop&w=800&q=80',
+          },
+        },
       },
+      include: { guia: true },
     }),
   ])
 
-  const [davi, matheus, carrara] = guides
+  const [daviUsuario, matheusUsuario, carraraUsuario] = guiaUsuarios
+  const davi = daviUsuario.guia
+  const matheus = matheusUsuario.guia
+  const carrara = carraraUsuario.guia
+
+  if (!davi || !matheus || !carrara) {
+    throw new Error('Falha ao criar registros de guia durante o seed.')
+  }
+
+  await prisma.usuario.create({
+    data: {
+      cpf: '45678901234',
+      nome: 'Ana Colaboradora',
+      email: 'ana.colaboradora@agendunas.com',
+      senhaHash: colaboradorPasswordHash,
+      tipo: TipoUsuario.C,
+    },
+  })
 
   await prisma.trailGuide.createMany({
     data: [
-      { trailId: perobinha.id, guideId: davi.id },
-      { trailId: perobinha.id, guideId: matheus.id },
-      { trailId: ubaudoce.id, guideId: matheus.id },
-      { trailId: aroeira.id, guideId: carrara.id },
-      { trailId: fozDoSol.id, guideId: davi.id },
+      { trailId: perobinha.id, guideCpf: davi.cpf },
+      { trailId: perobinha.id, guideCpf: matheus.cpf },
+      { trailId: ubaudoce.id, guideCpf: matheus.cpf },
+      { trailId: aroeira.id, guideCpf: carrara.cpf },
+      { trailId: fozDoSol.id, guideCpf: davi.cpf },
     ],
   })
 
@@ -165,7 +248,7 @@ async function main() {
     prisma.trailSession.create({
       data: {
         trailId: perobinha.id,
-        primaryGuideId: davi.id,
+        primaryGuideCpf: davi.cpf,
         startsAt: new Date(upcomingBase.getTime() + 24 * 60 * 60 * 1000),
         endsAt: new Date(upcomingBase.getTime() + (24 * 60 + 150) * 60 * 1000),
         capacity: 60,
@@ -176,7 +259,7 @@ async function main() {
     prisma.trailSession.create({
       data: {
         trailId: ubaudoce.id,
-        primaryGuideId: matheus.id,
+        primaryGuideCpf: matheus.cpf,
         startsAt: new Date(upcomingBase.getTime() + 24 * 60 * 60 * 1000 + 90 * 60 * 1000),
         endsAt: new Date(upcomingBase.getTime() + (24 * 60 + 180) * 60 * 1000),
         capacity: 60,
@@ -186,7 +269,7 @@ async function main() {
     prisma.trailSession.create({
       data: {
         trailId: aroeira.id,
-        primaryGuideId: carrara.id,
+        primaryGuideCpf: carrara.cpf,
         startsAt: new Date(upcomingBase.getTime() + 2 * 24 * 60 * 60 * 1000 + 60 * 60 * 1000),
         endsAt: new Date(upcomingBase.getTime() + (2 * 24 * 60 + 210) * 60 * 1000),
         capacity: 55,
@@ -196,7 +279,7 @@ async function main() {
     prisma.trailSession.create({
       data: {
         trailId: fozDoSol.id,
-        primaryGuideId: davi.id,
+        primaryGuideCpf: davi.cpf,
         startsAt: new Date(upcomingBase.getTime() + 3 * 24 * 60 * 60 * 1000 + 17 * 60 * 60 * 1000),
         endsAt: new Date(upcomingBase.getTime() + (3 * 24 * 60 + 120) * 60 * 1000),
         capacity: 30,
@@ -213,7 +296,7 @@ async function main() {
         protocol: 'ACD-2025-0001',
         trailId: perobinha.id,
         sessionId: sessionPerobinha.id,
-        guideId: davi.id,
+        guideCpf: davi.cpf,
         status: BookingStatus.CONFIRMED,
         scheduledFor: sessionPerobinha.startsAt,
         participantsCount: 45,
@@ -224,8 +307,13 @@ async function main() {
         source: BookingSource.PUBLIC_PORTAL,
         participants: {
           create: [
-            { fullName: 'Maria Silva', email: 'maria.silva@email.com', phone: '+55 84 99875-5420' },
-            { fullName: 'João Lima', email: 'joao.lima@email.com' },
+            {
+              fullName: 'Maria Silva',
+              cpf: '11122233344',
+              email: 'maria.silva@email.com',
+              phone: '+55 84 99875-5420',
+            },
+            { fullName: 'João Lima', cpf: '22233344455', email: 'joao.lima@email.com' },
           ],
         },
       },
@@ -236,7 +324,7 @@ async function main() {
         protocol: 'ACD-2025-0002',
         trailId: ubaudoce.id,
         sessionId: sessionUbaudoce.id,
-        guideId: matheus.id,
+        guideCpf: matheus.cpf,
         status: BookingStatus.PENDING,
         scheduledFor: sessionUbaudoce.startsAt,
         participantsCount: 33,
@@ -252,7 +340,7 @@ async function main() {
         protocol: 'ACD-2025-0003',
         trailId: aroeira.id,
         sessionId: sessionAroeira.id,
-        guideId: carrara.id,
+        guideCpf: carrara.cpf,
         status: BookingStatus.RESCHEDULED,
         scheduledFor: sessionAroeira.startsAt,
         participantsCount: 28,
@@ -267,7 +355,7 @@ async function main() {
         protocol: 'ACD-2025-0004',
         trailId: ubaudoce.id,
         sessionId: sessionUbaudoce.id,
-        guideId: matheus.id,
+        guideCpf: matheus.cpf,
         status: BookingStatus.CANCELLED,
         scheduledFor: sessionUbaudoce.startsAt,
         participantsCount: 18,
@@ -285,18 +373,21 @@ async function main() {
       {
         bookingId: bookings[0].id,
         fullName: 'Ana Paula Santos',
+        cpf: '33344455566',
         phone: '+55 84 99876-4431',
         email: 'ana.santos@email.com',
       },
       {
         bookingId: bookings[1].id,
         fullName: 'Paulo Henrique',
+        cpf: '44455566677',
         phone: '+55 84 98765-3321',
         email: 'paulo.henrique@email.com',
       },
       {
         bookingId: bookings[2].id,
         fullName: 'Fernanda Costa',
+        cpf: '55566677788',
         phone: '+55 84 90905-5521',
         email: 'fernanda.costa@email.com',
       },

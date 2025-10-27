@@ -13,11 +13,13 @@ import {
   fetchAdminTrails,
   createAdminGuide,
   createAdminTrail,
+  createAdminInvite,
   updateAdminGuide,
   updateAdminTrail,
   deleteAdminGuide,
   deleteAdminTrail,
   type AdminOverview,
+  type AdminInviteResponse,
   type AdminGuide,
   type AdminGuidePayload,
   type AdminGuideTrail,
@@ -73,6 +75,7 @@ type AdminPageData = {
 }
 
 type GuideFormState = {
+  cpf: string
   name: string
   slug: string
   speciality: string
@@ -97,6 +100,7 @@ type GuidesState = {
 }
 
 const initialGuideFormState: GuideFormState = {
+  cpf: '',
   name: '',
   slug: '',
   speciality: '',
@@ -126,7 +130,7 @@ type TrailFormState = {
   basePrice: string
   highlight: boolean
   meetingPoint: string
-  guideIds: string[]
+  guideCpfs: string[]
 }
 
 type TrailsState = {
@@ -152,7 +156,7 @@ const initialTrailFormState: TrailFormState = {
   basePrice: '',
   highlight: false,
   meetingPoint: '',
-  guideIds: [],
+  guideCpfs: [],
 }
 
 const TRAIL_STATUS_LABELS: Record<TrailStatus, string> = {
@@ -167,10 +171,27 @@ const TRAIL_DIFFICULTY_LABELS: Record<TrailDifficulty, string> = {
   HARD: 'Intensa',
 }
 
+const INVITE_ROLE_LABELS: Record<'A' | 'C' | 'G', string> = {
+  A: 'Administrador',
+  C: 'Colaborador',
+  G: 'Guia',
+}
+
 const currencyFormatter = new Intl.NumberFormat('pt-BR', {
   style: 'currency',
   currency: 'BRL',
 })
+
+const sanitizeCpf = (value: string) => value.replace(/\D/g, '').slice(0, 11)
+
+const formatCpf = (value: string) => {
+  const digits = sanitizeCpf(value)
+  if (digits.length !== 11) {
+    return digits
+  }
+
+  return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`
+}
 
 const formatTrailDuration = (minutes: number) => {
   if (!Number.isFinite(minutes) || minutes <= 0) {
@@ -1191,9 +1212,15 @@ function AdminPage() {
     error: null,
   })
   const [guideForm, setGuideForm] = useState<GuideFormState>(initialGuideFormState)
-  const [editingGuideId, setEditingGuideId] = useState<string | null>(null)
+  const [editingGuideCpf, setEditingGuideCpf] = useState<string | null>(null)
   const [isSavingGuide, setIsSavingGuide] = useState(false)
   const [guideFeedback, setGuideFeedback] = useState<string | null>(null)
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false)
+  const [inviteCpf, setInviteCpf] = useState('')
+  const [inviteRole, setInviteRole] = useState<'A' | 'C' | 'G'>('C')
+  const [inviteResult, setInviteResult] = useState<AdminInviteResponse | null>(null)
+  const [inviteError, setInviteError] = useState<string | null>(null)
+  const [isGeneratingInvite, setIsGeneratingInvite] = useState(false)
   const [trailsState, setTrailsState] = useState<TrailsState>({
     items: [],
     guides: [],
@@ -1301,7 +1328,7 @@ function AdminPage() {
 
   const resetGuideForm = useCallback(() => {
     setGuideForm(initialGuideFormState)
-    setEditingGuideId(null)
+    setEditingGuideCpf(null)
   }, [])
 
   const resetTrailForm = useCallback(() => {
@@ -1321,9 +1348,66 @@ function AdminPage() {
     const selected = Array.from(event.target.selectedOptions).map((option) => option.value)
     setTrailForm((prev) => ({
       ...prev,
-      guideIds: Array.from(new Set(selected)),
+      guideCpfs: Array.from(new Set(selected)),
     }))
   }, [])
+
+  const handleOpenInviteModal = useCallback(() => {
+    setInviteCpf('')
+    setInviteRole('C')
+    setInviteResult(null)
+    setInviteError(null)
+    setIsInviteModalOpen(true)
+  }, [])
+
+  const handleCloseInviteModal = useCallback(() => {
+    setIsInviteModalOpen(false)
+    setInviteCpf('')
+    setInviteRole('C')
+    setInviteResult(null)
+    setInviteError(null)
+  }, [])
+
+  const handleGenerateInvite = useCallback(
+    async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault()
+      const normalizedCpf = sanitizeCpf(inviteCpf)
+
+      if (normalizedCpf.length !== 11) {
+        setInviteError('Informe um CPF válido com 11 dígitos.')
+        return
+      }
+
+      setIsGeneratingInvite(true)
+      setInviteError(null)
+      setInviteResult(null)
+
+      try {
+        const result = await createAdminInvite({ cpf: normalizedCpf, tipo: inviteRole })
+        setInviteResult(result)
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Não foi possível gerar o convite.'
+        setInviteError(message)
+        setInviteResult(null)
+      } finally {
+        setIsGeneratingInvite(false)
+      }
+    },
+    [inviteCpf, inviteRole],
+  )
+
+  const inviteExpiryLabel = useMemo(() => {
+    if (!inviteResult) {
+      return null
+    }
+
+    const parsed = new Date(inviteResult.validoAte)
+    if (Number.isNaN(parsed.getTime())) {
+      return inviteResult.validoAte
+    }
+
+    return parsed.toLocaleString('pt-BR')
+  }, [inviteResult])
 
   const handleStartNewGuide = useCallback(() => {
     resetGuideForm()
@@ -1353,7 +1437,7 @@ function AdminPage() {
       basePrice: trail.basePrice !== null ? String(trail.basePrice) : '',
       highlight: trail.highlight,
       meetingPoint: trail.meetingPoint ?? '',
-      guideIds: trail.guides.map((assignment) => assignment.id),
+      guideCpfs: trail.guides.map((assignment) => assignment.cpf),
     })
     setEditingTrailId(trail.id)
     setTrailFeedback(null)
@@ -1411,7 +1495,7 @@ function AdminPage() {
       const badgeLabel = trailForm.badgeLabel.trim()
       const imageUrl = trailForm.imageUrl.trim()
       const meetingPoint = trailForm.meetingPoint.trim()
-      const uniqueGuideIds = Array.from(new Set(trailForm.guideIds))
+      const uniqueGuideCpfs = Array.from(new Set(trailForm.guideCpfs))
 
       const createPayload: CreateAdminTrailPayload = {
         name: trimmedName,
@@ -1427,7 +1511,7 @@ function AdminPage() {
         basePrice: basePriceValue,
         highlight: trailForm.highlight,
         meetingPoint: meetingPoint ? meetingPoint : null,
-        guideIds: uniqueGuideIds,
+        guideCpfs: uniqueGuideCpfs,
       }
 
       const updatePayload: UpdateAdminTrailPayload = {
@@ -1473,7 +1557,7 @@ function AdminPage() {
       trailForm.basePrice,
       trailForm.highlight,
       trailForm.meetingPoint,
-      trailForm.guideIds,
+      trailForm.guideCpfs,
       editingTrailId,
       loadTrails,
       resetTrailForm,
@@ -1523,6 +1607,7 @@ function AdminPage() {
   const handleEditGuide = useCallback(
     (guide: AdminGuide) => {
       setGuideForm({
+        cpf: guide.cpf,
         name: guide.name,
         slug: guide.slug,
         speciality: guide.speciality ?? '',
@@ -1537,7 +1622,7 @@ function AdminPage() {
         featuredTrailId: guide.featuredTrailId ?? '',
         trailIds: guide.trails.map((trail) => trail.id),
       })
-      setEditingGuideId(guide.id)
+      setEditingGuideCpf(guide.cpf)
       setGuideFeedback(null)
       setGuidesState((state) => ({ ...state, error: null }))
     },
@@ -1548,8 +1633,14 @@ function AdminPage() {
     async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault()
 
+      const sanitizedCpf = sanitizeCpf(guideForm.cpf)
       const trimmedName = guideForm.name.trim()
       const trimmedSlug = guideForm.slug.trim()
+
+      if (sanitizedCpf.length !== 11) {
+        setGuidesState((state) => ({ ...state, error: 'Informe um CPF válido com 11 dígitos.' }))
+        return
+      }
 
       if (!trimmedName) {
         setGuidesState((state) => ({ ...state, error: 'Informe o nome do guia.' }))
@@ -1572,6 +1663,7 @@ function AdminPage() {
       }
 
       const payload: AdminGuidePayload = {
+        cpf: sanitizedCpf,
         name: trimmedName,
         slug: trimmedSlug,
         speciality: guideForm.speciality.trim() || null,
@@ -1592,22 +1684,22 @@ function AdminPage() {
       setGuidesState((state) => ({ ...state, error: null }))
 
       try {
-        const savedGuide = editingGuideId
-          ? await updateAdminGuide(editingGuideId, payload)
+        const savedGuide = editingGuideCpf
+          ? await updateAdminGuide(editingGuideCpf, payload)
           : await createAdminGuide(payload)
 
         setGuidesState((state) => ({
           ...state,
           items: sortGuides(
-            editingGuideId
-              ? state.items.map((item) => (item.id === savedGuide.id ? savedGuide : item))
+            editingGuideCpf
+              ? state.items.map((item) => (item.cpf === savedGuide.cpf ? savedGuide : item))
               : [...state.items, savedGuide],
           ),
           error: null,
         }))
 
         setGuideFeedback(
-          editingGuideId ? 'Guia atualizado com sucesso.' : 'Guia cadastrado com sucesso.',
+          editingGuideCpf ? 'Guia atualizado com sucesso.' : 'Guia cadastrado com sucesso.',
         )
         resetGuideForm()
       } catch (error) {
@@ -1618,6 +1710,7 @@ function AdminPage() {
       }
     },
     [
+      guideForm.cpf,
       guideForm.biography,
       guideForm.certifications,
       guideForm.experienceYears,
@@ -1632,7 +1725,7 @@ function AdminPage() {
       guideForm.summary,
       guideForm.trailIds,
       splitList,
-      editingGuideId,
+      editingGuideCpf,
       sortGuides,
       resetGuideForm,
     ],
@@ -1648,15 +1741,15 @@ function AdminPage() {
       setGuidesState((state) => ({ ...state, isLoading: true, error: null }))
 
       try {
-        await deleteAdminGuide(guide.id)
+        await deleteAdminGuide(guide.cpf)
         setGuidesState((state) => ({
           ...state,
-          items: state.items.filter((item) => item.id !== guide.id),
+          items: state.items.filter((item) => item.cpf !== guide.cpf),
           isLoading: false,
           error: null,
         }))
 
-        if (editingGuideId === guide.id) {
+        if (editingGuideCpf === guide.cpf) {
           resetGuideForm()
         }
 
@@ -1666,7 +1759,7 @@ function AdminPage() {
         setGuidesState((state) => ({ ...state, isLoading: false, error: message }))
       }
     },
-    [editingGuideId, resetGuideForm],
+    [editingGuideCpf, resetGuideForm],
   )
 
   useEffect(() => {
@@ -2010,12 +2103,12 @@ function AdminPage() {
                 Guias habilitados
                 <select
                   multiple
-                  value={trailForm.guideIds}
+                  value={trailForm.guideCpfs}
                   onChange={handleTrailGuideSelectionChange}
                   size={Math.min(Math.max(trailsState.guides.length, 3), 6)}
                 >
                   {trailsState.guides.map((guide) => (
-                    <option key={guide.id} value={guide.id}>
+                    <option key={guide.cpf} value={guide.cpf}>
                       {guide.name}
                       {guide.speciality ? ` • ${guide.speciality}` : ''}
                     </option>
@@ -2254,28 +2347,53 @@ function AdminPage() {
     title: 'Guias',
     description: 'Gerencie disponibilidade, trilhas qualificadas e destaque de guias do parque',
     actions: (
-      <button
-        type="button"
-        className="admin-primary-button"
-        onClick={handleStartNewGuide}
-        disabled={isSavingGuide}
-      >
-        Novo Guia
-      </button>
+      <div className="admin-guides__actions">
+        <button
+          type="button"
+          className="admin-secondary-button"
+          onClick={handleOpenInviteModal}
+          disabled={isGeneratingInvite}
+        >
+          Gerar convite
+        </button>
+        <button
+          type="button"
+          className="admin-primary-button"
+          onClick={handleStartNewGuide}
+          disabled={isSavingGuide}
+        >
+          Novo Guia
+        </button>
+      </div>
     ),
     content: (
       <div className="admin-guides">
         <section className="admin-card admin-guides__form">
           <header className="admin-card__header">
-            <h2>{editingGuideId ? 'Editar guia' : 'Cadastrar guia'}</h2>
+            <h2>{editingGuideCpf ? 'Editar guia' : 'Cadastrar guia'}</h2>
             <span>
-              {editingGuideId
+              {editingGuideCpf
                 ? 'Atualize as informações e a disponibilidade do guia selecionado.'
                 : 'Preencha os dados para registrar um novo guia credenciado.'}
             </span>
           </header>
           <form className="admin-guides__form-fields" onSubmit={handleGuideSubmit}>
             <div className="admin-guides__grid">
+              <label>
+                CPF do guia
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="00000000000"
+                  value={guideForm.cpf}
+                  onChange={(event) =>
+                    setGuideForm((prev) => ({ ...prev, cpf: sanitizeCpf(event.target.value) }))
+                  }
+                  disabled={Boolean(editingGuideCpf)}
+                  required
+                />
+                <small>Utilizado como identificador único no sistema.</small>
+              </label>
               <label>
                 Nome do guia
                 <input
@@ -2423,7 +2541,7 @@ function AdminPage() {
               </label>
             </div>
             <div className="admin-guides__form-actions">
-              {editingGuideId ? (
+              {editingGuideCpf ? (
                 <button type="button" className="admin-secondary-button" onClick={handleStartNewGuide}>
                   Cancelar edição
                 </button>
@@ -2431,7 +2549,7 @@ function AdminPage() {
               <button type="submit" className="admin-primary-button" disabled={isSavingGuide}>
                 {isSavingGuide
                   ? 'Salvando...'
-                  : editingGuideId
+                  : editingGuideCpf
                   ? 'Salvar alterações'
                   : 'Cadastrar guia'}
               </button>
@@ -2462,11 +2580,12 @@ function AdminPage() {
             {guidesState.items.length > 0 ? (
               <ul className="admin-guides__items">
                 {guidesState.items.map((guide) => (
-                  <li key={guide.id} className="admin-guides__item">
+                  <li key={guide.cpf} className="admin-guides__item">
                     <div className="admin-guides__item-header">
                       <div>
                         <h3>{guide.name}</h3>
-                        <span className="admin-guides__item-slug">{guide.slug}</span>
+                        <span className="admin-guides__item-id">CPF: {formatCpf(guide.cpf)}</span>
+                        <span className="admin-guides__item-slug">Slug: {guide.slug}</span>
                       </div>
                       <div className="admin-guides__item-status">
                         {guide.isFeatured ? (
@@ -2554,6 +2673,82 @@ function AdminPage() {
       header={{ title: section.title, description: section.description, actions: section.actions }}
     >
       {section.content}
+      {isInviteModalOpen ? (
+        <div className="admin-modal" role="dialog" aria-modal="true" aria-labelledby="invite-modal-title">
+          <div className="admin-modal__backdrop" aria-hidden="true" onClick={handleCloseInviteModal} />
+          <div className="admin-modal__dialog" role="document">
+            <button
+              type="button"
+              className="admin-modal__close"
+              onClick={handleCloseInviteModal}
+              aria-label="Fechar"
+            >
+              ×
+            </button>
+            <header className="admin-modal__header">
+              <h2 id="invite-modal-title">Gerar convite de acesso</h2>
+              <p>Envie um token para colaboradores, administradores ou guias ativarem o acesso.</p>
+            </header>
+            <form className="admin-modal__form" onSubmit={handleGenerateInvite}>
+              <div className="admin-modal__body">
+                {inviteError ? <div className="admin-modal__error">{inviteError}</div> : null}
+                <label>
+                  CPF do convidado
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="00000000000"
+                    value={inviteCpf}
+                    onChange={(event) => setInviteCpf(sanitizeCpf(event.target.value))}
+                    disabled={isGeneratingInvite}
+                    required
+                  />
+                </label>
+                <label>
+                  Tipo de acesso
+                  <select
+                    value={inviteRole}
+                    onChange={(event) => setInviteRole(event.target.value as 'A' | 'C' | 'G')}
+                    disabled={isGeneratingInvite}
+                  >
+                    <option value="A">Administrador</option>
+                    <option value="C">Colaborador</option>
+                    <option value="G">Guia</option>
+                  </select>
+                  <small>Apenas administradores podem gerar convites.</small>
+                </label>
+                {inviteResult ? (
+                  <div className="admin-modal__result">
+                    <p>
+                      Compartilhe o token com {INVITE_ROLE_LABELS[inviteResult.tipo].toLowerCase()} registrado no CPF{' '}
+                      <strong>{formatCpf(inviteResult.cpf)}</strong>.
+                    </p>
+                    <div className="admin-modal__token">
+                      <code>{inviteResult.token}</code>
+                      {inviteExpiryLabel ? <span>Válido até {inviteExpiryLabel}</span> : null}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="admin-modal__hint">Preencha os dados e gere um novo código de convite.</p>
+                )}
+              </div>
+              <footer className="admin-modal__actions">
+                <button
+                  type="button"
+                  className="admin-secondary-button"
+                  onClick={handleCloseInviteModal}
+                  disabled={isGeneratingInvite}
+                >
+                  Fechar
+                </button>
+                <button type="submit" className="admin-primary-button" disabled={isGeneratingInvite}>
+                  {isGeneratingInvite ? 'Gerando...' : 'Gerar convite'}
+                </button>
+              </footer>
+            </form>
+          </div>
+        </div>
+      ) : null}
     </AdminLayout>
   )
 }
