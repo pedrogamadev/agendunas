@@ -114,12 +114,12 @@ section {
   gap: clamp(1rem, 4vw, 2.5rem);
   padding: 0 clamp(1.5rem, 6vw, 6rem);
   min-height: var(--nav-height);
-  background: linear-gradient(135deg, rgba(8, 18, 32, 0.68), rgba(16, 32, 54, 0.36));
-  box-shadow: 0 22px 60px rgba(4, 9, 18, 0.55);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: transparent;
+  box-shadow: none;
+  border-bottom: 1px solid transparent;
   color: #ffffff;
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   isolation: isolate;
   transition: background 0.4s ease, box-shadow 0.4s ease, color 0.3s ease, backdrop-filter 0.3s ease,
     border-color 0.3s ease;
