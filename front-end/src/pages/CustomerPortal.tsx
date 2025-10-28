@@ -7,8 +7,11 @@ import './AuthPortal.css'
 
 type AuthMode = 'login' | 'register'
 
+type CustomerPortalVariant = 'admin' | 'customer'
+
 type CustomerPortalProps = PageProps & {
   initialMode?: AuthMode
+  variant?: CustomerPortalVariant
 }
 
 function EyeIcon({ hidden }: { hidden: boolean }) {
@@ -36,7 +39,13 @@ function EyeIcon({ hidden }: { hidden: boolean }) {
   )
 }
 
-function CustomerPortal({ navigation, onNavigate, searchParams, initialMode = 'login' }: CustomerPortalProps) {
+function CustomerPortal({
+  navigation,
+  onNavigate,
+  searchParams,
+  initialMode = 'login',
+  variant = 'customer',
+}: CustomerPortalProps) {
   const { customerLogin, customerRegister, error, isAuthenticating, user } = useAuth()
   const [activeMode, setActiveMode] = useState<AuthMode>(initialMode)
   const [formError, setFormError] = useState<string | null>(null)
@@ -199,7 +208,7 @@ function CustomerPortal({ navigation, onNavigate, searchParams, initialMode = 'l
   }
 
   return (
-    <div className={`auth-portal auth-portal--${activeMode}`}>
+    <div className={`auth-portal auth-portal--${variant} auth-portal--${activeMode}`}>
       {navigation}
       <div className="auth-portal__backdrop" aria-hidden="true" />
       <div className="auth-portal__card">

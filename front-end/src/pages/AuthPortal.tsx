@@ -7,8 +7,11 @@ import './AuthPortal.css'
 
 type AuthMode = 'login' | 'register'
 
+type AuthVariant = 'admin' | 'customer'
+
 type AuthPortalProps = PageProps & {
   initialMode: AuthMode
+  variant: AuthVariant
 }
 
 function EyeIcon({ hidden }: { hidden: boolean }) {
@@ -36,7 +39,7 @@ function EyeIcon({ hidden }: { hidden: boolean }) {
   )
 }
 
-function AuthPortal({ navigation, onNavigate, searchParams, initialMode }: AuthPortalProps) {
+function AuthPortal({ navigation, onNavigate, searchParams, initialMode, variant }: AuthPortalProps) {
   const { adminLogin, adminRegister, error, isAuthenticating, user } = useAuth()
   const [activeMode, setActiveMode] = useState<AuthMode>(initialMode)
   const [formError, setFormError] = useState<string | null>(null)
@@ -174,7 +177,7 @@ function AuthPortal({ navigation, onNavigate, searchParams, initialMode }: AuthP
   const isRegisterFirstStep = registerStep === 0
 
   return (
-    <div className={`auth-portal auth-portal--${activeMode}`}>
+    <div className={`auth-portal auth-portal--${variant} auth-portal--${activeMode}`}>
       {navigation}
       <div className="auth-portal__backdrop" aria-hidden="true" />
       <div className="auth-portal__card">

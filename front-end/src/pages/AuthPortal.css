@@ -6,9 +6,135 @@
   align-items: center;
   justify-content: center;
   padding: clamp(1.5rem, 4vw, 3rem);
-  background: linear-gradient(180deg, #f7fbff 0%, #edf3ff 100%);
   overflow: hidden;
-  color: #0f172a;
+  --auth-text-color: #0f172a;
+  --auth-background: linear-gradient(180deg, #f7fbff 0%, #edf3ff 100%);
+  --auth-backdrop: radial-gradient(circle at 15% 20%, rgba(79, 140, 255, 0.18), transparent 45%),
+    radial-gradient(circle at 85% 35%, rgba(79, 192, 255, 0.15), transparent 40%),
+    linear-gradient(145deg, rgba(233, 242, 255, 0.9), rgba(255, 255, 255, 0.95));
+  --auth-card-background: linear-gradient(135deg, rgba(255, 255, 255, 0.68), rgba(226, 232, 255, 0.4));
+  --auth-card-border: rgba(148, 163, 184, 0.28);
+  --auth-card-shadow: 0 42px 90px rgba(15, 23, 42, 0.18);
+  --auth-pane-background: linear-gradient(155deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.08));
+  --auth-form-background: linear-gradient(165deg, rgba(255, 255, 255, 0.92), rgba(237, 242, 255, 0.72));
+  --auth-form-border: rgba(148, 163, 184, 0.28);
+  --auth-form-shadow: 0 38px 72px rgba(15, 23, 42, 0.16);
+  --auth-form-border-active: rgba(37, 99, 235, 0.45);
+  --auth-form-shadow-active: 0 42px 78px rgba(37, 99, 235, 0.22);
+  --auth-overlay-background: #1d4ed8;
+  --auth-overlay-color: #f8fbff;
+  --auth-overlay-heading: #e2e8f0;
+  --auth-overlay-text: rgba(241, 245, 255, 0.92);
+  --auth-overlay-shadow: 0 40px 90px rgba(15, 23, 42, 0.22);
+  --auth-overlay-cta-background: linear-gradient(135deg, #f8fafc, #dbeafe);
+  --auth-overlay-cta-color: #1d4ed8;
+  --auth-overlay-cta-hover-background: #ffffff;
+  --auth-overlay-cta-shadow: 0 18px 32px rgba(15, 23, 42, 0.24);
+  --auth-overlay-cta-hover-shadow: 0 26px 42px rgba(15, 23, 42, 0.28);
+  --auth-primary-background: linear-gradient(135deg, #2563eb, #3b82f6);
+  --auth-primary-text: #ffffff;
+  --auth-primary-shadow: 0 12px 24px rgba(37, 99, 235, 0.25);
+  --auth-primary-hover-shadow: 0 18px 32px rgba(37, 99, 235, 0.35);
+  --auth-accent-color: #1d4ed8;
+  --auth-ghost-background: rgba(148, 163, 184, 0.15);
+  --auth-ghost-hover-background: rgba(148, 163, 184, 0.25);
+  --auth-ghost-color: rgba(15, 23, 42, 0.75);
+  --auth-toggle-hover-background: rgba(37, 99, 235, 0.12);
+  --auth-paragraph-color: rgba(15, 23, 42, 0.68);
+  --auth-stepper-color: rgba(100, 116, 139, 0.8);
+  --auth-stepper-pill-bg: rgba(148, 163, 184, 0.15);
+  --auth-stepper-active-bg: rgba(37, 99, 235, 0.18);
+  --auth-stepper-active-color: #1d4ed8;
+  --auth-label-color: rgba(15, 23, 42, 0.9);
+  --auth-input-border: rgba(148, 163, 184, 0.35);
+  --auth-input-background: rgba(255, 255, 255, 0.9);
+  --auth-input-placeholder: rgba(148, 163, 184, 0.8);
+  --auth-input-focus-border: rgba(37, 99, 235, 0.7);
+  --auth-input-focus-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
+  --auth-input-focus-background: #ffffff;
+  --auth-input-disabled-background: rgba(241, 245, 249, 0.7);
+  --auth-muted-strong: rgba(71, 85, 105, 0.75);
+  --auth-link-color: var(--auth-accent-color);
+  background: var(--auth-background);
+  color: var(--auth-text-color);
+}
+
+.auth-portal--customer {
+  --auth-background: linear-gradient(180deg, #f7fbff 0%, #edf3ff 100%);
+  --auth-backdrop: radial-gradient(circle at 15% 20%, rgba(79, 140, 255, 0.18), transparent 45%),
+    radial-gradient(circle at 85% 35%, rgba(79, 192, 255, 0.15), transparent 40%),
+    linear-gradient(145deg, rgba(233, 242, 255, 0.9), rgba(255, 255, 255, 0.95));
+  --auth-overlay-cta-background: linear-gradient(135deg, #f8fafc, #dbeafe);
+  --auth-overlay-cta-hover-background: #ffffff;
+  --auth-primary-shadow: 0 12px 24px rgba(37, 99, 235, 0.25);
+  --auth-primary-hover-shadow: 0 18px 32px rgba(37, 99, 235, 0.35);
+}
+
+.auth-portal--admin {
+  --auth-text-color: #e2e8f0;
+  --auth-background: linear-gradient(165deg, #0b1220 0%, #111827 100%);
+  --auth-backdrop: radial-gradient(circle at 12% 18%, rgba(59, 130, 246, 0.18), transparent 42%),
+    radial-gradient(circle at 82% 28%, rgba(30, 64, 175, 0.22), transparent 40%),
+    linear-gradient(150deg, rgba(15, 23, 42, 0.92), rgba(15, 23, 42, 0.78));
+  --auth-card-background: linear-gradient(150deg, rgba(17, 24, 39, 0.92), rgba(15, 23, 42, 0.78));
+  --auth-card-border: rgba(71, 85, 105, 0.45);
+  --auth-card-shadow: 0 48px 110px rgba(2, 6, 23, 0.6);
+  --auth-pane-background: linear-gradient(155deg, rgba(15, 23, 42, 0.75), rgba(15, 23, 42, 0.5));
+  --auth-form-background: linear-gradient(160deg, rgba(17, 24, 39, 0.96), rgba(15, 23, 42, 0.82));
+  --auth-form-border: rgba(148, 163, 184, 0.2);
+  --auth-form-shadow: 0 42px 84px rgba(2, 6, 23, 0.55);
+  --auth-form-border-active: rgba(124, 58, 237, 0.55);
+  --auth-form-shadow-active: 0 46px 96px rgba(124, 58, 237, 0.35);
+  --auth-overlay-background: linear-gradient(165deg, #0b1120, #111827);
+  --auth-overlay-color: #e2e8f0;
+  --auth-overlay-heading: #f8fafc;
+  --auth-overlay-text: rgba(226, 232, 240, 0.85);
+  --auth-overlay-shadow: 0 56px 120px rgba(2, 6, 23, 0.65);
+  --auth-overlay-cta-background: linear-gradient(135deg, #f59e0b, #d97706);
+  --auth-overlay-cta-color: #0b1120;
+  --auth-overlay-cta-hover-background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  --auth-overlay-cta-shadow: 0 28px 48px rgba(217, 119, 6, 0.35);
+  --auth-overlay-cta-hover-shadow: 0 36px 58px rgba(217, 119, 6, 0.4);
+  --auth-primary-background: linear-gradient(135deg, #4338ca, #7c3aed);
+  --auth-primary-text: #f5f3ff;
+  --auth-primary-shadow: 0 18px 36px rgba(76, 29, 149, 0.35);
+  --auth-primary-hover-shadow: 0 28px 52px rgba(76, 29, 149, 0.5);
+  --auth-accent-color: #c084fc;
+  --auth-ghost-background: rgba(148, 163, 184, 0.18);
+  --auth-ghost-hover-background: rgba(148, 163, 184, 0.28);
+  --auth-ghost-color: rgba(226, 232, 240, 0.85);
+  --auth-toggle-hover-background: rgba(124, 58, 237, 0.22);
+  --auth-paragraph-color: rgba(226, 232, 240, 0.75);
+  --auth-stepper-color: rgba(148, 163, 184, 0.85);
+  --auth-stepper-pill-bg: rgba(148, 163, 184, 0.2);
+  --auth-stepper-active-bg: rgba(124, 58, 237, 0.3);
+  --auth-stepper-active-color: #ede9fe;
+  --auth-label-color: rgba(226, 232, 240, 0.9);
+  --auth-input-border: rgba(148, 163, 184, 0.4);
+  --auth-input-background: rgba(15, 23, 42, 0.85);
+  --auth-input-placeholder: rgba(148, 163, 184, 0.65);
+  --auth-input-focus-border: rgba(124, 58, 237, 0.65);
+  --auth-input-focus-shadow: 0 0 0 3px rgba(124, 58, 237, 0.35);
+  --auth-input-focus-background: rgba(17, 24, 39, 0.95);
+  --auth-input-disabled-background: rgba(30, 41, 59, 0.7);
+  --auth-muted-strong: rgba(203, 213, 225, 0.78);
+  --auth-link-color: #c084fc;
+}
+
+.auth-portal--customer .auth-portal__overlay-cta {
+  border: 1px solid rgba(226, 232, 240, 0.6);
+}
+
+.auth-portal--admin .auth-portal__overlay {
+  border-right: 1px solid rgba(148, 163, 184, 0.22);
+}
+
+.auth-portal--admin .auth-portal__overlay-cta {
+  border: none;
+}
+
+.auth-portal--admin .auth-portal__submit {
+  text-shadow: 0 1px 1px rgba(8, 11, 19, 0.35);
 }
 
 .auth-portal > *:first-child {
@@ -19,9 +145,7 @@
 .auth-portal__backdrop {
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at 15% 20%, rgba(79, 140, 255, 0.18), transparent 45%),
-    radial-gradient(circle at 85% 35%, rgba(79, 192, 255, 0.15), transparent 40%),
-    linear-gradient(145deg, rgba(233, 242, 255, 0.9), rgba(255, 255, 255, 0.95));
+  background: var(--auth-backdrop);
   z-index: 0;
   pointer-events: none;
 }
@@ -34,9 +158,9 @@
   overflow: hidden;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.68), rgba(226, 232, 255, 0.4));
-  box-shadow: 0 42px 90px rgba(15, 23, 42, 0.18);
-  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: var(--auth-card-background);
+  box-shadow: var(--auth-card-shadow);
+  border: 1px solid var(--auth-card-border);
   backdrop-filter: blur(26px);
   z-index: 2;
 }
@@ -49,7 +173,7 @@
   min-height: 100%;
   padding: clamp(2.75rem, 4vw, 3.5rem);
   transition: transform 550ms cubic-bezier(0.23, 1, 0.32, 1), opacity 450ms ease;
-  background: linear-gradient(155deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.08));
+  background: var(--auth-pane-background);
   backdrop-filter: blur(18px);
   z-index: 1;
 }
@@ -79,15 +203,15 @@
   gap: 1.25rem;
   border-radius: clamp(20px, 3vw, 28px);
   padding: clamp(2.25rem, 4vw, 3rem);
-  box-shadow: 0 38px 72px rgba(15, 23, 42, 0.16);
-  border: 1px solid rgba(148, 163, 184, 0.28);
-  background: linear-gradient(165deg, rgba(255, 255, 255, 0.92), rgba(237, 242, 255, 0.72));
+  box-shadow: var(--auth-form-shadow);
+  border: 1px solid var(--auth-form-border);
+  background: var(--auth-form-background);
   backdrop-filter: blur(18px);
 }
 
 .auth-portal__pane.is-active .auth-portal__form-surface {
-  border-color: rgba(37, 99, 235, 0.45);
-  box-shadow: 0 42px 78px rgba(37, 99, 235, 0.22);
+  border-color: var(--auth-form-border-active);
+  box-shadow: var(--auth-form-shadow-active);
 }
 
 .auth-portal__overlay {
@@ -101,9 +225,9 @@
   transform: translateX(100%);
   transition: transform 600ms cubic-bezier(0.22, 1, 0.36, 1), opacity 420ms ease;
   z-index: 3;
-  background: #1d4ed8;
-  color: #f8fbff;
-  box-shadow: 0 40px 90px rgba(15, 23, 42, 0.22);
+  background: var(--auth-overlay-background);
+  color: var(--auth-overlay-color);
+  box-shadow: var(--auth-overlay-shadow);
 }
 
 .auth-portal__overlay-content {
@@ -124,13 +248,14 @@
 .auth-portal__overlay-content h2 {
   margin: 0;
   font-size: clamp(1.75rem, 3vw, 2.1rem);
+  color: var(--auth-overlay-heading);
 }
 
 .auth-portal__overlay-content p {
   margin: 0;
   line-height: 1.6;
   font-size: 0.95rem;
-  color: rgba(241, 245, 255, 0.92);
+  color: var(--auth-overlay-text);
 }
 
 .auth-portal__overlay-cta {
@@ -141,16 +266,16 @@
   font-weight: 600;
   letter-spacing: 0.01em;
   cursor: pointer;
-  color: #1d4ed8;
-  background: #f8fafc;
-  box-shadow: 0 18px 32px rgba(15, 23, 42, 0.24);
+  color: var(--auth-overlay-cta-color);
+  background: var(--auth-overlay-cta-background);
+  box-shadow: var(--auth-overlay-cta-shadow);
   transition: transform 220ms ease, box-shadow 220ms ease, background-color 220ms ease;
 }
 
 .auth-portal__overlay-cta:hover {
   transform: translateY(-2px);
-  box-shadow: 0 26px 42px rgba(15, 23, 42, 0.28);
-  background: #ffffff;
+  box-shadow: var(--auth-overlay-cta-hover-shadow);
+  background: var(--auth-overlay-cta-hover-background);
 }
 
 .auth-portal__overlay--register {
@@ -170,7 +295,7 @@
   margin: 0;
   font-size: 0.95rem;
   line-height: 1.6;
-  color: rgba(15, 23, 42, 0.68);
+  color: var(--auth-paragraph-color);
 }
 
 .auth-portal__form {
@@ -182,18 +307,18 @@
   display: flex;
   gap: 0.75rem;
   font-size: 0.85rem;
-  color: rgba(100, 116, 139, 0.8);
+  color: var(--auth-stepper-color);
 }
 
 .auth-portal__stepper span {
   padding: 0.25rem 0.75rem;
   border-radius: 999px;
-  background: rgba(148, 163, 184, 0.15);
+  background: var(--auth-stepper-pill-bg);
 }
 
 .auth-portal__stepper .is-active {
-  background: rgba(37, 99, 235, 0.18);
-  color: #1d4ed8;
+  background: var(--auth-stepper-active-bg);
+  color: var(--auth-stepper-active-color);
   font-weight: 600;
 }
 
@@ -220,7 +345,7 @@
 .auth-portal__field label {
   font-weight: 600;
   font-size: 0.95rem;
-  color: rgba(15, 23, 42, 0.9);
+  color: var(--auth-label-color);
 }
 
 .auth-portal__input-wrapper {
@@ -240,21 +365,21 @@
   padding: 0.85rem 1rem;
   border-radius: 14px;
   font-size: 1rem;
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid var(--auth-input-border);
+  background: var(--auth-input-background);
   color: inherit;
   transition: border-color 200ms ease, box-shadow 200ms ease, background-color 200ms ease;
 }
 
 .auth-portal__field input::placeholder {
-  color: rgba(148, 163, 184, 0.8);
+  color: var(--auth-input-placeholder);
 }
 
 .auth-portal__field input:focus {
   outline: none;
-  border-color: rgba(37, 99, 235, 0.7);
-  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
-  background: #ffffff;
+  border-color: var(--auth-input-focus-border);
+  box-shadow: var(--auth-input-focus-shadow);
+  background: var(--auth-input-focus-background);
 }
 
 .auth-portal__password-wrapper input {
@@ -263,7 +388,7 @@
 
 .auth-portal__field input:disabled {
   opacity: 0.65;
-  background: rgba(241, 245, 249, 0.7);
+  background: var(--auth-input-disabled-background);
   cursor: not-allowed;
 }
 
@@ -276,7 +401,7 @@
   background: none;
   padding: 0.35rem;
   border-radius: 50%;
-  color: #1d4ed8;
+  color: var(--auth-accent-color);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -293,7 +418,7 @@
   background: none;
   padding: 0.35rem;
   border-radius: 999px;
-  color: #1d4ed8;
+  color: var(--auth-accent-color);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -302,11 +427,11 @@
 }
 
 .auth-portal__password-toggle:hover {
-  background-color: rgba(37, 99, 235, 0.12);
+  background-color: var(--auth-toggle-hover-background);
 }
 
 .auth-portal__toggle-visibility:hover {
-  background-color: rgba(37, 99, 235, 0.12);
+  background-color: var(--auth-toggle-hover-background);
 }
 
 .auth-portal__eye-icon {
@@ -320,7 +445,7 @@
   align-items: center;
   gap: 1rem;
   font-size: 0.9rem;
-  color: rgba(71, 85, 105, 0.75);
+  color: var(--auth-muted-strong);
 }
 
 .auth-portal__remember {
@@ -332,7 +457,7 @@
 }
 
 .auth-portal__remember input {
-  accent-color: #2563eb;
+  accent-color: var(--auth-accent-color);
 }
 
 .auth-portal__link {
@@ -352,8 +477,8 @@
 
 .auth-portal__ghost {
   border: none;
-  background: rgba(148, 163, 184, 0.15);
-  color: rgba(15, 23, 42, 0.75);
+  background: var(--auth-ghost-background);
+  color: var(--auth-ghost-color);
   padding: 0.85rem 1.4rem;
   border-radius: 16px;
   font-weight: 600;
@@ -365,7 +490,7 @@
 }
 
 .auth-portal__ghost:hover {
-  background: rgba(148, 163, 184, 0.25);
+  background: var(--auth-ghost-hover-background);
 }
 
 .auth-portal__submit {
@@ -379,14 +504,15 @@
   font-weight: 600;
   font-size: 1rem;
   cursor: pointer;
-  background: linear-gradient(135deg, #2563eb, #3b82f6);
-  color: #ffffff;
+  background: var(--auth-primary-background);
+  color: var(--auth-primary-text);
+  box-shadow: var(--auth-primary-shadow);
   transition: transform 200ms ease, box-shadow 200ms ease;
 }
 
 .auth-portal__submit:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 18px 32px rgba(37, 99, 235, 0.35);
+  box-shadow: var(--auth-primary-hover-shadow);
 }
 
 .auth-portal__submit:disabled {
@@ -399,14 +525,14 @@
   margin: 0;
   font-size: 0.9rem;
   text-align: center;
-  color: rgba(71, 85, 105, 0.8);
+  color: var(--auth-muted-strong);
 }
 
 .auth-portal__switch button {
   border: none;
   background: none;
   font-weight: 600;
-  color: #1d4ed8;
+  color: var(--auth-link-color);
   cursor: pointer;
 }
 
