@@ -2,32 +2,29 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ChangeEvent, FormEvent, ReactNode } from 'react'
 import AdminLayout, { type AdminSection } from '../components/admin/AdminLayout'
 import MetricCard, { type MetricCardProps } from '../components/admin/MetricCard'
-import AdminTable, {
-  type AdminTableAction,
-  type AdminTableColumn,
-  type AdminTableRow,
-} from '../components/admin/AdminTable'
+import AdminSessionWizard, {
+  type SessionWizardFormState,
+  type SessionWizardStep,
+  INITIAL_SESSION_WIZARD_FORM,
+  SESSION_WIZARD_STEPS,
+} from '../components/admin/AdminSessionWizard'
 import {
   fetchAdminOverview,
   fetchAdminGuides,
   fetchAdminTrails,
   fetchAdminTrailSessions,
-  fetchAdminBooking,
   fetchAdminParticipant,
   fetchAdminTrailSessionParticipants,
   createAdminGuide,
   createAdminTrail,
   createAdminInvite,
-  createAdminBooking,
   createAdminEvent,
   updateAdminGuide,
   updateAdminTrail,
-  updateAdminBookingStatus,
   updateAdminParticipant,
   deleteAdminGuide,
   deleteAdminTrail,
   type AdminOverview,
-  type AdminBookingDetail,
   type AdminInviteResponse,
   type AdminGuide,
   type AdminGuidePayload,
@@ -45,6 +42,24 @@ import {
 } from '../api/admin'
 import { formatCpf, formatCpfForInput, sanitizeCpf } from '../utils/cpf'
 import './AdminPage.css'
+
+const sessionWizardStepLabels: Record<SessionWizardStep, string> = {
+  trail: 'Trilha',
+  date: 'Data',
+  time: 'Horário',
+  guide: 'Guia',
+  phone: 'Telefone',
+  capacity: 'Vagas',
+}
+
+const sessionWizardStepDescriptions: Record<SessionWizardStep, string> = {
+  trail: 'Selecione a trilha que receberá a nova turma.',
+  date: 'Informe o dia para publicação da sessão.',
+  time: 'Defina o horário de encontro do grupo.',
+  guide: 'Associe o guia responsável pela condução.',
+  phone: 'Confirme o telefone direto do guia escolhido.',
+  capacity: 'Estabeleça o limite de participantes.',
+}
 
 type SectionKey =
   | 'dashboard'
@@ -120,8 +135,6 @@ type DashboardReport = {
 
 type AdminPageData = {
   metrics: MetricCardProps[]
-  bookingRows: AdminTableRow[]
-  participantRows: AdminTableRow[]
   todaysTrails: DashboardSession[]
   upcomingEvents: DashboardEventHighlight[]
   recentActivity: DashboardActivity[]
@@ -221,42 +234,6 @@ const initialTrailFormState: TrailFormState = {
   guideCpfs: [],
 }
 
-type BookingParticipantForm = {
-  id: string
-  fullName: string
-  cpf: string
-  email: string
-  phone: string
-}
-
-type BookingFormState = {
-  trailId: string
-  sessionId: string
-  guideCpf: string
-  contactName: string
-  contactEmail: string
-  contactPhone: string
-  scheduledDate: string
-  scheduledTime: string
-  participantsCount: string
-  notes: string
-  participants: BookingParticipantForm[]
-}
-
-const initialBookingFormState: BookingFormState = {
-  trailId: '',
-  sessionId: '',
-  guideCpf: '',
-  contactName: '',
-  contactEmail: '',
-  contactPhone: '',
-  scheduledDate: '',
-  scheduledTime: '08:00',
-  participantsCount: '1',
-  notes: '',
-  participants: [],
-}
-
 type EventFormState = {
   title: string
   slug: string
@@ -327,11 +304,6 @@ const timeFormatter = new Intl.DateTimeFormat('pt-BR', {
   hour: '2-digit',
   minute: '2-digit',
 })
-
-const createTempId = () =>
-  typeof crypto !== 'undefined' && 'randomUUID' in crypto
-    ? crypto.randomUUID()
-    : Math.random().toString(36).slice(2)
 
 const slugify = (value: string) =>
   value
@@ -441,7 +413,7 @@ const sidebarSections = [
   },
   {
     id: 'agendamentos',
-    label: 'Agendamentos',
+    label: 'Criar turma',
     icon: createIcon(
       <>
         <rect x="4" y="5" width="16" height="15" rx="2" fill="currentColor" opacity="0.72" />
@@ -544,40 +516,6 @@ const sectionKeys = sidebarSections.map((section) => section.id)
 
 const isSectionKey = (value: string): value is SectionKey =>
   (sectionKeys as string[]).includes(value)
-
-const tableActions: AdminTableAction[] = [
-  {
-    id: 'view',
-    label: 'Ver detalhes',
-    icon: createIcon(<path d="M12 6c4 0 7.5 2.6 9 6-1.5 3.4-5 6-9 6s-7.5-2.6-9-6c1.5-3.4 5-6 9-6Zm0 10a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" fill="currentColor" />),
-  },
-  {
-    id: 'confirm',
-    label: 'Confirmar',
-    icon: createIcon(
-      <path d="m10.2 16.6-3.8-3.8 1.4-1.4 2.4 2.4 5.6-5.6 1.4 1.4Z" fill="currentColor" />,
-    ),
-  },
-  {
-    id: 'cancel',
-    label: 'Cancelar',
-    tone: 'danger',
-    icon: createIcon(
-      <path d="m7.4 7.4 9.2 9.2-1.4 1.4-9.2-9.2Zm9.2 0-9.2 9.2 1.4 1.4 9.2-9.2Z" fill="currentColor" />,
-    ),
-  },
-]
-
-const bookingColumns: AdminTableColumn[] = [
-  { id: 'protocol', label: 'Protocolo' },
-  { id: 'name', label: 'Nome' },
-  { id: 'trail', label: 'Trilha' },
-  { id: 'date', label: 'Data' },
-  { id: 'time', label: 'Horário' },
-  { id: 'participants', label: 'Participantes', align: 'center' },
-  { id: 'guide', label: 'Guia' },
-]
-
 
 type ChartDatum = {
   label: string
@@ -693,9 +631,8 @@ type SectionBuilderParams = {
   data: AdminPageData
   trailsSection: SectionConfig
   guidesSection: SectionConfig
-  bookingActionFeedback: { message: string; tone: 'success' | 'error' } | null
-  onOpenBookingModal: () => void
-  onBookingTableAction: (rowId: string, actionId: string) => void
+  sessionWizardFeedback: { message: string; tone: 'success' | 'error' } | null
+  onOpenSessionWizard: () => void
   onParticipantTableAction: (rowId: string, actionId: string) => void
   onOpenEventModal: () => void
   trailOptions: AdminTrail[]
@@ -713,6 +650,10 @@ type SectionBuilderParams = {
   onSelectSessionsTrail: (event: ChangeEvent<HTMLSelectElement>) => void
   onRefreshSessions: () => void
   onToggleSessionParticipants: (sessionId: string) => void
+  messageTemplates: Record<MessageTemplateId, string>
+  onUpdateMessageTemplate: (
+    updater: (previous: Record<MessageTemplateId, string>) => Record<MessageTemplateId, string>,
+  ) => void
 }
 
 const buildSection = ({
@@ -720,9 +661,8 @@ const buildSection = ({
   data,
   trailsSection,
   guidesSection,
-  bookingActionFeedback,
-  onOpenBookingModal,
-  onBookingTableAction,
+  sessionWizardFeedback,
+  onOpenSessionWizard,
   onParticipantTableAction,
   onOpenEventModal,
   trailOptions,
@@ -733,6 +673,8 @@ const buildSection = ({
   onSelectSessionsTrail,
   onRefreshSessions,
   onToggleSessionParticipants,
+  messageTemplates,
+  onUpdateMessageTemplate,
 }: SectionBuilderParams): SectionConfig => {
   if (key === 'trilhas') {
     return trailsSection
@@ -841,58 +783,112 @@ const buildSection = ({
       }
     case 'agendamentos':
       return {
-        title: 'Agendamentos',
-        description: 'Gerencie reservas de trilhas e controle os status em tempo real',
+        title: 'Criar turma',
+        description: 'Publique novas turmas e monitore a disponibilidade em tempo real',
         actions: (
-          <>
-            <button type="button" className="admin-secondary-button">Exportar CSV</button>
-            <button type="button" className="admin-primary-button" onClick={onOpenBookingModal}>
-              Novo Agendamento
-            </button>
-          </>
+          <button type="button" className="admin-primary-button" onClick={onOpenSessionWizard}>
+            Iniciar fluxo de criação
+          </button>
         ),
         content: (
-          <div className="admin-section">
-            <div className="admin-filters">
-              <label>
-                Trilha
-                <select defaultValue="todas">
-                  <option value="todas">Todas</option>
-                </select>
-              </label>
-              <label>
-                Status
-                <select defaultValue="todos">
-                  <option value="todos">Todos</option>
-                  <option value="confirmado">Confirmados</option>
-                  <option value="pendente">Pendentes</option>
-                  <option value="cancelado">Cancelados</option>
-                </select>
-              </label>
-              <label>
-                Período
-                <input type="date" defaultValue={new Date().toISOString().slice(0, 10)} />
-              </label>
-            </div>
-            {bookingActionFeedback ? (
+          <div className="admin-session-control">
+            {sessionWizardFeedback ? (
               <div
                 className={`admin-alert admin-alert--${
-                  bookingActionFeedback.tone === 'success' ? 'success' : 'error'
+                  sessionWizardFeedback.tone === 'success' ? 'success' : 'error'
                 }`}
               >
-                {bookingActionFeedback.message}
+                {sessionWizardFeedback.message}
               </div>
             ) : null}
-            <AdminTable
-              columns={bookingColumns}
-              rows={data.bookingRows}
-              onAction={onBookingTableAction}
-              emptyMessage={
-                data.isLive
-                  ? 'Nenhum agendamento encontrado para o período selecionado.'
-                  : data.error ?? 'Agendamentos indisponíveis.'
-              }
-            />
+            <section className="admin-card admin-session-control__hero">
+              <header className="admin-card__header">
+                <h2>Fluxo guiado de criação</h2>
+                <span>
+                  Avance pelas etapas para configurar trilha, data, horário, guia, telefone e vagas antes de publicar.
+                </span>
+              </header>
+              <div className="admin-session-control__steps">
+                {SESSION_WIZARD_STEPS.map((wizardStep, index) => (
+                  <div key={wizardStep} className="admin-session-control__step">
+                    <span className="admin-session-control__step-index">{index + 1}</span>
+                    <div className="admin-session-control__step-body">
+                      <strong>{sessionWizardStepLabels[wizardStep]}</strong>
+                      <span>{sessionWizardStepDescriptions[wizardStep]}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <button type="button" className="admin-primary-button" onClick={onOpenSessionWizard}>
+                Abrir wizard de turma
+              </button>
+            </section>
+            <div className="admin-grid admin-grid--two admin-session-control__grid">
+              <section className="admin-card">
+                <header className="admin-card__header">
+                  <h2>Turmas do dia</h2>
+                  <span>Ocupação das próximas saídas publicadas</span>
+                </header>
+                <div className="admin-card__content">
+                  {data.todaysTrails.length > 0 ? (
+                    <ul className="admin-session-control__list">
+                      {data.todaysTrails.map((trail) => (
+                        <li key={trail.id}>
+                          <div className="admin-session-control__list-header">
+                            <strong>{trail.name}</strong>
+                            <span>{trail.schedule}</span>
+                          </div>
+                          <div className="admin-session-control__list-meta">
+                            <span>{trail.capacity}</span>
+                            <span>{trail.occupancy}%</span>
+                          </div>
+                          <div className="admin-session-control__progress" aria-hidden="true">
+                            <div
+                              className="admin-session-control__progress-bar"
+                              style={{ width: `${Math.min(100, Math.max(0, trail.occupancy))}%` }}
+                            />
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="admin-session-control__placeholder">
+                      Ainda não há turmas programadas para hoje.
+                    </p>
+                  )}
+                </div>
+              </section>
+              <section className="admin-card">
+                <header className="admin-card__header">
+                  <h2>Resumo das trilhas</h2>
+                  <span>Destaques de disponibilidade e status geral</span>
+                </header>
+                <div className="admin-card__content admin-session-control__summary">
+                  {data.trailCards.length > 0 ? (
+                    <ul>
+                      {data.trailCards.slice(0, 4).map((trail) => (
+                        <li key={trail.id}>
+                          <div className="admin-session-control__summary-header">
+                            <strong>{trail.name}</strong>
+                            <span>{trail.status}</span>
+                          </div>
+                          <p>{trail.description}</p>
+                          <div className="admin-session-control__summary-meta">
+                            <span>{trail.difficulty}</span>
+                            <span>{trail.duration}</span>
+                            <span>{trail.capacity}</span>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="admin-session-control__placeholder">
+                      Cadastre trilhas para acompanhar um panorama de disponibilidade.
+                    </p>
+                  )}
+                </div>
+              </section>
+            </div>
           </div>
         ),
       }
@@ -1260,7 +1256,7 @@ const buildSection = ({
                       <textarea
                         value={messageTemplates[template.id]}
                         onChange={(event) =>
-                          setMessageTemplates((prev) => ({
+                          onUpdateMessageTemplate((prev) => ({
                             ...prev,
                             [template.id]: event.target.value,
                           }))
@@ -1321,20 +1317,15 @@ function AdminPage() {
   const [isSavingTrail, setIsSavingTrail] = useState(false)
   const [trailFeedback, setTrailFeedback] = useState<string | null>(null)
   const [trailFormError, setTrailFormError] = useState<string | null>(null)
-  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false)
-  const [bookingForm, setBookingForm] = useState<BookingFormState>(initialBookingFormState)
-  const [bookingFormError, setBookingFormError] = useState<string | null>(null)
-  const [isSavingBooking, setIsSavingBooking] = useState(false)
-  const [bookingActionFeedback, setBookingActionFeedback] = useState<
+  const [isSessionWizardOpen, setIsSessionWizardOpen] = useState(false)
+  const [sessionWizardStep, setSessionWizardStep] = useState<SessionWizardStep>(SESSION_WIZARD_STEPS[0])
+  const [sessionWizardForm, setSessionWizardForm] = useState<SessionWizardFormState>(INITIAL_SESSION_WIZARD_FORM)
+  const [sessionWizardFeedback, setSessionWizardFeedback] = useState<
     { message: string; tone: 'success' | 'error' }
   | null>(null)
   const [messageTemplates, setMessageTemplates] = useState<Record<MessageTemplateId, string>>(() => ({
     ...DEFAULT_MESSAGE_TEMPLATES,
   }))
-  const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null)
-  const [bookingDetail, setBookingDetail] = useState<AdminBookingDetail | null>(null)
-  const [bookingDetailError, setBookingDetailError] = useState<string | null>(null)
-  const [isLoadingBookingDetail, setIsLoadingBookingDetail] = useState(false)
   const [selectedParticipantId, setSelectedParticipantId] = useState<string | null>(null)
   const [participantDetail, setParticipantDetail] = useState<AdminParticipantDetail | null>(null)
   const [participantDetailError, setParticipantDetailError] = useState<string | null>(null)
@@ -1559,6 +1550,24 @@ function AdminPage() {
     [trailsState.items],
   )
 
+  const loadOverview = useCallback(async () => {
+    setIsLoadingOverview(true)
+    try {
+      const data = await fetchAdminOverview()
+      setOverview(data)
+      setOverviewError(null)
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível carregar os dados em tempo real.'
+      setOverview(null)
+      setOverviewError(message)
+    } finally {
+      setIsLoadingOverview(false)
+    }
+  }, [])
+
   useEffect(() => {
     if (activeSection === 'guias' && !guidesState.isInitialized) {
       loadGuides()
@@ -1615,16 +1624,92 @@ function AdminPage() {
     setTrailFormError(null)
   }, [])
 
-  const resetBookingForm = useCallback(() => {
-    const today = new Date().toISOString().slice(0, 10)
-    const firstTrailId = trailsState.items[0]?.id ?? ''
-    setBookingForm({
-      ...initialBookingFormState,
-      trailId: firstTrailId,
-      scheduledDate: today,
+  const resetSessionWizard = useCallback(() => {
+    setSessionWizardForm(INITIAL_SESSION_WIZARD_FORM)
+    setSessionWizardStep(SESSION_WIZARD_STEPS[0])
+  }, [])
+
+  const handleOpenSessionWizard = useCallback(() => {
+    resetSessionWizard()
+    setSessionWizardFeedback(null)
+    setIsSessionWizardOpen(true)
+  }, [resetSessionWizard])
+
+  const handleSessionWizardStepChange = useCallback((nextStep: SessionWizardStep) => {
+    setSessionWizardStep(nextStep)
+  }, [])
+
+  const handleSessionWizardFormChange = useCallback(
+    (updates: Partial<SessionWizardFormState>) => {
+      setSessionWizardForm((prev) => ({ ...prev, ...updates }))
+    },
+    [],
+  )
+
+  const handleSessionWizardComplete = useCallback(
+    async (session: AdminTrailSession) => {
+      setSessionWizardFeedback({
+        message: `Turma criada para ${session.trailName ?? 'a trilha selecionada'} em ${formatDateLabel(
+          session.startsAt,
+        )} às ${formatTimeLabel(session.startsAt)}.`,
+        tone: 'success',
+      })
+      setIsSessionWizardOpen(false)
+      resetSessionWizard()
+      const refreshPromises: Array<Promise<void>> = [loadOverview(), loadTrails()]
+      if (
+        sessionExplorer.trailId === 'all' ||
+        sessionExplorer.trailId === '' ||
+        sessionExplorer.trailId === session.trailId
+      ) {
+        const targetTrailId = sessionExplorer.trailId === '' ? 'all' : sessionExplorer.trailId
+        refreshPromises.push(loadTrailSessions(targetTrailId))
+      }
+      await Promise.all(refreshPromises)
+    },
+    [
+      formatDateLabel,
+      formatTimeLabel,
+      loadOverview,
+      loadTrailSessions,
+      loadTrails,
+      resetSessionWizard,
+      sessionExplorer.trailId,
+    ],
+  )
+
+  const handleSessionWizardCancel = useCallback(() => {
+    setIsSessionWizardOpen(false)
+    resetSessionWizard()
+  }, [resetSessionWizard])
+
+  const handleCloseParticipantDetail = useCallback(() => {
+    setSelectedParticipantId(null)
+    setParticipantDetail(null)
+    setParticipantDetailError(null)
+  }, [])
+
+  const handleStartWizardFromParticipant = useCallback(() => {
+    if (!participantDetail) {
+      return
+    }
+
+    const scheduledDate = participantDetail.booking.scheduledFor.slice(0, 10)
+    const scheduledTime = participantDetail.booking.scheduledFor.slice(11, 16)
+
+    setSessionWizardForm({
+      ...INITIAL_SESSION_WIZARD_FORM,
+      trailId: participantDetail.booking.trail.id,
+      scheduledDate,
+      scheduledTime,
+      guideCpf: participantDetail.booking.guide?.cpf ?? '',
+      guidePhone: participantDetail.phone ?? participantDetail.booking.contactPhone ?? '',
     })
-    setBookingFormError(null)
-  }, [trailsState.items])
+    setSessionWizardStep(SESSION_WIZARD_STEPS[0])
+    setSessionWizardFeedback(null)
+    setIsSessionWizardOpen(true)
+    handleCloseParticipantDetail()
+  }, [handleCloseParticipantDetail, participantDetail])
 
   const resetEventForm = useCallback(() => {
     setEventForm(initialEventFormState)
@@ -1646,72 +1731,6 @@ function AdminPage() {
     }))
   }, [])
 
-  const handleAddBookingParticipant = useCallback(() => {
-    setBookingForm((prev) => ({
-      ...prev,
-      participants: [
-        ...prev.participants,
-        { id: createTempId(), fullName: '', cpf: '', email: '', phone: '' },
-      ],
-    }))
-  }, [])
-
-  const handleUpdateBookingParticipant = useCallback(
-    (index: number, field: keyof Omit<BookingParticipantForm, 'id'>, value: string) => {
-      setBookingForm((prev) => {
-        if (!prev.participants[index]) {
-          return prev
-        }
-
-        const next = prev.participants.slice()
-        next[index] = { ...next[index], [field]: value }
-        return { ...prev, participants: next }
-      })
-    },
-    [],
-  )
-
-  const handleRemoveBookingParticipant = useCallback((index: number) => {
-    setBookingForm((prev) => ({
-      ...prev,
-      participants: prev.participants.filter((_, itemIndex) => itemIndex !== index),
-    }))
-  }, [])
-
-  const handleBookingFormFieldChange = useCallback(
-    (field: keyof Omit<BookingFormState, 'participants'>, value: string) => {
-      setBookingForm((prev) => {
-        if (field === 'trailId') {
-          return {
-            ...prev,
-            trailId: value,
-            sessionId: '',
-            guideCpf: '',
-          }
-        }
-
-        return {
-          ...prev,
-          [field]: value,
-        }
-      })
-    },
-    [],
-  )
-
-  const handleOpenBookingModal = useCallback(async () => {
-    if (!trailsState.isInitialized) {
-      await loadTrails()
-    }
-    resetBookingForm()
-    setIsBookingModalOpen(true)
-  }, [loadTrails, resetBookingForm, trailsState.isInitialized])
-
-  const handleCloseBookingModal = useCallback(() => {
-    setIsBookingModalOpen(false)
-    resetBookingForm()
-  }, [resetBookingForm])
-
   const handleOpenEventModal = useCallback(() => {
     resetEventForm()
     setIsEventModalOpen(true)
@@ -1721,87 +1740,6 @@ function AdminPage() {
     setIsEventModalOpen(false)
     resetEventForm()
   }, [resetEventForm])
-
-  const handleCloseBookingDetail = useCallback(() => {
-    setSelectedBookingId(null)
-    setBookingDetail(null)
-    setBookingDetailError(null)
-  }, [])
-
-  const handleCloseParticipantDetail = useCallback(() => {
-    setSelectedParticipantId(null)
-    setParticipantDetail(null)
-    setParticipantDetailError(null)
-  }, [])
-
-  const loadOverview = useCallback(async () => {
-    setIsLoadingOverview(true)
-    try {
-      const data = await fetchAdminOverview()
-      setOverview(data)
-      setOverviewError(null)
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : 'Não foi possível carregar os dados em tempo real.'
-      setOverview(null)
-      setOverviewError(message)
-    } finally {
-      setIsLoadingOverview(false)
-    }
-  }, [])
-
-  const updateBookingStatus = useCallback(
-    async (bookingId: string, status: 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED' | 'RESCHEDULED') => {
-      try {
-        setBookingActionFeedback(null)
-        await updateAdminBookingStatus(bookingId, { status })
-        setBookingActionFeedback({
-          message: `Status do agendamento atualizado para ${status.toLowerCase()}.`,
-          tone: 'success',
-        })
-        await loadOverview()
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : 'Não foi possível atualizar o status do agendamento.'
-        setBookingActionFeedback({ message, tone: 'error' })
-      }
-    },
-    [loadOverview],
-  )
-
-  const handleBookingTableAction = useCallback(
-    async (rowId: string, actionId: string) => {
-      if (actionId === 'view') {
-        setSelectedBookingId(rowId)
-        setBookingDetail(null)
-        setBookingDetailError(null)
-        setIsLoadingBookingDetail(true)
-        try {
-          const detail = await fetchAdminBooking(rowId)
-          setBookingDetail(detail)
-        } catch (error) {
-          const message =
-            error instanceof Error ? error.message : 'Não foi possível carregar os detalhes do agendamento.'
-          setBookingDetailError(message)
-        } finally {
-          setIsLoadingBookingDetail(false)
-        }
-        return
-      }
-
-      if (actionId === 'confirm') {
-        updateBookingStatus(rowId, 'CONFIRMED')
-        return
-      }
-
-      if (actionId === 'cancel') {
-        updateBookingStatus(rowId, 'CANCELLED')
-      }
-    },
-    [fetchAdminBooking, updateBookingStatus],
-  )
 
   const handleParticipantTableAction = useCallback(
     async (rowId: string, actionId: string) => {
@@ -1958,101 +1896,6 @@ function AdminPage() {
     [sessionExplorer.expandedSessionId],
   )
 
-  const handleBookingSubmit = useCallback(
-    async (event: FormEvent<HTMLFormElement>) => {
-      event.preventDefault()
-
-      if (!bookingForm.trailId) {
-        setBookingFormError('Selecione uma trilha para criar o agendamento.')
-        return
-      }
-
-      const participantsCount = Number.parseInt(bookingForm.participantsCount, 10)
-      if (!Number.isFinite(participantsCount) || participantsCount <= 0) {
-        setBookingFormError('Informe a quantidade de participantes.')
-        return
-      }
-
-      let scheduledDate = bookingForm.scheduledDate
-      let scheduledTime = bookingForm.scheduledTime
-
-      if (bookingForm.sessionId) {
-        const session = trailsState.items
-          .flatMap((trail) => trail.sessions)
-          .find((item) => item.id === bookingForm.sessionId)
-
-        if (!session) {
-          setBookingFormError('Sessão selecionada não encontrada.')
-          return
-        }
-
-        scheduledDate = session.startsAt.slice(0, 10)
-        scheduledTime = session.startsAt.slice(11, 16)
-      } else if (!scheduledDate) {
-        setBookingFormError('Informe a data desejada para o agendamento.')
-        return
-      }
-
-      const participants = bookingForm.participants
-        .filter((participant) => participant.fullName.trim().length > 0)
-        .map((participant) => ({
-          fullName: participant.fullName.trim(),
-          cpf: participant.cpf.trim() || undefined,
-          email: participant.email.trim() || undefined,
-          phone: participant.phone.trim() || undefined,
-        }))
-
-      setIsSavingBooking(true)
-      setBookingFormError(null)
-
-      try {
-        await createAdminBooking({
-          trailId: bookingForm.trailId,
-          sessionId: bookingForm.sessionId || undefined,
-          guideCpf: bookingForm.guideCpf ? sanitizeCpf(bookingForm.guideCpf) : undefined,
-          contactName: bookingForm.contactName,
-          contactEmail: bookingForm.contactEmail,
-          contactPhone: bookingForm.contactPhone,
-          scheduledDate,
-          scheduledTime,
-          participantsCount,
-          notes: bookingForm.notes || undefined,
-          participants,
-          source: 'ADMIN',
-        })
-
-        setBookingActionFeedback({
-          message: 'Agendamento registrado com sucesso.',
-          tone: 'success',
-        })
-        setIsBookingModalOpen(false)
-        resetBookingForm()
-        await loadOverview()
-      } catch (error) {
-        const message = error instanceof Error ? error.message : 'Não foi possível criar o agendamento.'
-        setBookingFormError(message)
-      } finally {
-        setIsSavingBooking(false)
-      }
-    },
-    [
-      bookingForm.contactEmail,
-      bookingForm.contactName,
-      bookingForm.contactPhone,
-      bookingForm.guideCpf,
-      bookingForm.notes,
-      bookingForm.participants,
-      bookingForm.participantsCount,
-      bookingForm.scheduledDate,
-      bookingForm.scheduledTime,
-      bookingForm.sessionId,
-      bookingForm.trailId,
-      loadOverview,
-      resetBookingForm,
-      trailsState.items,
-    ],
-  )
-
   const handleEventSubmit = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault()
@@ -2144,61 +1987,12 @@ function AdminPage() {
     ],
   )
 
-  const handleCreateBookingFromParticipant = useCallback(async () => {
-    if (!participantDetail) {
-      return
-    }
-
-    await handleOpenBookingModal()
-    setBookingForm((prev) => ({
-      ...prev,
-      contactName: participantDetail.fullName,
-      contactEmail: participantDetail.email ?? participantDetail.booking.contactEmail,
-      contactPhone: participantDetail.phone ?? participantDetail.booking.contactPhone,
-      participantsCount: String(Math.max(1, participantDetail.booking.participantsCount)),
-      participants: [
-        {
-          id: createTempId(),
-          fullName: participantDetail.fullName,
-          cpf: participantDetail.cpf ?? '',
-          email: participantDetail.email ?? '',
-          phone: participantDetail.phone ?? '',
-        },
-        ...prev.participants,
-      ],
-    }))
-    handleCloseParticipantDetail()
-  }, [handleCloseParticipantDetail, handleOpenBookingModal, participantDetail])
-
-  const selectedBookingTrail = useMemo(() => {
-    return trailsState.items.find((trail) => trail.id === bookingForm.trailId) ?? null
-  }, [bookingForm.trailId, trailsState.items])
-
-  const availableSessions = useMemo(() => {
-    return selectedBookingTrail?.sessions ?? []
-  }, [selectedBookingTrail])
-
   const messageTemplateOptions = useMemo(() => {
     return MESSAGE_TEMPLATE_METADATA.map((metadata) => ({
       id: metadata.id,
       label: metadata.label,
     }))
   }, [])
-
-  const availableGuidesForTrail = useMemo(() => {
-    if (!selectedBookingTrail) {
-      return trailsState.guides
-    }
-    return selectedBookingTrail.guides.map((guide) => ({
-      cpf: guide.cpf,
-      name: guide.name,
-    }))
-  }, [selectedBookingTrail, trailsState.guides])
-
-  const selectedBookingSession = useMemo(() => {
-    return availableSessions.find((session) => session.id === bookingForm.sessionId) ?? null
-  }, [availableSessions, bookingForm.sessionId])
-
   const handleOpenInviteModal = useCallback(() => {
     setInviteCpf('')
     setInviteRole('C')
@@ -2668,59 +2462,6 @@ function AdminPage() {
   }, [loadOverview])
 
   const adminData = useMemo<AdminPageData>(() => {
-    const bookings = overview
-      ? overview.bookings.map((booking) => ({
-          id: booking.id,
-          cells: {
-            protocol: booking.protocol,
-            name: booking.contactName,
-            trail: booking.trailName,
-            date: booking.dateLabel,
-            time: booking.timeLabel,
-            participants: String(booking.participantsCount),
-            guide: booking.guideName ?? '—',
-          },
-          status: booking.statusTone,
-          actions: tableActions,
-        }))
-      : []
-
-    const participants = overview
-      ? overview.participants.map((participant) => ({
-          id: participant.id,
-          cells: {
-            name: participant.name,
-            contact: participant.contact,
-            trail: participant.trailName,
-            datetime: participant.datetimeLabel,
-            status: participant.statusTone.label,
-          },
-          status: participant.statusTone,
-          actions: [
-            {
-              id: 'manage',
-              label: 'Gerenciar participante',
-              icon: createIcon(
-                <>
-                  <path
-                    d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Z"
-                    fill="currentColor"
-                    opacity="0.82"
-                  />
-                  <path
-                    d="M4 19c0-3 4-4.5 8-4.5s8 1.5 8 4.5"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </>,
-              ),
-            },
-          ],
-        }))
-      : []
-
     const todaysSessions = overview
       ? overview.todaysSessions.map((session) => ({
           id: session.id,
@@ -2805,8 +2546,6 @@ function AdminPage() {
 
     return {
       metrics: overview?.metrics ?? [],
-      bookingRows: bookings,
-      participantRows: participants,
       todaysTrails: todaysSessions,
       upcomingEvents: upcoming,
       recentActivity: activities,
@@ -3556,9 +3295,8 @@ function AdminPage() {
         data: adminData,
         trailsSection,
         guidesSection,
-        bookingActionFeedback,
-        onOpenBookingModal: handleOpenBookingModal,
-        onBookingTableAction: handleBookingTableAction,
+        sessionWizardFeedback,
+        onOpenSessionWizard: handleOpenSessionWizard,
         onParticipantTableAction: handleParticipantTableAction,
         onOpenEventModal: handleOpenEventModal,
         trailOptions: trailsState.items,
@@ -3569,15 +3307,16 @@ function AdminPage() {
         onSelectSessionsTrail: handleSessionsTrailSelect,
         onRefreshSessions: handleRefreshTrailSessions,
         onToggleSessionParticipants: handleToggleSessionParticipants,
+        messageTemplates,
+        onUpdateMessageTemplate: setMessageTemplates,
       }),
     [
       activeSection,
       adminData,
       trailsSection,
       guidesSection,
-      bookingActionFeedback,
-      handleOpenBookingModal,
-      handleBookingTableAction,
+      sessionWizardFeedback,
+      handleOpenSessionWizard,
       handleParticipantTableAction,
       handleOpenEventModal,
       trailsState.items,
@@ -3588,6 +3327,7 @@ function AdminPage() {
       handleSessionsTrailSelect,
       handleRefreshTrailSessions,
       handleToggleSessionParticipants,
+      messageTemplates,
     ],
   )
 
@@ -3603,315 +3343,15 @@ function AdminPage() {
       header={{ title: section.title, description: section.description, actions: section.actions }}
     >
       {section.content}
-      {isBookingModalOpen ? (
-        <div className="admin-modal" role="dialog" aria-modal="true" aria-labelledby="booking-modal-title">
-          <div className="admin-modal__backdrop" aria-hidden="true" onClick={handleCloseBookingModal} />
-          <div className="admin-modal__dialog admin-modal__dialog--wide" role="document">
-            <button
-              type="button"
-              className="admin-modal__close"
-              onClick={handleCloseBookingModal}
-              aria-label="Fechar"
-            >
-              ×
-            </button>
-            <header className="admin-modal__header">
-              <h2 id="booking-modal-title">Novo agendamento</h2>
-              <p>Cadastre uma reserva vinculada a uma trilha ou sessão existente.</p>
-            </header>
-            <form className="admin-modal__form" onSubmit={handleBookingSubmit}>
-              <div className="admin-modal__body admin-modal__body--scroll">
-                {bookingFormError ? <div className="admin-modal__error">{bookingFormError}</div> : null}
-                <label>
-                  Trilha
-                  <select
-                    value={bookingForm.trailId}
-                    onChange={(event) => handleBookingFormFieldChange('trailId', event.target.value)}
-                    required
-                  >
-                    <option value="">Selecione uma trilha</option>
-                    {trailsState.items.map((trail) => (
-                      <option key={trail.id} value={trail.id}>
-                        {trail.name}
-                      </option>
-                    ))}
-                  </select>
-                  {trailsState.error ? (
-                    <small className="admin-modal__hint">{trailsState.error}</small>
-                  ) : null}
-                </label>
-                <label>
-                  Sessão existente
-                  <select
-                    value={bookingForm.sessionId}
-                    onChange={(event) => handleBookingFormFieldChange('sessionId', event.target.value)}
-                    disabled={!selectedBookingTrail}
-                  >
-                    <option value="">Criar nova sessão manualmente</option>
-                    {availableSessions.map((session) => (
-                      <option key={session.id} value={session.id}>
-                        {`${formatDateLabel(session.startsAt)} • ${formatTimeLabel(session.startsAt)} (${session.capacity} vagas)`}
-                      </option>
-                    ))}
-                  </select>
-                  <small className="admin-modal__hint">
-                    Ao selecionar uma sessão, o agendamento utilizará as vagas disponíveis automaticamente.
-                  </small>
-                </label>
-                {selectedBookingSession ? (
-                  <p className="admin-modal__hint">
-                    Capacidade da sessão: {selectedBookingSession.capacity} vagas. Status atual: {selectedBookingSession.status.toLowerCase()}.
-                  </p>
-                ) : null}
-                <label>
-                  Guia responsável
-                  <select
-                    value={bookingForm.guideCpf}
-                    onChange={(event) => handleBookingFormFieldChange('guideCpf', event.target.value)}
-                  >
-                    <option value="">Definir posteriormente</option>
-                    {availableGuidesForTrail.map((guide) => (
-                      <option key={guide.cpf} value={guide.cpf}>
-                        {guide.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Nome do responsável
-                  <input
-                    type="text"
-                    value={bookingForm.contactName}
-                    onChange={(event) => handleBookingFormFieldChange('contactName', event.target.value)}
-                    required
-                  />
-                </label>
-                <label>
-                  E-mail de contato
-                  <input
-                    type="email"
-                    value={bookingForm.contactEmail}
-                    onChange={(event) => handleBookingFormFieldChange('contactEmail', event.target.value)}
-                    required
-                  />
-                </label>
-                <label>
-                  Telefone
-                  <input
-                    type="tel"
-                    value={bookingForm.contactPhone}
-                    onChange={(event) => handleBookingFormFieldChange('contactPhone', event.target.value)}
-                    required
-                  />
-                </label>
-                <label>
-                  Data desejada
-                  <input
-                    type="date"
-                    value={bookingForm.scheduledDate}
-                    onChange={(event) => handleBookingFormFieldChange('scheduledDate', event.target.value)}
-                    disabled={Boolean(bookingForm.sessionId)}
-                    required={!bookingForm.sessionId}
-                  />
-                </label>
-                <label>
-                  Horário previsto
-                  <input
-                    type="time"
-                    value={bookingForm.scheduledTime}
-                    onChange={(event) => handleBookingFormFieldChange('scheduledTime', event.target.value)}
-                    disabled={Boolean(bookingForm.sessionId)}
-                  />
-                </label>
-                <label>
-                  Quantidade de participantes
-                  <input
-                    type="number"
-                    min={1}
-                    value={bookingForm.participantsCount}
-                    onChange={(event) => handleBookingFormFieldChange('participantsCount', event.target.value)}
-                    required
-                  />
-                </label>
-                <label>
-                  Observações
-                  <textarea
-                    rows={3}
-                    value={bookingForm.notes}
-                    onChange={(event) => handleBookingFormFieldChange('notes', event.target.value)}
-                    placeholder="Informações relevantes para a equipe operacional"
-                  />
-                </label>
-                <div className="admin-modal__section">
-                  <div className="admin-modal__section-header">
-                    <h3>Acompanhantes</h3>
-                    <button type="button" className="admin-secondary-button" onClick={handleAddBookingParticipant}>
-                      Adicionar participante
-                    </button>
-                  </div>
-                  {bookingForm.participants.length === 0 ? (
-                    <p className="admin-empty-state">Nenhum acompanhante cadastrado.</p>
-                  ) : (
-                    bookingForm.participants.map((participant, index) => (
-                      <div key={participant.id} className="admin-modal__inline-fields">
-                        <label>
-                          Nome completo
-                          <input
-                            type="text"
-                            value={participant.fullName}
-                            onChange={(event) =>
-                              handleUpdateBookingParticipant(index, 'fullName', event.target.value)
-                            }
-                          />
-                        </label>
-                        <label>
-                          CPF
-                          <input
-                            type="text"
-                            value={participant.cpf}
-                            onChange={(event) =>
-                              handleUpdateBookingParticipant(index, 'cpf', event.target.value)
-                            }
-                          />
-                        </label>
-                        <label>
-                          E-mail
-                          <input
-                            type="email"
-                            value={participant.email}
-                            onChange={(event) =>
-                              handleUpdateBookingParticipant(index, 'email', event.target.value)
-                            }
-                          />
-                        </label>
-                        <label>
-                          Telefone
-                          <input
-                            type="tel"
-                            value={participant.phone}
-                            onChange={(event) =>
-                              handleUpdateBookingParticipant(index, 'phone', event.target.value)
-                            }
-                          />
-                        </label>
-                        <button
-                          type="button"
-                          className="admin-secondary-button admin-secondary-button--danger"
-                          onClick={() => handleRemoveBookingParticipant(index)}
-                        >
-                          Remover
-                        </button>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-              <footer className="admin-modal__actions">
-                <button type="button" className="admin-secondary-button" onClick={handleCloseBookingModal}>
-                  Cancelar
-                </button>
-                <button type="submit" className="admin-primary-button" disabled={isSavingBooking}>
-                  {isSavingBooking ? 'Registrando...' : 'Registrar agendamento'}
-                </button>
-              </footer>
-            </form>
-          </div>
-        </div>
-      ) : null}
-      {selectedBookingId ? (
-        <div className="admin-modal" role="dialog" aria-modal="true" aria-labelledby="booking-detail-title">
-          <div className="admin-modal__backdrop" aria-hidden="true" onClick={handleCloseBookingDetail} />
-          <div className="admin-modal__dialog admin-modal__dialog--wide" role="document">
-            <button
-              type="button"
-              className="admin-modal__close"
-              onClick={handleCloseBookingDetail}
-              aria-label="Fechar"
-            >
-              ×
-            </button>
-            <header className="admin-modal__header">
-              <h2 id="booking-detail-title">Detalhes do agendamento</h2>
-              <p>Visualize informações de contato, status e participantes cadastrados.</p>
-            </header>
-            <div className="admin-modal__body admin-modal__body--scroll">
-              {isLoadingBookingDetail ? (
-                <p className="admin-empty-state">Carregando detalhes do agendamento...</p>
-              ) : bookingDetail ? (
-                <>
-                  <div className="admin-detail-list">
-                    <div>
-                      <dt>Protocolo</dt>
-                      <dd>{bookingDetail.protocol}</dd>
-                    </div>
-                    <div>
-                      <dt>Status</dt>
-                      <dd>
-                        <span className={`admin-status admin-status--${bookingDetail.statusTone.tone || 'info'}`}>
-                          {bookingDetail.statusTone.label}
-                        </span>
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>Trilha</dt>
-                      <dd>{bookingDetail.trail.name}</dd>
-                    </div>
-                    <div>
-                      <dt>Guia</dt>
-                      <dd>{bookingDetail.guide?.name ?? 'A definir'}</dd>
-                    </div>
-                    <div>
-                      <dt>Data agendada</dt>
-                      <dd>
-                        {formatDateLabel(bookingDetail.scheduledFor)} • {formatTimeLabel(bookingDetail.scheduledFor)}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>Contato</dt>
-                      <dd>
-                        {bookingDetail.contactName}
-                        <br />
-                        <small>{bookingDetail.contactEmail}</small>
-                        <br />
-                        <small>{bookingDetail.contactPhone}</small>
-                      </dd>
-                    </div>
-                  </div>
-                  {bookingDetail.notes ? (
-                    <p className="admin-modal__hint">Observações: {bookingDetail.notes}</p>
-                  ) : null}
-                  <div className="admin-modal__section">
-                    <h3>Participantes</h3>
-                    <ul className="admin-modal__list">
-                      {bookingDetail.participants.map((participant) => (
-                        <li key={participant.id} className="admin-modal__list-item">
-                          <strong>{participant.fullName}</strong>
-                          <small>
-                            {participant.email ? `${participant.email} • ` : ''}
-                            {participant.phone ?? 'Sem telefone informado'}
-                          </small>
-                          {participant.isBanned ? (
-                            <span className="admin-status admin-status--danger">Banido</span>
-                          ) : null}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </>
-              ) : (
-                <div className="admin-modal__error">
-                  {bookingDetailError ?? 'Não foi possível carregar o agendamento selecionado.'}
-                </div>
-              )}
-            </div>
-            <footer className="admin-modal__actions">
-              <button type="button" className="admin-secondary-button" onClick={handleCloseBookingDetail}>
-                Fechar
-              </button>
-            </footer>
-          </div>
-        </div>
-      ) : null}
+      <AdminSessionWizard
+        isOpen={isSessionWizardOpen}
+        step={sessionWizardStep}
+        form={sessionWizardForm}
+        onStepChange={handleSessionWizardStepChange}
+        onFormChange={handleSessionWizardFormChange}
+        onCancel={handleSessionWizardCancel}
+        onComplete={handleSessionWizardComplete}
+      />
       {selectedParticipantId ? (
         <div className="admin-modal" role="dialog" aria-modal="true" aria-labelledby="participant-detail-title">
           <div
@@ -3998,10 +3438,10 @@ function AdminPage() {
               <button
                 type="button"
                 className="admin-secondary-button"
-                onClick={handleCreateBookingFromParticipant}
+                onClick={handleStartWizardFromParticipant}
                 disabled={!participantDetail}
               >
-                Novo agendamento
+                Criar turma
               </button>
               <button
                 type="button"

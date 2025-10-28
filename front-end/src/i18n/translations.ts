@@ -6,6 +6,8 @@ type HighlightedTitle = {
   suffix?: string
 }
 
+type TrailDifficultyKey = 'EASY' | 'MODERATE' | 'HARD'
+
 type WeatherConditionKey =
   | 'clear'
   | 'mostlyClear'
@@ -300,6 +302,90 @@ type FooterTranslation = {
   adminArea: { label: string; href: string }
 }
 
+type AdminWizardStepKey = 'trail' | 'date' | 'time' | 'guide' | 'phone' | 'capacity'
+
+type AdminSessionWizardFieldTranslation = {
+  label: string
+  placeholder?: string
+  help: string
+}
+
+type AdminSessionWizardTrailFieldTranslation = AdminSessionWizardFieldTranslation & {
+  preview: {
+    heading: string
+    description: string
+    duration: string
+    capacity: string
+    difficulty: string
+    action: string
+    imageAlt: string
+  }
+}
+
+type AdminSessionWizardTranslation = {
+  title: string
+  headline: string
+  description: string
+  steps: Record<AdminWizardStepKey, string>
+  fields: {
+    trail: AdminSessionWizardTrailFieldTranslation
+    date: AdminSessionWizardFieldTranslation
+    time: AdminSessionWizardFieldTranslation
+    guide: AdminSessionWizardFieldTranslation
+    phone: AdminSessionWizardFieldTranslation
+    capacity: AdminSessionWizardFieldTranslation
+  }
+  difficultyLabels: Record<TrailDifficultyKey, string>
+  duration: {
+    hoursAndMinutes: string
+    hoursOnly: string
+    minutesOnly: string
+  }
+  summary: {
+    title: string
+    description: string
+    trail: string
+    capacity: string
+    guide: string
+    phone: string
+    empty: string
+    availability: string
+    totalSpots: string
+    sessionsTitle: string
+    refreshHint: string
+    noSessions: string
+    sessionSpots: string
+  }
+  actions: {
+    cancel: string
+    previous: string
+    next: string
+    finish: string
+    saving: string
+    close: string
+  }
+  validation: {
+    trail: string
+    date: string
+    time: string
+    datetime: string
+    guide: string
+    phone: string
+    capacityRequired: string
+    capacityInvalid: string
+  }
+  status: {
+    loadOptionsError: string
+    loadSessionsError: string
+    submitError: string
+    loadingSessions: string
+  }
+}
+
+type AdminTranslation = {
+  sessionWizard: AdminSessionWizardTranslation
+}
+
 type TranslationContent = {
   navigation: NavigationTranslation
   footer: FooterTranslation
@@ -307,6 +393,7 @@ type TranslationContent = {
   guides: GuideTranslation
   booking: BookingTranslation
   faunaFlora: FaunaFloraTranslation
+  admin: AdminTranslation
 }
 
 const withBasePath = (path: string) => `${import.meta.env.BASE_URL}${path.replace(/^\//, '')}`
@@ -341,6 +428,110 @@ const translations: Record<Language, TranslationContent> = {
         { label: 'Fauna & Flora', href: '/fauna-e-flora' },
       ],
       adminArea: { label: 'Área ADM', href: '/login?redirect=/admin' },
+    },
+    admin: {
+      sessionWizard: {
+        title: 'Criar nova turma',
+        headline: 'Configure a turma do Parque das Dunas em etapas',
+        description:
+          'Selecione a trilha, defina data e horário, associe o guia e confirme as vagas antes de publicar.',
+        steps: {
+          trail: 'Trilha',
+          date: 'Data',
+          time: 'Horário',
+          guide: 'Guia',
+          phone: 'Telefone',
+          capacity: 'Vagas',
+        },
+        fields: {
+          trail: {
+            label: 'Trilha',
+            placeholder: 'Selecione uma trilha',
+            help: 'Escolha a trilha que receberá a nova turma.',
+            preview: {
+              heading: 'Conheça a trilha antes de avançar',
+              description: 'Revise os destaques principais e confirme se esta é a trilha correta.',
+              duration: 'Duração média',
+              capacity: 'Capacidade padrão',
+              difficulty: 'Nível de dificuldade',
+              action: 'Ir para a etapa de data',
+              imageAlt: 'Imagem da trilha {name}',
+            },
+          },
+          date: {
+            label: 'Data da turma',
+            help: 'Informe o dia da saída da turma.',
+          },
+          time: {
+            label: 'Horário de início',
+            help: 'Determine o horário de encontro do grupo.',
+          },
+          guide: {
+            label: 'Guia responsável',
+            placeholder: 'Selecione um guia',
+            help: 'Associe o guia que conduzirá a atividade.',
+          },
+          phone: {
+            label: 'Telefone do guia',
+            placeholder: '(00) 00000-0000',
+            help: 'Confirme o telefone direto para contato rápido.',
+          },
+          capacity: {
+            label: 'Vagas disponíveis',
+            placeholder: 'Ex.: 20',
+            help: 'Informe o limite de participantes para a turma.',
+          },
+        },
+        difficultyLabels: {
+          EASY: 'Leve',
+          MODERATE: 'Moderada',
+          HARD: 'Intensa',
+        },
+        duration: {
+          hoursAndMinutes: '{hours}h {minutes}min',
+          hoursOnly: '{hours}h',
+          minutesOnly: '{minutes}min',
+        },
+        summary: {
+          title: 'Resumo da trilha selecionada',
+          description: 'Acompanhe capacidade e sessões publicadas enquanto configura a nova turma.',
+          trail: 'Trilha selecionada',
+          capacity: 'Capacidade máxima',
+          guide: 'Guia sugerido',
+          phone: 'Telefone do guia',
+          empty: 'Selecione uma trilha para visualizar o resumo e as sessões disponíveis.',
+          availability: 'Total de vagas abertas nas próximas sessões',
+          totalSpots: '{count} vagas abertas',
+          sessionsTitle: 'Próximas sessões publicadas',
+          refreshHint: 'Atualização automática a cada 30 segundos.',
+          noSessions: 'Nenhuma sessão futura cadastrada para esta trilha.',
+          sessionSpots: '{count} vagas livres',
+        },
+        actions: {
+          cancel: 'Cancelar',
+          previous: 'Voltar',
+          next: 'Próximo',
+          finish: 'Publicar turma',
+          saving: 'Publicando...',
+          close: 'Fechar',
+        },
+        validation: {
+          trail: 'Selecione uma trilha para continuar.',
+          date: 'Informe a data da turma.',
+          time: 'Informe o horário de início.',
+          datetime: 'Data ou horário inválidos.',
+          guide: 'Selecione um guia responsável.',
+          phone: 'Informe o telefone do guia.',
+          capacityRequired: 'Informe a quantidade de vagas disponíveis.',
+          capacityInvalid: 'A capacidade deve ser um número maior que zero.',
+        },
+        status: {
+          loadOptionsError: 'Não foi possível carregar trilhas e guias.',
+          loadSessionsError: 'Não foi possível carregar as sessões da trilha selecionada.',
+          submitError: 'Não foi possível criar a turma.',
+          loadingSessions: 'Buscando sessões da trilha...',
+        },
+      },
     },
     home: {
       hero: {
@@ -1028,6 +1219,110 @@ const translations: Record<Language, TranslationContent> = {
         { label: 'Fauna & Flora', href: '/fauna-e-flora' },
       ],
       adminArea: { label: 'Admin area', href: '/login?redirect=/admin' },
+    },
+    admin: {
+      sessionWizard: {
+        title: 'Create a new class',
+        headline: 'Configure the guided session step by step',
+        description:
+          'Pick the trail, define date and time, assign the guide and confirm available seats before publishing.',
+        steps: {
+          trail: 'Trail',
+          date: 'Date',
+          time: 'Time',
+          guide: 'Guide',
+          phone: 'Guide phone',
+          capacity: 'Seats',
+        },
+        fields: {
+          trail: {
+            label: 'Trail',
+            placeholder: 'Select a trail',
+            help: 'Choose which trail will receive the new class.',
+            preview: {
+              heading: 'Review the trail before continuing',
+              description: 'Double-check the highlights to confirm this is the trail you want to publish.',
+              duration: 'Average duration',
+              capacity: 'Default capacity',
+              difficulty: 'Difficulty',
+              action: 'Go to the date step',
+              imageAlt: '{name} trail image',
+            },
+          },
+          date: {
+            label: 'Class date',
+            help: 'Select the day when the group will depart.',
+          },
+          time: {
+            label: 'Start time',
+            help: 'Define the meeting time for participants.',
+          },
+          guide: {
+            label: 'Assigned guide',
+            placeholder: 'Select a guide',
+            help: 'Assign the guide that will lead the activity.',
+          },
+          phone: {
+            label: 'Guide phone number',
+            placeholder: '(000) 000-0000',
+            help: 'Confirm a direct contact for quick coordination.',
+          },
+          capacity: {
+            label: 'Available seats',
+            placeholder: 'e.g. 20',
+            help: 'Set the maximum number of participants for the class.',
+          },
+        },
+        difficultyLabels: {
+          EASY: 'Easy',
+          MODERATE: 'Moderate',
+          HARD: 'Challenging',
+        },
+        duration: {
+          hoursAndMinutes: '{hours}h {minutes}m',
+          hoursOnly: '{hours}h',
+          minutesOnly: '{minutes}m',
+        },
+        summary: {
+          title: 'Trail overview',
+          description: 'Track capacity and published sessions while configuring the new class.',
+          trail: 'Selected trail',
+          capacity: 'Maximum capacity',
+          guide: 'Suggested guide',
+          phone: 'Guide phone',
+          empty: 'Select a trail to see its summary and upcoming sessions.',
+          availability: 'Total open seats in upcoming sessions',
+          totalSpots: '{count} open seats',
+          sessionsTitle: 'Upcoming published sessions',
+          refreshHint: 'Auto refresh every 30 seconds.',
+          noSessions: 'No future sessions registered for this trail.',
+          sessionSpots: '{count} seats available',
+        },
+        actions: {
+          cancel: 'Cancel',
+          previous: 'Back',
+          next: 'Next',
+          finish: 'Publish class',
+          saving: 'Publishing...',
+          close: 'Close',
+        },
+        validation: {
+          trail: 'Select a trail to continue.',
+          date: 'Provide the class date.',
+          time: 'Provide the start time.',
+          datetime: 'Invalid date or time.',
+          guide: 'Select the responsible guide.',
+          phone: 'Enter the guide phone number.',
+          capacityRequired: 'Enter the number of seats available.',
+          capacityInvalid: 'Capacity must be a number greater than zero.',
+        },
+        status: {
+          loadOptionsError: 'We could not load trails and guides.',
+          loadSessionsError: 'We could not load the sessions for the selected trail.',
+          submitError: 'We could not create the class.',
+          loadingSessions: 'Loading trail sessions...',
+        },
+      },
     },
     home: {
       hero: {
