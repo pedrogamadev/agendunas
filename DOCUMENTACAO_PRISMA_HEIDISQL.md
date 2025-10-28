@@ -37,7 +37,7 @@ Este roteiro explica como preparar o ambiente para que a API do AgenDunas utiliz
    ```
    O arquivo resultante deve conter algo como:
    ```env
-   DATABASE_URL="postgresql://postgres:postgres@localhost:5432/agendunas?schema=public"
+   DATABASE_URL="postgresql://postgres:6562@localhost:5432/agendunas?schema=public"
    ALLOWED_ORIGINS="http://localhost:5173,http://localhost:3000"
    PORT=3001
    ```
