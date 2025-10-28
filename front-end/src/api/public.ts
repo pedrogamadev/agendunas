@@ -61,6 +61,7 @@ export type PublicTrail = {
   imageUrl: string | null
   meetingPoint: string | null
   highlight: boolean
+  contactPhone?: string | null
   upcomingSession: {
     id: string
     startsAt: string
@@ -76,6 +77,7 @@ export type PublicTrail = {
     name: string
     speciality: string | null
     photoUrl: string | null
+    phone?: string | null
   }[]
 }
 

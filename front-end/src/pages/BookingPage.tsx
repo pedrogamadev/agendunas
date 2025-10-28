@@ -10,6 +10,7 @@ import {
 } from 'react'
 import type { PageProps } from '../App'
 import { useTranslation } from '../i18n/TranslationProvider'
+import type { TranslationContent } from '../i18n/translations'
 import {
   createPublicBooking,
   fetchPublicGuides,
@@ -18,6 +19,46 @@ import {
   type PublicTrailSessionGroup,
 } from '../api/public'
 import { formatCpf, formatCpfForInput, sanitizeCpf } from '../utils/cpf'
+import { formatPhoneForDisplay, sanitizePhoneNumber } from '../utils/phone'
+
+type BookingContent = TranslationContent['booking']
+
+type GuideOption = {
+  id: string
+  name: string
+  photo: string
+  speciality: string
+  description: string
+  trails: number
+  experience: string
+  rating: number
+  certifications: string[]
+  languages: string[]
+  curiosities: string[]
+  featuredTrailId?: string
+  databaseCpf?: string
+}
+
+type TrailOption = {
+  id: string
+  label: string
+  description: string
+  duration: string
+  difficulty?: string
+  availableSpots: number
+  databaseId?: string
+  sessions: PublicTrailSessionGroup[]
+  contactPhone?: string | null
+  guides: {
+    name: string
+    phone?: string | null
+  }[]
+}
+
+type NormalizedSession = (PublicTrailSessionGroup['slots'][number] & {
+  date: string
+  dateLabel: string
+}) | null
 import { useAuth } from '../context/AuthContext'
 import './BookingPage.css'
 
@@ -58,11 +99,6 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
   const booking = content.booking
   const guidesContent = content.guides
   const { user, isAuthenticating } = useAuth()
-  type GuideOption = (typeof guidesContent.guides)[number] & { databaseCpf?: string }
-  type TrailOption = Omit<(typeof booking.trails)[number], 'sessions'> & {
-    databaseId?: string
-    sessions: PublicTrailSessionGroup[]
-  }
   const [guideOptions, setGuideOptions] = useState<GuideOption[]>(
     guidesContent.guides.map((guide) => ({ ...guide, databaseCpf: undefined })),
   )
@@ -86,7 +122,7 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
   )
   const [selectedDate, setSelectedDate] = useState('')
   const [selectedSessionId, setSelectedSessionId] = useState('')
-  const [isSessionModalOpen, setIsSessionModalOpen] = useState(false)
+  const [isWizardOpen, setIsWizardOpen] = useState(false)
   const [weatherState, setWeatherState] = useState<WeatherState>({ status: 'idle' })
   const [showRainWarning, setShowRainWarning] = useState(false)
   const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false)
@@ -116,7 +152,7 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
       ),
     [availableSessionGroups],
   )
-  const selectedSession = useMemo(() => {
+  const selectedSession = useMemo<NormalizedSession>(() => {
     const match = sessionEntries.find((entry) => entry.slot.id === selectedSessionId)
     if (!match) {
       return null
@@ -146,11 +182,6 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
       setSelectedSessionId('')
     }
   }, [selectedTrailOption, sessionEntries, selectedSessionId])
-  useEffect(() => {
-    if (selectedSession) {
-      setSelectedDate(selectedSession.startsAt.slice(0, 10))
-    }
-  }, [selectedSession])
   useEffect(() => {
     if (previousTrailIdRef.current !== selectedTrailId) {
       if (!hasPublishedSessions) {
@@ -306,6 +337,16 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
     onNavigate('/area-cliente')
   }, [onNavigate])
 
+  const handleOpenWizard = useCallback(() => {
+    setSubmissionResult(null)
+    setShowRainWarning(false)
+    setIsWizardOpen(true)
+  }, [])
+
+  const handleCloseWizard = useCallback(() => {
+    setIsWizardOpen(false)
+  }, [])
+
   useEffect(() => {
     if (!firstParticipantLocked) {
       return
@@ -346,9 +387,7 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
     }
   }, [selectedTrailId, trailOptions])
 
-  useEffect(() => {
-    let isMounted = true
-
+  const fetchPublicCatalog = useCallback(async () => {
     const difficultyLabels: Record<string, string> = {
       EASY: 'Leve',
       MODERATE: 'Moderada',
@@ -369,75 +408,92 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
       return `${hours}h${String(remaining).padStart(2, '0')}`
     }
 
-    fetchPublicTrails()
-      .then((data) => {
-        if (!isMounted || data.length === 0) {
-          return
-        }
+    const [trailsResult, guidesResult] = await Promise.allSettled([
+      fetchPublicTrails(),
+      fetchPublicGuides(),
+    ])
 
-        const mapped: TrailOption[] = data.map((trail) => ({
-          id: trail.slug,
-          databaseId: trail.id,
-          label: trail.name,
-          description: trail.summary ?? trail.description,
-          duration: formatDuration(trail.durationMinutes),
-          difficulty: difficultyLabels[trail.difficulty] ?? trail.difficulty,
-          availableSpots: Number.isFinite(trail.availableSpots)
-            ? Math.max(1, trail.availableSpots)
-            : Math.max(1, trail.maxGroupSize),
-          sessions: trail.sessions ?? [],
-        }))
+    const catalog: { trails?: TrailOption[]; guides?: GuideOption[] } = {}
 
-        if (mapped.length > 0) {
-          setTrailOptions(mapped)
-        }
-      })
-      .catch(() => {
-        /* mantém opções padrão quando API estiver indisponível */
-      })
-
-    fetchPublicGuides()
-      .then((data) => {
-        if (!isMounted || data.length === 0) {
-          return
-        }
-
-        const mapped: GuideOption[] = data.map((guide) => ({
-          id: guide.slug,
-          databaseCpf: guide.cpf,
+    if (trailsResult.status === 'fulfilled' && trailsResult.value.length > 0) {
+      catalog.trails = trailsResult.value.map((trail) => ({
+        id: trail.slug,
+        databaseId: trail.id,
+        label: trail.name,
+        description: trail.summary ?? trail.description,
+        duration: formatDuration(trail.durationMinutes),
+        difficulty: difficultyLabels[trail.difficulty] ?? trail.difficulty,
+        availableSpots: Number.isFinite(trail.availableSpots)
+          ? Math.max(1, trail.availableSpots)
+          : Math.max(1, trail.maxGroupSize),
+        sessions: trail.sessions ?? [],
+        contactPhone: trail.contactPhone ?? null,
+        guides: (trail.guides ?? []).map((guide) => ({
           name: guide.name,
-          photo: guide.photoUrl ?? guidesContent.guides[0]?.photo ?? '',
-          speciality: guide.speciality ?? guidesContent.guides[0]?.speciality ?? '',
-          description:
-            guide.summary ?? guide.biography ?? guidesContent.guides[0]?.description ?? '',
-          trails: guide.toursCompleted > 0 ? guide.toursCompleted : guide.trails.length,
-          experience: `${guide.experienceYears} anos guiando trilhas`,
-          rating: guide.rating ?? guidesContent.guides[0]?.rating ?? 0,
-          certifications:
-            guide.certifications.length > 0
-              ? guide.certifications
-              : guidesContent.guides[0]?.certifications ?? [],
-          languages: guide.languages.length > 0 ? guide.languages : ['Português'],
-          curiosities:
-            guide.curiosities.length > 0
-              ? guide.curiosities
-              : guidesContent.guides[0]?.curiosities ?? [],
-          featuredTrailId:
-            guide.featuredTrail?.slug ?? guidesContent.guides[0]?.featuredTrailId ?? undefined,
-        }))
+          phone: guide.phone ?? null,
+        })),
+      }))
+    }
 
-        if (mapped.length > 0) {
-          setGuideOptions(mapped)
-        }
-      })
-      .catch(() => {
-        /* mantém o catálogo estático se não houver API */
-      })
+    if (guidesResult.status === 'fulfilled' && guidesResult.value.length > 0) {
+      catalog.guides = guidesResult.value.map((guide) => ({
+        id: guide.slug,
+        databaseCpf: guide.cpf,
+        name: guide.name,
+        photo: guide.photoUrl ?? guidesContent.guides[0]?.photo ?? '',
+        speciality: guide.speciality ?? guidesContent.guides[0]?.speciality ?? '',
+        description:
+          guide.summary ?? guide.biography ?? guidesContent.guides[0]?.description ?? '',
+        trails: guide.toursCompleted > 0 ? guide.toursCompleted : guide.trails.length,
+        experience: `${guide.experienceYears} anos guiando trilhas`,
+        rating: guide.rating ?? guidesContent.guides[0]?.rating ?? 0,
+        certifications:
+          guide.certifications.length > 0
+            ? guide.certifications
+            : guidesContent.guides[0]?.certifications ?? [],
+        languages: guide.languages.length > 0 ? guide.languages : ['Português'],
+        curiosities:
+          guide.curiosities.length > 0
+            ? guide.curiosities
+            : guidesContent.guides[0]?.curiosities ?? [],
+        featuredTrailId:
+          guide.featuredTrail?.slug ?? guidesContent.guides[0]?.featuredTrailId ?? undefined,
+      }))
+    }
+
+    return catalog
+  }, [guidesContent.guides])
+
+  const applyCatalog = useCallback((catalog: { trails?: TrailOption[]; guides?: GuideOption[] }) => {
+    if (catalog.trails && catalog.trails.length > 0) {
+      setTrailOptions(catalog.trails)
+    }
+
+    if (catalog.guides && catalog.guides.length > 0) {
+      setGuideOptions(catalog.guides)
+    }
+  }, [])
+
+  useEffect(() => {
+    let active = true
+
+    fetchPublicCatalog().then((catalog) => {
+      if (!active) {
+        return
+      }
+
+      applyCatalog(catalog)
+    })
 
     return () => {
-      isMounted = false
+      active = false
     }
-  }, [booking.trails, guidesContent.guides])
+  }, [applyCatalog, fetchPublicCatalog])
+
+  const refreshPublicCatalog = useCallback(async () => {
+    const catalog = await fetchPublicCatalog()
+    applyCatalog(catalog)
+  }, [applyCatalog, fetchPublicCatalog])
 
   const dateFormatter = useMemo(() => {
     const locale = language === 'pt' ? 'pt-BR' : 'en-US'
@@ -563,10 +619,20 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
     [getConditionKey],
   )
 
+  useEffect(() => {
+    if (selectedSession) {
+      const nextDate = selectedSession.startsAt.slice(0, 10)
+      setSelectedDate(nextDate)
+      fetchWeather(nextDate)
+      setShowRainWarning(false)
+    }
+  }, [fetchWeather, selectedSession])
+
   const handleDateChange = useCallback(
     (event: ChangeEvent<HTMLInputElement>) => {
       const value = event.target.value
       setSelectedDate(value)
+      setSelectedSessionId('')
       fetchWeather(value)
       setShowRainWarning(false)
     },
@@ -585,17 +651,8 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
     setShowTermsModal(false)
   }, [])
 
-  const handleOpenSessionModal = useCallback(() => {
-    setIsSessionModalOpen(true)
-  }, [])
-
-  const handleCloseSessionModal = useCallback(() => {
-    setIsSessionModalOpen(false)
-  }, [])
-
   const handleSelectSession = useCallback((sessionId: string) => {
     setSelectedSessionId(sessionId)
-    setIsSessionModalOpen(false)
   }, [])
 
   const handleAcceptTerms = useCallback(() => {
@@ -614,6 +671,16 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
       updateParticipantsCount(parsed)
     },
     [updateParticipantsCount],
+  )
+
+  const handleWizardDateSelect = useCallback(
+    (date: string) => {
+      setSelectedDate(date)
+      setSelectedSessionId('')
+      fetchWeather(date)
+      setShowRainWarning(false)
+    },
+    [fetchWeather],
   )
 
   const handleParticipantFieldChange = useCallback(
@@ -704,10 +771,17 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
       const contactEmail = shouldUseProfileIdentity
         ? contactEmailFromProfile
         : String(formData.get('email') ?? '').trim()
-      const contactPhone = String(formData.get('phone') ?? '').trim()
+      const contactPhoneInput = String(formData.get('phone') ?? '').trim()
+      const contactPhone = sanitizePhoneNumber(contactPhoneInput)
 
       if (!contactName || !contactEmail) {
         setSubmissionResult({ type: 'error', message: booking.form.customerSummaryIncomplete })
+        setIsSubmitting(false)
+        return
+      }
+
+      if (!contactPhone) {
+        setSubmissionResult({ type: 'error', message: booking.wizard.steps.contact.phoneError })
         setIsSubmitting(false)
         return
       }
@@ -775,7 +849,6 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
         setSelectedDate('')
         setSelectedTrailId('')
         setSelectedSessionId('')
-        setIsSessionModalOpen(false)
         updateParticipantsCount(1)
       } catch (error) {
         const message =
@@ -789,6 +862,7 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
     },
     [
       booking.form.customerSummaryIncomplete,
+      booking.wizard.steps.contact.phoneError,
       booking.form.participantsValidationError,
       contactEmailFromProfile,
       contactNameFromProfile,
@@ -818,6 +892,13 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
     setShowRainWarning(false)
     allowRainySubmitRef.current = true
     formRef.current?.requestSubmit()
+  }, [])
+
+  const handleTrailSelect = useCallback((trailId: string) => {
+    setSelectedTrailId(trailId)
+    setSelectedSessionId('')
+    setSelectedDate('')
+    setShowRainWarning(false)
   }, [])
 
   useEffect(() => {
@@ -870,245 +951,15 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
               <p>{authLoadingMessage}</p>
             </div>
           ) : (
-            <form ref={formRef} className="booking-form" onSubmit={handleSubmit}>
-              <h2>{booking.form.title}</h2>
-              {showCustomerSummary ? (
-                <section className="customer-summary">
-                  <div className="customer-summary__header">
-                    <h3>{booking.form.customerSummaryTitle}</h3>
-                    <p>{booking.form.customerSummaryDescription}</p>
-                  </div>
-                  <dl className="customer-summary__list">
-                    {customerSummaryItems.map((item) => (
-                      <div key={`${item.label}-${item.value}`} className="customer-summary__item">
-                        <dt>{item.label}</dt>
-                        <dd>{item.value}</dd>
-                      </div>
-                    ))}
-                  </dl>
-                  {booking.form.customerSummaryHint ? (
-                    <p className="customer-summary__hint">
-                      {booking.form.customerSummaryHint}{' '}
-                      <button
-                        type="button"
-                        className="customer-summary__manage"
-                        onClick={handleNavigateToCustomerArea}
-                      >
-                        {booking.form.customerSummaryManage}
-                      </button>
-                    </p>
-                  ) : null}
-                </section>
-              ) : null}
-              <div className="booking-grid">
-                {isLoggedIn && needsIdentityForm ? (
-                  <div className="customer-summary-notice input-full">
-                    <p>{booking.form.customerSummaryIncomplete}</p>
-                    <button type="button" onClick={handleNavigateToCustomerArea}>
-                      {booking.form.customerSummaryManage}
-                    </button>
-                  </div>
-                ) : null}
-                {needsIdentityForm ? (
-                  <>
-                    <label className="input-field">
-                      <span>{booking.form.name}</span>
-                      <input
-                        type="text"
-                        name="name"
-                        placeholder={booking.form.namePlaceholder}
-                        required
-                        defaultValue={contactNameFromProfile}
-                      />
-                    </label>
-                    <label className="input-field">
-                      <span>{booking.form.email}</span>
-                      <input
-                        type="email"
-                        name="email"
-                        placeholder={booking.form.emailPlaceholder}
-                        required
-                        defaultValue={contactEmailFromProfile}
-                      />
-                    </label>
-                  </>
-                ) : null}
-                <label className="input-field">
-                  <span>{booking.form.phone}</span>
-                  <input type="tel" name="phone" placeholder={booking.form.phonePlaceholder} required />
-                </label>
-                <label className="input-field">
-                  <span>{booking.form.trail}</span>
-                  <select
-                    name="trail"
-                    required
-                    value={selectedTrailId}
-                    onChange={(event) => setSelectedTrailId(event.target.value)}
-                  >
-                    <option value="" disabled>
-                      {booking.form.selectPlaceholder}
-                    </option>
-                    {trailOptions.map((trail) => (
-                      <option key={trail.id} value={trail.id}>
-                        {trail.label} · {trail.duration}
-                      </option>
-                    ))}
-                  </select>
-                  <small className="field-help">{booking.form.helpText}</small>
-                </label>
-                {hasPublishedSessions ? (
-                  <>
-                    <div className="input-field input-full booking-session-field">
-                      <span>{booking.form.sessionLabel}</span>
-                      {selectedSession ? (
-                        <div className="booking-session-summary">
-                          <strong>
-                            {booking.form.sessionSummary
-                              .replace('{date}', selectedSession.dateLabel)
-                              .replace('{time}', selectedSession.timeLabel)}
-                          </strong>
-                          <span>
-                            {booking.form.sessionCapacity
-                              .replace('{available}', String(selectedSession.availableSpots))
-                              .replace('{total}', String(selectedSession.capacity))}
-                          </span>
-                        </div>
-                      ) : (
-                        <p className="booking-session-placeholder">{booking.form.sessionPlaceholder}</p>
-                      )}
-                      <div className="booking-session-actions">
-                        <button type="button" className="btn outline" onClick={handleOpenSessionModal}>
-                          {selectedSession ? booking.form.sessionChange : booking.form.sessionSelect}
-                        </button>
-                      </div>
-                    </div>
-                    <input
-                      type="hidden"
-                      name="date"
-                      value={selectedSession ? selectedSession.startsAt.slice(0, 10) : ''}
-                    />
-                    <input
-                      type="hidden"
-                      name="time"
-                      value={selectedSession ? selectedSession.startsAt.slice(11, 16) : ''}
-                    />
-                  </>
-                ) : (
-                  <>
-                    <label className="input-field">
-                      <span>{booking.form.date}</span>
-                      <input
-                        type="date"
-                        name="date"
-                        value={selectedDate}
-                        onChange={handleDateChange}
-                        required
-                      />
-                    </label>
-                    <label className="input-field">
-                      <span>{booking.form.time}</span>
-                      <input type="time" name="time" required />
-                    </label>
-                  </>
-                )}
-                <label className="input-field">
-                  <span>{booking.form.participants}</span>
-                  <select
-                    name="participants"
-                    required
-                    value={participantsCount}
-                    onChange={handleParticipantsCountChange}
-                  >
-                    {participantOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <div className="participants-details input-full">
-                  <div className="participants-details__header">
-                    <strong>{booking.form.participantsListTitle}</strong>
-                    <span>{booking.form.participantsListDescription}</span>
-                  </div>
-                  <div className="participants-details__list">
-                    {participants.map((participant, index) => {
-                      const isFirstParticipant = index === 0
-                      const isLocked = isFirstParticipant && firstParticipantLocked
-
-                      return (
-                        <div key={`participant-${index}`} className="participants-details__item">
-                          <label className="input-field">
-                            <span>
-                              {booking.form.participantNameLabel.replace('{index}', String(index + 1))}
-                            </span>
-                            <input
-                              type="text"
-                              name={`participant-name-${index}`}
-                              required
-                              value={participant.fullName}
-                              placeholder={booking.form.participantNamePlaceholder}
-                              readOnly={isLocked}
-                              aria-readonly={isLocked ? true : undefined}
-                              onChange={
-                                isLocked
-                                  ? undefined
-                                  : (event) =>
-                                      handleParticipantFieldChange(index, 'fullName', event.target.value)
-                              }
-                            />
-                          </label>
-                          <label className="input-field">
-                            <span>
-                              {booking.form.participantCpfLabel.replace('{index}', String(index + 1))}
-                            </span>
-                            <input
-                              type="text"
-                              name={`participant-cpf-${index}`}
-                              inputMode="numeric"
-                              required
-                              value={formatCpfForInput(participant.cpf)}
-                              placeholder={booking.form.participantCpfPlaceholder}
-                              readOnly={isLocked}
-                              aria-readonly={isLocked ? true : undefined}
-                              onChange={
-                                isLocked
-                                  ? undefined
-                                  : (event) =>
-                                      handleParticipantFieldChange(index, 'cpf', event.target.value)
-                              }
-                            />
-                          </label>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-                <label className="input-field input-full">
-                  <span>{booking.form.notes}</span>
-                  <textarea
-                    name="notes"
-                    rows={4}
-                    placeholder={booking.form.notesPlaceholder}
-                  />
-                </label>
-              </div>
-              <div className="terms-consent">
-                <label className="terms-consent__checkbox">
-                  <input
-                    type="checkbox"
-                    name="termsConsent"
-                    required
-                    checked={hasAcceptedTerms}
-                    onChange={handleTermsChange}
-                  />
-                  <span>{booking.terms.checkboxLabel}</span>
-                </label>
-                <button type="button" className="terms-consent__open" onClick={handleOpenTermsModal}>
-                  {booking.terms.openModal}
+            <div className="booking-wizard-card">
+              <h2>{booking.wizard.triggerTitle}</h2>
+              <p>{booking.wizard.triggerDescription}</p>
+              <div className="booking-wizard-card__actions">
+                <button type="button" className="btn solid" onClick={handleOpenWizard}>
+                  {booking.wizard.openButton}
                 </button>
               </div>
-              {submissionResult && (
+              {submissionResult ? (
                 <div
                   className={`form-feedback form-feedback--${submissionResult.type}`}
                   role="status"
@@ -1124,14 +975,9 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
                     ) : null}
                   </p>
                 </div>
-              )}
-              <div className="form-actions">
-                <button type="submit" className="btn solid" disabled={!hasAcceptedTerms || isSubmitting}>
-                  {booking.form.submit}
-                </button>
-                <p className="form-disclaimer">{booking.form.disclaimer}</p>
-              </div>
-            </form>
+              ) : null}
+              <p className="booking-wizard-card__disclaimer">{booking.form.disclaimer}</p>
+            </div>
           )}
           <aside className="booking-sidebar">
             <div className="selected-guide-card">
@@ -1257,67 +1103,46 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
         </section>
       </main>
 
-      {isSessionModalOpen && hasPublishedSessions ? (
-        <div className="booking-session-modal" role="presentation">
-          <div
-            className="booking-session-modal__backdrop"
-            aria-hidden="true"
-            onClick={handleCloseSessionModal}
-          />
-          <div
-            className="booking-session-modal__dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="session-modal-title"
-          >
-            <button
-              type="button"
-              className="booking-session-modal__close"
-              onClick={handleCloseSessionModal}
-              aria-label={booking.form.sessionModalClose}
-            >
-              ×
-            </button>
-            <header className="booking-session-modal__header">
-              <h3 id="session-modal-title">{booking.form.sessionModalTitle}</h3>
-              <p>{booking.form.sessionModalDescription}</p>
-            </header>
-            <div className="booking-session-modal__groups">
-              {availableSessionGroups.map((group) => (
-                <section key={group.date} className="booking-session-modal__group">
-                  <h4>{group.dateLabel}</h4>
-                  <div className="booking-session-modal__slots">
-                    {group.slots.map((slot) => {
-                      const isSelected = selectedSessionId === slot.id
-                      const isDisabled = slot.status !== 'SCHEDULED' || slot.availableSpots <= 0
-                      const capacityLabel = booking.form.sessionSlotCapacity
-                        .replace('{available}', String(Math.max(0, slot.availableSpots)))
-                        .replace('{total}', String(slot.capacity))
-
-                      return (
-                        <button
-                          key={slot.id}
-                          type="button"
-                          className={`booking-session-modal__slot${
-                            isSelected ? ' is-selected' : ''
-                          }${isDisabled ? ' is-disabled' : ''}`}
-                          onClick={() => handleSelectSession(slot.id)}
-                          disabled={isDisabled}
-                        >
-                          <span>{slot.timeLabel}</span>
-                          <small>{capacityLabel}</small>
-                        </button>
-                      )
-                    })}
-                  </div>
-                </section>
-              ))}
-              {availableSessionGroups.length === 0 ? (
-                <p className="booking-session-modal__empty">{booking.form.sessionModalEmpty}</p>
-              ) : null}
-            </div>
-          </div>
-        </div>
+      {isWizardOpen ? (
+        <BookingWizard
+          isOpen={isWizardOpen}
+          onClose={handleCloseWizard}
+          booking={booking}
+          formRef={formRef}
+          onSubmit={handleSubmit}
+          showCustomerSummary={showCustomerSummary}
+          customerSummaryItems={customerSummaryItems}
+          customerSummaryHint={booking.form.customerSummaryHint}
+          onManageProfile={handleNavigateToCustomerArea}
+          needsIdentityForm={needsIdentityForm}
+          isLoggedIn={isLoggedIn}
+          contactNameFromProfile={contactNameFromProfile}
+          contactEmailFromProfile={contactEmailFromProfile}
+          participantOptions={participantOptions}
+          participantsCount={participantsCount}
+          onParticipantsCountChange={handleParticipantsCountChange}
+          participants={participants}
+          onParticipantFieldChange={handleParticipantFieldChange}
+          formatCpfForInput={formatCpfForInput}
+          firstParticipantLocked={firstParticipantLocked}
+          hasAcceptedTerms={hasAcceptedTerms}
+          onTermsChange={handleTermsChange}
+          onOpenTermsModal={handleOpenTermsModal}
+          submissionResult={submissionResult}
+          isSubmitting={isSubmitting}
+          selectedTrailId={selectedTrailId}
+          onSelectTrail={handleTrailSelect}
+          trailOptions={trailOptions}
+          selectedDate={selectedDate}
+          onSelectDate={handleWizardDateSelect}
+          onManualDateChange={handleDateChange}
+          selectedSessionId={selectedSessionId}
+          selectedSession={selectedSession}
+          availableSessionGroups={availableSessionGroups}
+          onSelectSession={handleSelectSession}
+          hasPublishedSessions={hasPublishedSessions}
+          refreshCatalog={refreshPublicCatalog}
+        />
       ) : null}
 
       {showRainWarning && (
@@ -1404,6 +1229,697 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+type BookingWizardProps = {
+  isOpen: boolean
+  onClose: () => void
+  booking: BookingContent
+  formRef: React.RefObject<HTMLFormElement>
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void
+  showCustomerSummary: boolean
+  customerSummaryItems: { label: string; value: string }[]
+  customerSummaryHint?: string
+  onManageProfile: () => void
+  needsIdentityForm: boolean
+  isLoggedIn: boolean
+  contactNameFromProfile: string
+  contactEmailFromProfile: string
+  participantOptions: { value: number; label: string }[]
+  participantsCount: number
+  onParticipantsCountChange: (event: ChangeEvent<HTMLSelectElement>) => void
+  participants: Array<{ fullName: string; cpf: string }>
+  onParticipantFieldChange: (index: number, field: 'fullName' | 'cpf', value: string) => void
+  formatCpfForInput: (value: string) => string
+  firstParticipantLocked: boolean
+  hasAcceptedTerms: boolean
+  onTermsChange: (event: ChangeEvent<HTMLInputElement>) => void
+  onOpenTermsModal: () => void
+  submissionResult: { type: 'success' | 'error'; message: string; protocol?: string } | null
+  isSubmitting: boolean
+  selectedTrailId: string
+  onSelectTrail: (id: string) => void
+  trailOptions: TrailOption[]
+  selectedDate: string
+  onSelectDate: (date: string) => void
+  onManualDateChange: (event: ChangeEvent<HTMLInputElement>) => void
+  selectedSessionId: string
+  selectedSession: NormalizedSession
+  availableSessionGroups: PublicTrailSessionGroup[]
+  onSelectSession: (id: string) => void
+  hasPublishedSessions: boolean
+  refreshCatalog: () => Promise<void>
+}
+
+function BookingWizard({
+  isOpen,
+  onClose,
+  booking,
+  formRef,
+  onSubmit,
+  showCustomerSummary,
+  customerSummaryItems,
+  customerSummaryHint,
+  onManageProfile,
+  needsIdentityForm,
+  isLoggedIn,
+  contactNameFromProfile,
+  contactEmailFromProfile,
+  participantOptions,
+  participantsCount,
+  onParticipantsCountChange,
+  participants,
+  onParticipantFieldChange,
+  formatCpfForInput,
+  firstParticipantLocked,
+  hasAcceptedTerms,
+  onTermsChange,
+  onOpenTermsModal,
+  submissionResult,
+  isSubmitting,
+  selectedTrailId,
+  onSelectTrail,
+  trailOptions,
+  selectedDate,
+  onSelectDate,
+  onManualDateChange,
+  selectedSessionId,
+  selectedSession,
+  availableSessionGroups,
+  onSelectSession,
+  hasPublishedSessions,
+  refreshCatalog,
+}: BookingWizardProps) {
+  const [activeStep, setActiveStep] = useState(0)
+  const [manualTime, setManualTime] = useState('')
+  const dialogRef = useRef<HTMLDivElement | null>(null)
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null)
+
+  const selectedTrail = useMemo(
+    () => trailOptions.find((trail) => trail.id === selectedTrailId) ?? null,
+    [selectedTrailId, trailOptions],
+  )
+
+  const sessionsForSelectedDate = useMemo(() => {
+    if (!selectedDate) {
+      return [] as PublicTrailSessionGroup['slots']
+    }
+
+    const group = availableSessionGroups.find((entry) => entry.date === selectedDate)
+    return group ? group.slots : []
+  }, [availableSessionGroups, selectedDate])
+
+  useEffect(() => {
+    if (!isOpen) {
+      return
+    }
+
+    refreshCatalog()
+    const intervalId = window.setInterval(() => {
+      refreshCatalog()
+    }, 30000)
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        onClose()
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+
+    window.requestAnimationFrame(() => {
+      closeButtonRef.current?.focus()
+    })
+
+    return () => {
+      window.clearInterval(intervalId)
+      document.removeEventListener('keydown', handleKeyDown)
+      document.body.style.overflow = previousOverflow
+    }
+  }, [isOpen, onClose, refreshCatalog])
+
+  useEffect(() => {
+    if (!isOpen) {
+      return
+    }
+
+    setActiveStep(0)
+    setManualTime('')
+  }, [isOpen, selectedTrailId])
+
+  useEffect(() => {
+    if (!isOpen) {
+      return
+    }
+
+    setManualTime('')
+  }, [isOpen, selectedDate])
+
+  useEffect(() => {
+    if (!isOpen) {
+      return
+    }
+
+    const focusable = dialogRef.current?.querySelector<HTMLElement>(
+      '.booking-wizard__step[data-active="true"] button,' +
+        '.booking-wizard__step[data-active="true"] input,' +
+        '.booking-wizard__step[data-active="true"] select,' +
+        '.booking-wizard__step[data-active="true"] textarea',
+    )
+
+    focusable?.focus()
+  }, [activeStep, isOpen])
+
+  const steps = useMemo(
+    () => [
+      {
+        key: 'trail',
+        title: booking.wizard.steps.trail.title,
+        description: booking.wizard.steps.trail.description,
+      },
+      {
+        key: 'date',
+        title: booking.wizard.steps.date.title,
+        description: booking.wizard.steps.date.description,
+      },
+      {
+        key: 'time',
+        title: booking.wizard.steps.time.title,
+        description: booking.wizard.steps.time.description,
+      },
+      {
+        key: 'participants',
+        title: booking.wizard.steps.participants.title,
+        description: booking.wizard.steps.participants.description,
+      },
+      {
+        key: 'contact',
+        title: booking.wizard.steps.contact.title,
+        description: booking.wizard.steps.contact.description,
+      },
+    ],
+    [booking.wizard.steps],
+  )
+
+  const totalSteps = steps.length
+  const isFinalStep = activeStep === totalSteps - 1
+
+  const canAdvance = useMemo(() => {
+    if (activeStep === 0) {
+      return Boolean(selectedTrailId)
+    }
+
+    if (activeStep === 1) {
+      if (availableSessionGroups.length === 0) {
+        return Boolean(selectedDate)
+      }
+
+      return Boolean(selectedDate)
+    }
+
+    if (activeStep === 2) {
+      if (availableSessionGroups.length === 0) {
+        return manualTime.trim().length > 0
+      }
+
+      return Boolean(selectedSessionId)
+    }
+
+    return true
+  }, [activeStep, availableSessionGroups.length, manualTime, selectedDate, selectedSessionId, selectedTrailId])
+
+  const handleNextStep = useCallback(() => {
+    if (isFinalStep || !canAdvance) {
+      return
+    }
+
+    setActiveStep((current) => Math.min(totalSteps - 1, current + 1))
+  }, [canAdvance, isFinalStep, totalSteps])
+
+  const handlePreviousStep = useCallback(() => {
+    setActiveStep((current) => Math.max(0, current - 1))
+  }, [])
+
+  const handleManualTimeChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    setManualTime(event.target.value)
+  }, [])
+
+  if (!isOpen) {
+    return null
+  }
+
+  const selectedDateGroup = availableSessionGroups.find((group) => group.date === selectedDate)
+  const availableTimeSlots = sessionsForSelectedDate
+
+  return (
+    <div className="booking-wizard-modal" role="presentation">
+      <div className="booking-wizard-modal__backdrop" aria-hidden="true" onClick={onClose} />
+      <div
+        ref={dialogRef}
+        className="booking-wizard-modal__dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="booking-wizard-title"
+      >
+        <header className="booking-wizard__header">
+          <div>
+            <h2 id="booking-wizard-title">{booking.wizard.modalTitle}</h2>
+            <p>{booking.wizard.refreshLabel}</p>
+          </div>
+          <button
+            ref={closeButtonRef}
+            type="button"
+            className="booking-wizard__close"
+            onClick={onClose}
+            aria-label={booking.wizard.closeButton}
+          >
+            ×
+          </button>
+        </header>
+
+        <nav className="booking-wizard__progress" aria-label={booking.wizard.progressLabel}>
+          {steps.map((step, index) => (
+            <div
+              key={step.key}
+              className={`booking-wizard__progress-item${index === activeStep ? ' is-active' : ''}${
+                index < activeStep ? ' is-complete' : ''
+              }`}
+            >
+              <span className="booking-wizard__progress-index">{index + 1}</span>
+              <span className="booking-wizard__progress-title">{step.title}</span>
+            </div>
+          ))}
+        </nav>
+
+        <form ref={formRef} className="booking-wizard-form" onSubmit={onSubmit}>
+          <input type="hidden" name="trail" value={selectedTrailId} />
+          {hasPublishedSessions ? (
+            <>
+              <input type="hidden" name="date" value={selectedSession ? selectedSession.date : selectedDate} />
+              <input
+                type="hidden"
+                name="time"
+                value={selectedSession ? selectedSession.startsAt.slice(11, 16) : ''}
+              />
+            </>
+          ) : null}
+
+          <div className="booking-wizard__steps">
+            {steps.map((step, index) => {
+              const isActive = index === activeStep
+              const stepKey = step.key
+
+              return (
+                <section
+                  key={stepKey}
+                  className={`booking-wizard__step${isActive ? ' is-active' : ''}`}
+                  data-active={isActive ? 'true' : 'false'}
+                  aria-hidden={isActive ? undefined : true}
+                >
+                  <header className="booking-wizard__step-header">
+                    <h3>{step.title}</h3>
+                    <p>{step.description}</p>
+                  </header>
+
+                  {stepKey === 'trail' ? (
+                    <div className="booking-wizard__trail-grid" role="radiogroup" aria-label={booking.form.trail}>
+                      {trailOptions.map((trail) => {
+                        const isSelected = trail.id === selectedTrailId
+                        const totalSpots = Math.max(0, trail.availableSpots)
+
+                        return (
+                          <button
+                            key={trail.id}
+                            type="button"
+                            className={`booking-wizard__trail-card${isSelected ? ' is-selected' : ''}`}
+                            onClick={() => onSelectTrail(trail.id)}
+                            aria-pressed={isSelected}
+                          >
+                            <div className="booking-wizard__trail-card-header">
+                              <strong>{trail.label}</strong>
+                              {trail.duration ? <span>{trail.duration}</span> : null}
+                            </div>
+                            <p>{trail.description}</p>
+                            <span className="booking-wizard__trail-card-meta">
+                              {booking.wizard.steps.trail.availability.replace(
+                                '{spots}',
+                                String(totalSpots),
+                              )}
+                            </span>
+                            {trail.guides.length > 0 ? (
+                              <ul className="booking-wizard__trail-guides">
+                                {trail.guides.map((guide) => (
+                                  <li key={`${trail.id}-${guide.name}`}>
+                                    <strong>{guide.name}</strong>
+                                    {guide.phone ? (
+                                      <span>
+                                        {booking.wizard.steps.trail.phoneLabel}{' '}
+                                        {formatPhoneForDisplay(guide.phone)}
+                                      </span>
+                                    ) : (
+                                      <span>{booking.wizard.steps.trail.phoneFallback}</span>
+                                    )}
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <p className="booking-wizard__trail-guides-empty">
+                                {booking.wizard.steps.trail.guidesFallback}
+                              </p>
+                            )}
+                            {trail.contactPhone ? (
+                              <span className="booking-wizard__trail-contact">
+                                {booking.wizard.steps.trail.contactLabel}{' '}
+                                {formatPhoneForDisplay(trail.contactPhone)}
+                              </span>
+                            ) : null}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  ) : null}
+
+                  {stepKey === 'date' ? (
+                    availableSessionGroups.length > 0 ? (
+                      <div className="booking-wizard__date-grid" role="radiogroup" aria-label={booking.form.date}>
+                        {availableSessionGroups.map((group) => {
+                          const isSelected = group.date === selectedDate
+                          const availableCount = group.slots.reduce(
+                            (total, slot) => total + Math.max(0, slot.availableSpots),
+                            0,
+                          )
+
+                          return (
+                            <button
+                              key={group.date}
+                              type="button"
+                              className={`booking-wizard__date-card${isSelected ? ' is-selected' : ''}`}
+                              onClick={() => {
+                                onSelectDate(group.date)
+                                onSelectSession('')
+                              }}
+                              aria-pressed={isSelected}
+                            >
+                              <strong>{group.dateLabel}</strong>
+                              <span>
+                                {booking.wizard.steps.date.availability.replace(
+                                  '{spots}',
+                                  String(availableCount),
+                                )}
+                              </span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    ) : (
+                      <label className="booking-wizard__input">
+                        <span>{booking.form.date}</span>
+                        <input
+                          type="date"
+                          name="date"
+                          value={selectedDate}
+                          onChange={onManualDateChange}
+                          required={activeStep === 1}
+                          data-autofocus="true"
+                        />
+                      </label>
+                    )
+                  ) : null}
+
+                  {stepKey === 'time' ? (
+                    availableSessionGroups.length > 0 ? (
+                      selectedDateGroup ? (
+                        <div className="booking-wizard__time-grid" role="radiogroup" aria-label={booking.form.time}>
+                          {availableTimeSlots.length > 0 ? (
+                            availableTimeSlots.map((slot) => {
+                              const isSelected = slot.id === selectedSessionId
+                              const isDisabled = slot.status !== 'SCHEDULED' || slot.availableSpots <= 0
+                              const capacityLabel = booking.form.sessionCapacity
+                                .replace('{available}', String(Math.max(0, slot.availableSpots)))
+                                .replace('{total}', String(slot.capacity))
+
+                              return (
+                                <button
+                                  key={slot.id}
+                                  type="button"
+                                  className={`booking-wizard__time-card${isSelected ? ' is-selected' : ''}${
+                                    isDisabled ? ' is-disabled' : ''
+                                  }`}
+                                  onClick={() => onSelectSession(slot.id)}
+                                  aria-pressed={isSelected}
+                                  disabled={isDisabled}
+                                >
+                                  <strong>{slot.timeLabel}</strong>
+                                  <span>{capacityLabel}</span>
+                                </button>
+                              )
+                            })
+                          ) : (
+                            <p className="booking-wizard__empty">{booking.wizard.steps.time.empty}</p>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="booking-wizard__empty">{booking.wizard.steps.time.waitingDate}</p>
+                      )
+                    ) : (
+                      <label className="booking-wizard__input">
+                        <span>{booking.form.time}</span>
+                        <input
+                          type="time"
+                          name="time"
+                          value={manualTime}
+                          onChange={handleManualTimeChange}
+                          required={activeStep === 2}
+                          data-autofocus="true"
+                        />
+                      </label>
+                    )
+                  ) : null}
+
+                  {stepKey === 'participants' ? (
+                    <div className="booking-wizard__participants">
+                      <label className="booking-wizard__input">
+                        <span>{booking.form.participants}</span>
+                        <select
+                          name="participants"
+                          value={participantsCount}
+                          onChange={onParticipantsCountChange}
+                        >
+                          {participantOptions.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <div className="participants-details__list">
+                        {participants.map((participant, index) => {
+                          const isFirstParticipant = index === 0
+                          const isLocked = isFirstParticipant && firstParticipantLocked
+
+                          return (
+                            <div key={`participant-${index}`} className="participants-details__item">
+                              <label className="input-field">
+                                <span>
+                                  {booking.form.participantNameLabel.replace('{index}', String(index + 1))}
+                                </span>
+                                <input
+                                  type="text"
+                                  name={`participant-name-${index}`}
+                                  value={participant.fullName}
+                                  placeholder={booking.form.participantNamePlaceholder}
+                                  readOnly={isLocked}
+                                  aria-readonly={isLocked ? true : undefined}
+                                  onChange={
+                                    isLocked
+                                      ? undefined
+                                      : (event) =>
+                                          onParticipantFieldChange(index, 'fullName', event.target.value)
+                                  }
+                                />
+                              </label>
+                              <label className="input-field">
+                                <span>
+                                  {booking.form.participantCpfLabel.replace('{index}', String(index + 1))}
+                                </span>
+                                <input
+                                  type="text"
+                                  name={`participant-cpf-${index}`}
+                                  inputMode="numeric"
+                                  value={formatCpfForInput(participant.cpf)}
+                                  placeholder={booking.form.participantCpfPlaceholder}
+                                  readOnly={isLocked}
+                                  aria-readonly={isLocked ? true : undefined}
+                                  onChange={
+                                    isLocked
+                                      ? undefined
+                                      : (event) =>
+                                          onParticipantFieldChange(index, 'cpf', event.target.value)
+                                  }
+                                />
+                              </label>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {stepKey === 'contact' ? (
+                    <div className="booking-wizard__contact">
+                      {showCustomerSummary ? (
+                        <section className="customer-summary">
+                          <div className="customer-summary__header">
+                            <h4>{booking.form.customerSummaryTitle}</h4>
+                            <p>{booking.form.customerSummaryDescription}</p>
+                          </div>
+                          <dl className="customer-summary__list">
+                            {customerSummaryItems.map((item) => (
+                              <div key={`${item.label}-${item.value}`} className="customer-summary__item">
+                                <dt>{item.label}</dt>
+                                <dd>{item.value}</dd>
+                              </div>
+                            ))}
+                          </dl>
+                          {booking.form.customerSummaryHint ? (
+                            <p className="customer-summary__hint">
+                              {booking.form.customerSummaryHint}{' '}
+                              <button
+                                type="button"
+                                className="customer-summary__manage"
+                                onClick={onManageProfile}
+                              >
+                                {booking.form.customerSummaryManage}
+                              </button>
+                            </p>
+                          ) : null}
+                        </section>
+                      ) : null}
+
+                      {isLoggedIn && needsIdentityForm ? (
+                        <div className="customer-summary-notice">
+                          <p>{booking.form.customerSummaryIncomplete}</p>
+                          <button type="button" onClick={onManageProfile}>
+                            {booking.form.customerSummaryManage}
+                          </button>
+                        </div>
+                      ) : null}
+
+                      {needsIdentityForm ? (
+                        <div className="booking-wizard__identity">
+                          <label className="booking-wizard__input">
+                            <span>{booking.form.name}</span>
+                            <input
+                              type="text"
+                              name="name"
+                              placeholder={booking.form.namePlaceholder}
+                              defaultValue={contactNameFromProfile}
+                              required
+                            />
+                          </label>
+                          <label className="booking-wizard__input">
+                            <span>{booking.form.email}</span>
+                            <input
+                              type="email"
+                              name="email"
+                              placeholder={booking.form.emailPlaceholder}
+                              defaultValue={contactEmailFromProfile}
+                              required
+                            />
+                          </label>
+                        </div>
+                      ) : null}
+
+                      <label className="booking-wizard__input">
+                        <span>{booking.form.phone}</span>
+                        <input
+                          type="tel"
+                          name="phone"
+                          placeholder={booking.form.phonePlaceholder}
+                          required
+                        />
+                        <small>{booking.wizard.steps.contact.phoneHint}</small>
+                      </label>
+
+                      <label className="booking-wizard__input booking-wizard__input--textarea">
+                        <span>{booking.form.notes}</span>
+                        <textarea
+                          name="notes"
+                          rows={4}
+                          placeholder={booking.form.notesPlaceholder}
+                        />
+                      </label>
+
+                      <div className="terms-consent">
+                        <label className="terms-consent__checkbox">
+                          <input
+                            type="checkbox"
+                            name="termsConsent"
+                            checked={hasAcceptedTerms}
+                            onChange={onTermsChange}
+                            required
+                          />
+                          <span>{booking.terms.checkboxLabel}</span>
+                        </label>
+                        <button type="button" className="terms-consent__open" onClick={onOpenTermsModal}>
+                          {booking.terms.openModal}
+                        </button>
+                      </div>
+
+                      {submissionResult ? (
+                        <div
+                          className={`form-feedback form-feedback--${submissionResult.type}`}
+                          role="status"
+                          aria-live="polite"
+                        >
+                          <p>
+                            {submissionResult.message}
+                            {submissionResult.type === 'success' && submissionResult.protocol ? (
+                              <>
+                                <br />
+                                <strong>Protocolo:</strong> {submissionResult.protocol}
+                              </>
+                            ) : null}
+                          </p>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </section>
+              )
+            })}
+          </div>
+
+          <footer className="booking-wizard__footer">
+            <div className="booking-wizard__footer-actions">
+              <button
+                type="button"
+                className="btn ghost"
+                onClick={handlePreviousStep}
+                disabled={activeStep === 0}
+              >
+                {booking.wizard.previous}
+              </button>
+              {isFinalStep ? (
+                <button type="submit" className="btn solid" disabled={isSubmitting || !hasAcceptedTerms}>
+                  {isSubmitting ? booking.wizard.submitting : booking.wizard.finish}
+                </button>
+              ) : (
+                <button type="button" className="btn solid" onClick={handleNextStep} disabled={!canAdvance}>
+                  {booking.wizard.next}
+                </button>
+              )}
+            </div>
+            <p className="booking-wizard__footer-note">{booking.form.disclaimer}</p>
+          </footer>
+        </form>
+      </div>
     </div>
   )
 }

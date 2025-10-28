@@ -134,6 +134,51 @@ type BookingTranslation = {
     cta: string
     animationLabel: string
   }
+  wizard: {
+    triggerTitle: string
+    triggerDescription: string
+    openButton: string
+    modalTitle: string
+    closeButton: string
+    progressLabel: string
+    refreshLabel: string
+    next: string
+    previous: string
+    finish: string
+    submitting: string
+    steps: {
+      trail: {
+        title: string
+        description: string
+        availability: string
+        guidesFallback: string
+        phoneLabel: string
+        phoneFallback: string
+        contactLabel: string
+      }
+      date: {
+        title: string
+        description: string
+        availability: string
+      }
+      time: {
+        title: string
+        description: string
+        empty: string
+        waitingDate: string
+      }
+      participants: {
+        title: string
+        description: string
+      }
+      contact: {
+        title: string
+        description: string
+        phoneHint: string
+        phoneError: string
+      }
+    }
+  }
   form: {
     title: string
     name: string
@@ -761,6 +806,52 @@ const translations: Record<Language, TranslationContent> = {
           'Para garantir sua vaga e usar seus dados cadastrados automaticamente, entre na sua conta e finalize o agendamento em poucos cliques.',
         cta: 'Fazer login',
         animationLabel: 'Animação de bússola flutuante convidando para login',
+      },
+      wizard: {
+        triggerTitle: 'Monte sua experiência',
+        triggerDescription:
+          'Escolha trilha, data, horário e finalize com seus dados em um assistente passo a passo.',
+        openButton: 'Abrir assistente de agendamento',
+        modalTitle: 'Assistente de agendamento',
+        closeButton: 'Fechar assistente',
+        progressLabel: 'Progresso do agendamento',
+        refreshLabel: 'Opções atualizadas automaticamente a cada 30 segundos.',
+        next: 'Avançar',
+        previous: 'Voltar',
+        finish: 'Enviar solicitação',
+        submitting: 'Enviando...',
+        steps: {
+          trail: {
+            title: 'Escolha a trilha',
+            description: 'Veja detalhes, guias responsáveis e vagas disponíveis antes de prosseguir.',
+            availability: '{spots} vagas totais na trilha',
+            guidesFallback: 'Os guias serão definidos pela equipe após a confirmação.',
+            phoneLabel: 'Telefone:',
+            phoneFallback: 'Contato indisponível no momento.',
+            contactLabel: 'Central da trilha:',
+          },
+          date: {
+            title: 'Selecione a data',
+            description: 'Escolha uma data com vagas disponíveis ou informe sua preferência.',
+            availability: '{spots} vagas publicadas na data',
+          },
+          time: {
+            title: 'Defina o horário',
+            description: 'Selecione o melhor horário publicado para a data escolhida.',
+            empty: 'Nenhum horário publicado para esta data. Escolha outra data ou continue com outra preferência.',
+            waitingDate: 'Escolha uma data para visualizar os horários disponíveis.',
+          },
+          participants: {
+            title: 'Participantes',
+            description: 'Revise a quantidade e complete os dados de cada pessoa na reserva.',
+          },
+          contact: {
+            title: 'Dados para contato',
+            description: 'Informe como podemos falar com você para confirmar a reserva.',
+            phoneHint: 'Digite apenas números do telefone ou WhatsApp.',
+            phoneError: 'Informe um telefone ou WhatsApp válido apenas com números.',
+          },
+        },
       },
       form: {
         title: 'Formulário de Agendamento',
@@ -1552,6 +1643,52 @@ const translations: Record<Language, TranslationContent> = {
           'Sign in so we can automatically fill in your details and secure your spot in just a few steps.',
         cta: 'Go to login',
         animationLabel: 'Animated compass inviting the user to sign in',
+      },
+      wizard: {
+        triggerTitle: 'Start your adventure',
+        triggerDescription:
+          'Choose the trail, date, time and confirm your details with our guided multi-step wizard.',
+        openButton: 'Open booking wizard',
+        modalTitle: 'Booking wizard',
+        closeButton: 'Close wizard',
+        progressLabel: 'Booking progress',
+        refreshLabel: 'Options refresh automatically every 30 seconds.',
+        next: 'Next step',
+        previous: 'Back',
+        finish: 'Submit request',
+        submitting: 'Submitting...',
+        steps: {
+          trail: {
+            title: 'Choose your trail',
+            description: 'Review highlights, guides and available spots before moving forward.',
+            availability: '{spots} total spots for this trail',
+            guidesFallback: 'Guides will be assigned by our team during confirmation.',
+            phoneLabel: 'Phone:',
+            phoneFallback: 'Phone not available yet.',
+            contactLabel: 'Trail contact:',
+          },
+          date: {
+            title: 'Pick a date',
+            description: 'Select one of the published dates or share your preferred day.',
+            availability: '{spots} published spots on this date',
+          },
+          time: {
+            title: 'Choose a time',
+            description: 'Select the best published slot for your chosen date.',
+            empty: 'No published time slots for this date. Try another day or keep going with your preferred time.',
+            waitingDate: 'Choose a date to see the available time slots.',
+          },
+          participants: {
+            title: 'Participants',
+            description: 'Adjust the group size and fill in the details for each person.',
+          },
+          contact: {
+            title: 'Contact details',
+            description: 'Let us know how to reach you to confirm the reservation.',
+            phoneHint: 'Enter digits only from your phone or WhatsApp number.',
+            phoneError: 'Please provide a valid phone or WhatsApp number using digits only.',
+          },
+        },
       },
       form: {
         title: 'Booking Form',
