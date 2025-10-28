@@ -178,6 +178,12 @@ type BookingTranslation = {
         phoneError: string
       }
     }
+    status: {
+      title: string
+      helper: string
+      empty: string
+      protocolLabel: string
+    }
   }
   form: {
     title: string
@@ -851,6 +857,12 @@ const translations: Record<Language, TranslationContent> = {
             phoneHint: 'Digite apenas números do telefone ou WhatsApp.',
             phoneError: 'Informe um telefone ou WhatsApp válido apenas com números.',
           },
+        },
+        status: {
+          title: 'Status da sua reserva',
+          helper: 'Acompanhe aqui as atualizações depois de enviar a solicitação.',
+          empty: 'Nenhuma solicitação enviada ainda. Use o assistente para iniciar seu agendamento.',
+          protocolLabel: 'Protocolo:',
         },
       },
       form: {
@@ -1688,6 +1700,12 @@ const translations: Record<Language, TranslationContent> = {
             phoneHint: 'Enter digits only from your phone or WhatsApp number.',
             phoneError: 'Please provide a valid phone or WhatsApp number using digits only.',
           },
+        },
+        status: {
+          title: 'Reservation status',
+          helper: 'Track the progress right here after submitting your request.',
+          empty: 'No reservation request sent yet. Use the assistant to start your booking.',
+          protocolLabel: 'Protocol:',
         },
       },
       form: {

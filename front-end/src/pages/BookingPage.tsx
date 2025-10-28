@@ -952,30 +952,36 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
             </div>
           ) : (
             <div className="booking-wizard-card">
-              <h2>{booking.wizard.triggerTitle}</h2>
-              <p>{booking.wizard.triggerDescription}</p>
-              <div className="booking-wizard-card__actions">
-                <button type="button" className="btn solid" onClick={handleOpenWizard}>
-                  {booking.wizard.openButton}
-                </button>
-              </div>
-              {submissionResult ? (
-                <div
-                  className={`form-feedback form-feedback--${submissionResult.type}`}
-                  role="status"
-                  aria-live="polite"
-                >
-                  <p>
-                    {submissionResult.message}
-                    {submissionResult.type === 'success' && submissionResult.protocol ? (
-                      <>
-                        <br />
-                        <strong>Protocolo:</strong> {submissionResult.protocol}
-                      </>
-                    ) : null}
-                  </p>
+              <div className="booking-wizard-card__header">
+                <div className="booking-wizard-card__intro">
+                  <h2>{booking.wizard.triggerTitle}</h2>
+                  <p>{booking.wizard.triggerDescription}</p>
+                  <div className="booking-wizard-card__actions">
+                    <button type="button" className="btn solid" onClick={handleOpenWizard}>
+                      {booking.wizard.openButton}
+                    </button>
+                  </div>
                 </div>
-              ) : null}
+                <div className="booking-wizard-card__status" role="status" aria-live="polite">
+                  <span className="booking-wizard-card__status-title">{booking.wizard.status.title}</span>
+                  <p className="booking-wizard-card__status-helper">{booking.wizard.status.helper}</p>
+                  {submissionResult ? (
+                    <div className={`form-feedback form-feedback--${submissionResult.type}`}>
+                      <p>
+                        {submissionResult.message}
+                        {submissionResult.type === 'success' && submissionResult.protocol ? (
+                          <>
+                            <br />
+                            <strong>{booking.wizard.status.protocolLabel}</strong> {submissionResult.protocol}
+                          </>
+                        ) : null}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="booking-wizard-card__status-placeholder">{booking.wizard.status.empty}</p>
+                  )}
+                </div>
+              </div>
               <p className="booking-wizard-card__disclaimer">{booking.form.disclaimer}</p>
             </div>
           )}
@@ -1883,7 +1889,7 @@ function BookingWizard({
                             {submissionResult.type === 'success' && submissionResult.protocol ? (
                               <>
                                 <br />
-                                <strong>Protocolo:</strong> {submissionResult.protocol}
+                                <strong>{booking.wizard.status.protocolLabel}</strong> {submissionResult.protocol}
                               </>
                             ) : null}
                           </p>

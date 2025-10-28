@@ -2,9 +2,10 @@
   background: linear-gradient(135deg, rgba(226, 244, 234, 0.85), rgba(255, 255, 255, 0.95));
   border: 1px solid rgba(26, 102, 68, 0.15);
   border-radius: 28px;
-  padding: 2.5rem;
+  padding: 2rem 2.25rem;
   box-shadow: 0 28px 64px rgba(16, 61, 40, 0.12);
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 1.5rem;
   position: relative;
   overflow: hidden;
@@ -26,7 +27,22 @@
   color: #144028;
 }
 
-.booking-wizard-card p {
+.booking-wizard-card__header {
+  display: flex;
+  gap: 1.75rem;
+  justify-content: space-between;
+  align-items: stretch;
+  flex-wrap: wrap;
+}
+
+.booking-wizard-card__intro {
+  flex: 1 1 280px;
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+}
+
+.booking-wizard-card__intro p {
   margin: 0;
   color: rgba(20, 52, 40, 0.75);
   font-size: 1rem;
@@ -37,12 +53,48 @@
   display: flex;
   gap: 1rem;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .booking-wizard-card .btn.solid {
   min-width: 220px;
   font-size: 1.05rem;
   padding: 0.95rem 1.75rem;
+}
+
+.booking-wizard-card__status {
+  flex: 1 1 240px;
+  min-width: 260px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(26, 102, 68, 0.12);
+  border-radius: 22px;
+  padding: 1.35rem 1.5rem;
+  display: grid;
+  gap: 0.75rem;
+  align-content: start;
+  box-shadow: inset 0 1px 0 rgba(20, 52, 40, 0.04);
+}
+
+.booking-wizard-card__status-title {
+  font-weight: 600;
+  color: #144028;
+}
+
+.booking-wizard-card__status-helper {
+  margin: 0;
+  color: rgba(20, 52, 40, 0.6);
+  font-size: 0.95rem;
+}
+
+.booking-wizard-card__status-placeholder {
+  margin: 0;
+  color: rgba(20, 52, 40, 0.7);
+  font-size: 0.95rem;
+}
+
+.booking-wizard-card__status .form-feedback {
+  margin: 0;
+  font-size: 0.95rem;
 }
 
 .booking-wizard-card__disclaimer {
@@ -425,6 +477,16 @@
 
   .booking-wizard-card h2 {
     font-size: 1.65rem;
+  }
+
+  .booking-wizard-card__header {
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .booking-wizard-card__status {
+    min-width: unset;
+    width: 100%;
   }
 
   .booking-wizard-card::after {
