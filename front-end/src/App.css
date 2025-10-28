@@ -915,7 +915,7 @@ section {
 .rain-warning-modal {
   position: fixed;
   inset: 0;
-  z-index: 1200;
+  z-index: 1500;
   display: grid;
   place-items: center;
   padding: clamp(1.5rem, 4vw, 3rem);
@@ -989,7 +989,7 @@ section {
 .terms-modal {
   position: fixed;
   inset: 0;
-  z-index: 1150;
+  z-index: 1520;
   display: grid;
   place-items: center;
   padding: clamp(1.25rem, 4vw, 3rem);

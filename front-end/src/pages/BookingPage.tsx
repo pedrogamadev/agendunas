@@ -1494,9 +1494,28 @@ function BookingWizard({
         aria-labelledby="booking-wizard-title"
       >
         <header className="booking-wizard__header">
-          <div>
-            <h2 id="booking-wizard-title">{booking.wizard.modalTitle}</h2>
-            <p>{booking.wizard.refreshLabel}</p>
+          <div className="booking-wizard__heading" role="presentation">
+            <nav
+              className="booking-wizard__progress"
+              aria-label={booking.wizard.progressLabel}
+            >
+              {steps.map((step, index) => (
+                <div
+                  key={step.key}
+                  className={`booking-wizard__progress-item${
+                    index === activeStep ? ' is-active' : ''
+                  }${index < activeStep ? ' is-complete' : ''}`}
+                >
+                  <span className="booking-wizard__progress-index">{index + 1}</span>
+                  <span className="booking-wizard__progress-title">{step.title}</span>
+                </div>
+              ))}
+            </nav>
+
+            <div className="booking-wizard__title">
+              <h2 id="booking-wizard-title">{booking.wizard.modalTitle}</h2>
+              <p>{booking.wizard.refreshLabel}</p>
+            </div>
           </div>
           <button
             ref={closeButtonRef}
@@ -1508,20 +1527,6 @@ function BookingWizard({
             ×
           </button>
         </header>
-
-        <nav className="booking-wizard__progress" aria-label={booking.wizard.progressLabel}>
-          {steps.map((step, index) => (
-            <div
-              key={step.key}
-              className={`booking-wizard__progress-item${index === activeStep ? ' is-active' : ''}${
-                index < activeStep ? ' is-complete' : ''
-              }`}
-            >
-              <span className="booking-wizard__progress-index">{index + 1}</span>
-              <span className="booking-wizard__progress-title">{step.title}</span>
-            </div>
-          ))}
-        </nav>
 
         <form ref={formRef} className="booking-wizard-form" onSubmit={onSubmit}>
           <input type="hidden" name="trail" value={selectedTrailId} />
