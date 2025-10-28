@@ -7,6 +7,7 @@ type GuideSummary = {
   name: string
   speciality: string | null
   photoUrl: string | null
+  contactPhone: string | null
 }
 
 type PublicTrail = {
@@ -31,6 +32,7 @@ type PublicTrail = {
     label: string
     occupancyPercentage: number
     primaryGuide: { cpf: string; name: string } | null
+    contactPhone: string | null
   } | null
   sessions: Array<{
     date: string
@@ -45,6 +47,7 @@ type PublicTrail = {
       occupancyPercentage: number
       status: string
       primaryGuide: { cpf: string; name: string } | null
+      contactPhone: string | null
     }>
   }>
   guides: GuideSummary[]
@@ -70,6 +73,7 @@ export async function getTrails(_request: Request, response: Response, next: Nex
               select: {
                 cpf: true,
                 name: true,
+                contactPhone: true,
               },
             },
           },
@@ -82,6 +86,7 @@ export async function getTrails(_request: Request, response: Response, next: Nex
                 name: true,
                 speciality: true,
                 photoUrl: true,
+                contactPhone: true,
               },
             },
           },
@@ -123,6 +128,8 @@ export async function getTrails(_request: Request, response: Response, next: Nex
           upcomingAvailableSpots = availableSpots
         }
 
+        const contactPhone = session.contactPhone ?? session.primaryGuide?.contactPhone ?? null
+
         const slot = {
           id: session.id,
           startsAt: session.startsAt.toISOString(),
@@ -135,6 +142,7 @@ export async function getTrails(_request: Request, response: Response, next: Nex
           primaryGuide: session.primaryGuide
             ? { cpf: session.primaryGuide.cpf, name: session.primaryGuide.name }
             : null,
+          contactPhone,
         }
 
         if (!sessionGroups.has(sessionDate)) {
@@ -181,6 +189,7 @@ export async function getTrails(_request: Request, response: Response, next: Nex
                     name: upcomingSession.primaryGuide.name,
                   }
                 : null,
+              contactPhone: upcomingSession.contactPhone ?? upcomingSession.primaryGuide?.contactPhone ?? null,
             }
           : null,
         sessions: Array.from(sessionGroups.values()).map((group) => ({
@@ -192,6 +201,7 @@ export async function getTrails(_request: Request, response: Response, next: Nex
           name: assignment.guide.name,
           speciality: assignment.guide.speciality,
           photoUrl: assignment.guide.photoUrl,
+          contactPhone: assignment.guide.contactPhone ?? null,
         })),
       }
     })

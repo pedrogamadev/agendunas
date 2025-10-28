@@ -33,6 +33,7 @@ export function normalizeGuide(guide: GuideRecord): AdminGuide {
     cpf: guide.cpf,
     slug: guide.slug,
     name: guide.name,
+    contactPhone: guide.contactPhone ?? null,
     speciality: guide.speciality,
     summary: guide.summary,
     biography: guide.biography,

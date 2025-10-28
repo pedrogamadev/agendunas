@@ -12,12 +12,13 @@ import type {
 export const trailGuideInclude = {
   include: {
     guide: {
-      select: {
-        cpf: true,
-        slug: true,
-        name: true,
-        speciality: true,
-        photoUrl: true,
+        select: {
+          cpf: true,
+          slug: true,
+          name: true,
+          contactPhone: true,
+          speciality: true,
+          photoUrl: true,
         isActive: true,
         isFeatured: true,
       },
@@ -150,6 +151,7 @@ export function normalizeTrailSession(
     primaryGuide: session.primaryGuide
       ? { cpf: (session.primaryGuide as PrimaryGuide).cpf, name: (session.primaryGuide as PrimaryGuide).name }
       : null,
+    contactPhone: session.contactPhone ?? null,
     totalParticipants,
     availableSpots,
     occupancyPercentage,
@@ -193,6 +195,7 @@ export function normalizeTrail(trail: TrailRecord): AdminTrail {
       cpf: assignment.guide.cpf,
       slug: assignment.guide.slug,
       name: assignment.guide.name,
+      contactPhone: assignment.guide.contactPhone ?? null,
       speciality: assignment.guide.speciality ?? null,
       photoUrl: assignment.guide.photoUrl ?? null,
       isActive: assignment.guide.isActive,

@@ -2,6 +2,7 @@ import type { Prisma } from '@prisma/client'
 import type { NextFunction, Request, Response } from 'express'
 import { z } from 'zod'
 import prisma from '../../lib/prisma.js'
+import { isValidPhoneInput, normalizePhoneInput } from '../../utils/phone.js'
 import { activeBookingStatuses, normalizeTrailSession, trailSessionsInclude } from './trail-service.js'
 
 const updateTrailSessionSchema = z
@@ -13,6 +14,15 @@ const updateTrailSessionSchema = z
     notes: z.string().max(2000).nullable().optional(),
     status: z.enum(['SCHEDULED', 'CANCELLED', 'COMPLETED']).optional(),
     primaryGuideCpf: z.string().min(11).nullable().optional(),
+    contactPhone: z
+      .string()
+      .min(8, 'Informe um telefone de contato válido.')
+      .max(20)
+      .nullable()
+      .optional()
+      .refine((value) => value == null || isValidPhoneInput(value), {
+        message: 'Telefone de contato inválido.',
+      }),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: 'Informe ao menos um campo para atualizar a sessão.',
@@ -144,6 +154,10 @@ export async function updateTrailSession(
 
     if (payload.primaryGuideCpf !== undefined) {
       data.primaryGuideCpf = resolvedGuideCpf
+    }
+
+    if (payload.contactPhone !== undefined) {
+      data.contactPhone = normalizePhoneInput(payload.contactPhone)
     }
 
     const updated = await prisma.trailSession.update({

@@ -107,6 +107,7 @@ export type AdminTrailGuideAssignment = {
   cpf: string
   slug: string
   name: string
+  contactPhone: string | null
   speciality: string | null
   photoUrl: string | null
   isActive: boolean
@@ -118,6 +119,7 @@ export type AdminTrailGuideOption = {
   cpf: string
   slug: string
   name: string
+  contactPhone: string | null
   speciality: string | null
   photoUrl: string | null
   isActive: boolean
@@ -167,6 +169,7 @@ export type AdminTrailSession = {
   notes: string | null
   status: TrailSessionStatus
   primaryGuide: { cpf: string; name: string } | null
+  contactPhone: string | null
   totalParticipants: number
   availableSpots: number
   occupancyPercentage: number
@@ -217,6 +220,7 @@ export type AdminGuide = {
   cpf: string
   slug: string
   name: string
+  contactPhone: string | null
   speciality: string | null
   summary: string | null
   biography: string | null

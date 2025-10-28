@@ -108,6 +108,7 @@ model Guide {
   usuario         Usuario        @relation(fields: [cpf], references: [cpf], onDelete: Cascade)
   slug            String         @unique
   name            String
+  contactPhone    String?
   photoUrl        String?
   speciality      String?
   biography       String?
@@ -173,6 +174,7 @@ model TrailSession {
   id              String             @id @default(cuid())
   trailId         String
   primaryGuideCpf String?
+  contactPhone    String?
   startsAt        DateTime
   endsAt          DateTime?
   capacity        Int

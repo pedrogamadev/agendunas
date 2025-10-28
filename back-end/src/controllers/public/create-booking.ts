@@ -1,4 +1,5 @@
 import crypto from 'node:crypto'
+import type { Prisma } from '@prisma/client'
 import type { NextFunction, Request, Response } from 'express'
 import { z } from 'zod'
 import prisma from '../../lib/prisma.js'
@@ -28,14 +29,22 @@ const bookingSchema = z.object({
 
 type CreateBookingBody = z.infer<typeof bookingSchema>
 
-async function generateProtocol(): Promise<string> {
+type TransactionClient = Prisma.TransactionClient
+
+type HttpError = Error & { statusCode: number }
+
+function createHttpError(statusCode: number, message: string): HttpError {
+  return Object.assign(new Error(message), { statusCode })
+}
+
+async function generateProtocol(client: TransactionClient): Promise<string> {
   const now = new Date()
   const prefix = `ACD-${now.getUTCFullYear()}${String(now.getUTCMonth() + 1).padStart(2, '0')}`
   let attempts = 0
 
   while (attempts < 5) {
     const candidate = `${prefix}-${String(crypto.randomInt(0, 9999)).padStart(4, '0')}`
-    const exists = await prisma.booking.findUnique({ where: { protocol: candidate }, select: { id: true } })
+    const exists = await client.booking.findUnique({ where: { protocol: candidate }, select: { id: true } })
     if (!exists) {
       return candidate
     }
@@ -53,139 +62,150 @@ export async function createBooking(
   try {
     const data = bookingSchema.parse(request.body)
 
-    const trail = await prisma.trail.findUnique({
-      where: { id: data.trailId },
-      select: { id: true, maxGroupSize: true, name: true },
-    })
-
-    if (!trail) {
-      response.status(404).json({ message: 'Trilha informada não foi encontrada.' })
-      return
-    }
-
-    const guideCpfInput = data.guideCpf ?? null
-    let resolvedGuideCpf: string | null = guideCpfInput
-    let scheduledFor: Date
-
-    const session = data.sessionId
-      ? await prisma.trailSession.findUnique({
-          where: { id: data.sessionId },
-          include: {
-            bookings: { select: { participantsCount: true } },
-          },
-        })
-      : null
-
-    if (data.sessionId) {
-      if (!session || session.trailId !== data.trailId) {
-        response.status(400).json({ message: 'Sessão selecionada não corresponde à trilha informada.' })
-        return
-      }
-
-      let occupied = 0
-      for (const booking of session.bookings) {
-        occupied += booking.participantsCount
-      }
-
-      if (occupied + data.participantsCount > session.capacity) {
-        response.status(409).json({ message: 'Capacidade da sessão excedida para a quantidade de participantes.' })
-        return
-      }
-
-      scheduledFor = session.startsAt
-      resolvedGuideCpf = resolvedGuideCpf ?? session.primaryGuideCpf
-    } else {
-      const isoDate = `${data.scheduledDate}T${data.scheduledTime ?? '08:00'}:00`
-      const parsedDate = new Date(isoDate)
-      if (Number.isNaN(parsedDate.getTime())) {
-        response.status(400).json({ message: 'Data ou horário informados são inválidos.' })
-        return
-      }
-
-      scheduledFor = parsedDate
-    }
-
-    if (data.participantsCount > trail.maxGroupSize) {
-      response.status(400).json({ message: 'Quantidade de participantes excede o limite da trilha.' })
-      return
-    }
-
-    if (resolvedGuideCpf) {
-      const guideRecord = await prisma.guide.findFirst({
-        where: {
-          isActive: true,
-          cpf: resolvedGuideCpf,
-        },
-        select: { cpf: true },
+    const created = await prisma.$transaction(async (tx) => {
+      const trail = await tx.trail.findUnique({
+        where: { id: data.trailId },
+        select: { id: true, maxGroupSize: true, name: true },
       })
 
-      if (!guideRecord) {
-        response.status(400).json({ message: 'Guia informado não está ativo ou não existe.' })
-        return
+      if (!trail) {
+        throw createHttpError(404, 'Trilha informada não foi encontrada.')
       }
 
-      resolvedGuideCpf = guideRecord.cpf
-    }
+      const guideCpfInput = data.guideCpf ?? null
+      let resolvedGuideCpf: string | null = guideCpfInput
+      let scheduledFor: Date
 
-    if (guideCpfInput && !resolvedGuideCpf) {
-      response.status(400).json({ message: 'Não foi possível identificar o guia informado.' })
-      return
-    }
+      if (data.sessionId) {
+        const lockedSession = await tx.$queryRaw<{ id: string }[]>`
+          SELECT id
+          FROM "sessoes_trilhas"
+          WHERE id = ${data.sessionId}
+          FOR UPDATE
+        `
 
-    const protocol = await generateProtocol()
+        if (!lockedSession || lockedSession.length === 0) {
+          throw createHttpError(400, 'Sessão selecionada não corresponde à trilha informada.')
+        }
 
-    const booking = await prisma.booking.create({
-      data: {
-        protocol,
-        trailId: trail.id,
-        sessionId: session?.id ?? null,
-        guideCpf: resolvedGuideCpf,
-        status: 'PENDING',
-        scheduledFor,
-        participantsCount: data.participantsCount,
-        contactName: data.contactName,
-        contactEmail: data.contactEmail,
-        contactPhone: data.contactPhone,
-        notes: data.notes,
-        source: data.source ?? 'PUBLIC_PORTAL',
-        participants: data.participants?.length
-          ? {
-              create: data.participants.map((participant) => ({
-                fullName: participant.fullName,
-                cpf: participant.cpf,
-                email: participant.email,
-                phone: participant.phone,
-              })),
-            }
-          : undefined,
-      },
-      include: {
-        trail: { select: { name: true } },
-        guide: { select: { name: true } },
-      },
-    })
+        const session = await tx.trailSession.findUnique({
+          where: { id: data.sessionId },
+          include: {
+            bookings: { select: { participantsCount: true, status: true } },
+          },
+        })
 
-    await prisma.activityLog.create({
-      data: {
-        bookingId: booking.id,
-        message: `Nova solicitação de agendamento recebida para ${booking.trail.name}.`,
-      },
+        if (!session || session.trailId !== data.trailId) {
+          throw createHttpError(400, 'Sessão selecionada não corresponde à trilha informada.')
+        }
+
+        const occupied = session.bookings.reduce((total, booking) => {
+          return booking.status === 'CANCELLED' ? total : total + booking.participantsCount
+        }, 0)
+
+        if (occupied + data.participantsCount > session.capacity) {
+          throw createHttpError(409, 'Capacidade da sessão excedida para a quantidade de participantes.')
+        }
+
+        scheduledFor = session.startsAt
+        resolvedGuideCpf = resolvedGuideCpf ?? session.primaryGuideCpf
+      } else {
+        const isoDate = `${data.scheduledDate}T${data.scheduledTime ?? '08:00'}:00`
+        const parsedDate = new Date(isoDate)
+        if (Number.isNaN(parsedDate.getTime())) {
+          throw createHttpError(400, 'Data ou horário informados são inválidos.')
+        }
+
+        scheduledFor = parsedDate
+      }
+
+      if (data.participantsCount > trail.maxGroupSize) {
+        throw createHttpError(400, 'Quantidade de participantes excede o limite da trilha.')
+      }
+
+      if (resolvedGuideCpf) {
+        const guideRecord = await tx.guide.findFirst({
+          where: {
+            isActive: true,
+            cpf: resolvedGuideCpf,
+          },
+          select: { cpf: true },
+        })
+
+        if (!guideRecord) {
+          throw createHttpError(400, 'Guia informado não está ativo ou não existe.')
+        }
+
+        resolvedGuideCpf = guideRecord.cpf
+      }
+
+      if (guideCpfInput && !resolvedGuideCpf) {
+        throw createHttpError(400, 'Não foi possível identificar o guia informado.')
+      }
+
+      const protocol = await generateProtocol(tx)
+
+      const booking = await tx.booking.create({
+        data: {
+          protocol,
+          trailId: trail.id,
+          sessionId: data.sessionId ?? null,
+          guideCpf: resolvedGuideCpf,
+          status: 'PENDING',
+          scheduledFor,
+          participantsCount: data.participantsCount,
+          contactName: data.contactName,
+          contactEmail: data.contactEmail,
+          contactPhone: data.contactPhone,
+          notes: data.notes,
+          source: data.source ?? 'PUBLIC_PORTAL',
+          participants: data.participants?.length
+            ? {
+                create: data.participants.map((participant) => ({
+                  fullName: participant.fullName,
+                  cpf: participant.cpf,
+                  email: participant.email,
+                  phone: participant.phone,
+                })),
+              }
+            : undefined,
+        },
+        include: {
+          trail: { select: { name: true } },
+          guide: { select: { name: true } },
+        },
+      })
+
+      await tx.activityLog.create({
+        data: {
+          bookingId: booking.id,
+          message: `Nova solicitação de agendamento recebida para ${booking.trail.name}.`,
+        },
+      })
+
+      return booking
     })
 
     response.status(201).json({
       data: {
-        id: booking.id,
-        protocol: booking.protocol,
-        status: booking.status,
-        scheduledFor: booking.scheduledFor,
-        scheduledForLabel: formatDateTimeLabel(booking.scheduledFor),
-        contactName: booking.contactName,
-        trailName: booking.trail.name,
-        guideName: booking.guide?.name ?? null,
+        id: created.id,
+        protocol: created.protocol,
+        status: created.status,
+        scheduledFor: created.scheduledFor,
+        scheduledForLabel: formatDateTimeLabel(created.scheduledFor),
+        contactName: created.contactName,
+        trailName: created.trail.name,
+        guideName: created.guide?.name ?? null,
       },
       message: 'Solicitação de agendamento registrada com sucesso. Entraremos em contato para confirmação.',
     })
   } catch (error) {
+    if (typeof (error as Partial<HttpError>).statusCode === 'number') {
+      const { statusCode } = error as HttpError
+      response.status(statusCode).json({ message: (error as Error).message })
+      return
+    }
+
     next(error)
   }
 }

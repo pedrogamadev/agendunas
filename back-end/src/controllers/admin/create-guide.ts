@@ -2,12 +2,22 @@ import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library'
 import type { NextFunction, Request, Response } from 'express'
 import { z } from 'zod'
 import prisma from '../../lib/prisma.js'
+import { isValidPhoneInput, normalizePhoneInput } from '../../utils/phone.js'
 import { guideInclude, normalizeGuide } from './guide-service.js'
 
 const guideSchema = z.object({
   cpf: z.string().min(11, 'Informe o CPF do guia.'),
   name: z.string().min(3, 'Informe o nome do guia.'),
   slug: z.string().min(3).max(120),
+  contactPhone: z
+    .string()
+    .min(8, 'Informe um telefone de contato válido.')
+    .max(20)
+    .optional()
+    .nullable()
+    .refine((value) => value == null || isValidPhoneInput(value), {
+      message: 'Telefone de contato inválido.',
+    }),
   speciality: z.string().min(1).max(160).optional().nullable(),
   summary: z.string().min(1).max(400).optional().nullable(),
   biography: z.string().min(1).max(4000).optional().nullable(),
@@ -81,11 +91,14 @@ export async function createGuide(
 
     await prisma.trailGuide.deleteMany({ where: { guideCpf: payload.cpf } })
 
+    const contactPhone = normalizePhoneInput(payload.contactPhone)
+
     const created = await prisma.guide.upsert({
       where: { cpf: payload.cpf },
       update: {
         name: payload.name,
         slug: payload.slug,
+        contactPhone: payload.contactPhone !== undefined ? contactPhone : undefined,
         speciality: payload.speciality ?? null,
         summary: payload.summary ?? null,
         biography: payload.biography ?? null,
@@ -111,6 +124,7 @@ export async function createGuide(
         cpf: payload.cpf,
         name: payload.name,
         slug: payload.slug,
+        contactPhone,
         speciality: payload.speciality ?? null,
         summary: payload.summary ?? null,
         biography: payload.biography ?? null,
