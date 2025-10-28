@@ -369,7 +369,8 @@
   align-items: center;
 }
 
-.auth-portal__field input {
+.auth-portal__field input,
+.auth-portal__field select {
   width: 100%;
   padding: 0.85rem 1rem;
   border-radius: 14px;
@@ -384,18 +385,39 @@
   color: var(--auth-input-placeholder);
 }
 
-.auth-portal__field input:focus {
+.auth-portal__field input:focus,
+.auth-portal__field select:focus {
   outline: none;
   border-color: var(--auth-input-focus-border);
   box-shadow: var(--auth-input-focus-shadow);
   background: var(--auth-input-focus-background);
 }
 
+.auth-portal__field select {
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, rgba(15, 23, 42, 0.35) 50%),
+    linear-gradient(135deg, rgba(15, 23, 42, 0.35) 50%, transparent 50%);
+  background-position: calc(100% - 1.75rem) calc(1.1rem), calc(100% - 1.3rem) calc(1.1rem);
+  background-size: 8px 8px, 8px 8px;
+  background-repeat: no-repeat;
+  padding-right: 2.5rem;
+}
+
+.auth-portal--admin .auth-portal__field select {
+  background-image: linear-gradient(45deg, transparent 50%, rgba(226, 232, 240, 0.75) 50%),
+    linear-gradient(135deg, rgba(226, 232, 240, 0.75) 50%, transparent 50%);
+}
+
+.auth-portal__field select:disabled {
+  background-image: none;
+}
+
 .auth-portal__password-wrapper input {
   padding-right: 3rem;
 }
 
-.auth-portal__field input:disabled {
+.auth-portal__field input:disabled,
+.auth-portal__field select:disabled {
   opacity: 0.65;
   background: var(--auth-input-disabled-background);
   cursor: not-allowed;
@@ -551,6 +573,12 @@
   background: rgba(248, 113, 113, 0.12);
   color: #b91c1c;
   border: 1px solid rgba(248, 113, 113, 0.25);
+}
+
+.auth-portal__inline-error {
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
+  color: #dc2626;
 }
 
 @media (max-width: 1080px) {
