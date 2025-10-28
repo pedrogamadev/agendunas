@@ -66,6 +66,8 @@ function App() {
   const { content, toggleLanguage } = useTranslation()
   const { user, isAuthenticating, logout } = useAuth()
   const isAdmin = user?.tipo === 'A'
+  const isCustomerLoginRoute =
+    location.path === '/area-cliente' || location.path === '/login-cliente'
 
   useEffect(() => {
     const handlePopState = () => {
@@ -234,7 +236,9 @@ function App() {
     <>
       <nav
         ref={navRef}
-        className={`top-nav${isScrolled ? ' top-nav--scrolled' : ''}${isMenuOpen ? ' top-nav--open' : ''}`}
+        className={`top-nav${
+          isScrolled || isCustomerLoginRoute ? ' top-nav--scrolled' : ''
+        }${isMenuOpen ? ' top-nav--open' : ''}`}
       >
         <a
           className="brand"

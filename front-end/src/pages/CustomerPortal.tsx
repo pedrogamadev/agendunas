@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { FormEvent } from 'react'
+import type { CSSProperties, FormEvent } from 'react'
 import type { PageProps } from '../App'
 import { useAuth } from '../context/AuthContext'
 import { formatCpfForInput, sanitizeCpf } from '../utils/cpf'
@@ -8,6 +8,8 @@ import './AuthPortal.css'
 type AuthMode = 'login' | 'register'
 
 type CustomerPortalVariant = 'admin' | 'customer'
+
+type OverlayStyle = CSSProperties & Record<'--auth-overlay-image', string>
 
 type CustomerPortalProps = PageProps & {
   initialMode?: AuthMode
@@ -65,6 +67,16 @@ function CustomerPortal({
   const [registerConfirmacao, setRegisterConfirmacao] = useState('')
   const [isRegisterPasswordVisible, setIsRegisterPasswordVisible] = useState(false)
   const [isRegisterConfirmVisible, setIsRegisterConfirmVisible] = useState(false)
+
+  const overlayStyle = useMemo<OverlayStyle>(() => {
+    const image =
+      activeMode === 'login'
+        ? "url('/images/guias/Turma_duninho_trilha.png')"
+        : "url('/images/guias/tuma_duninho_fogueira.png')"
+    return {
+      '--auth-overlay-image': image,
+    }
+  }, [activeMode])
 
   const redirectTarget = useMemo(() => {
     const redirect = searchParams.get('redirect')
@@ -397,7 +409,11 @@ function CustomerPortal({
             </form>
           </div>
         </section>
-        <aside className={`auth-portal__overlay auth-portal__overlay--${activeMode}`} aria-hidden="true">
+        <aside
+          className={`auth-portal__overlay auth-portal__overlay--${activeMode}`}
+          aria-hidden="true"
+          style={overlayStyle}
+        >
           <div className="auth-portal__overlay-content">
             <img className="auth-portal__overlay-logo" src="/agendunaslogo.png" alt="Logo AgenDunas" />
             <h2>{activeMode === 'login' ? 'Ainda não tem conta?' : 'Já possui cadastro?'}</h2>
