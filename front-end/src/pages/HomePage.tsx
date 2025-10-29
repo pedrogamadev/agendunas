@@ -10,11 +10,22 @@ const heroImages = [
   'https://diariodorn.com.br/wp-content/uploads/2024/05/titulo.png',
 ]
 
+const duninhoImages = [
+  '/images/duninho/Duninho.png',
+  '/images/duninho/Duninho-acena.png',
+  '/images/duninho/duninho-cajado.png',
+  '/images/duninho/duninho-correndo.png',
+  '/images/duninho/duninho-lupa.png',
+  '/images/duninho/duninho-mapa.png',
+  '/images/duninho/duninho-skate.png',
+]
+
 function HomePage({ navigation, onNavigate }: PageProps) {
   const { content } = useTranslation()
   const home = content.home
   const [activeTestimonial, setActiveTestimonial] = useState(0)
   const [activeHeroImage, setActiveHeroImage] = useState(0)
+  const [activeDuninho, setActiveDuninho] = useState(0)
   const [trailCards, setTrailCards] = useState(home.trails.items)
   const [wildlifeCards, setWildlifeCards] = useState(home.wildlife.items)
   const testimonials = home.testimonials.items
@@ -118,6 +129,18 @@ function HomePage({ navigation, onNavigate }: PageProps) {
     return () => window.clearInterval(interval)
   }, [])
 
+  useEffect(() => {
+    if (duninhoImages.length <= 1) {
+      return undefined
+    }
+
+    const interval = window.setInterval(() => {
+      setActiveDuninho((current) => (current + 1) % duninhoImages.length)
+    }, 4000)
+
+    return () => window.clearInterval(interval)
+  }, [])
+
   return (
     <div className="home-page" id="home">
       <header className="hero">
@@ -149,6 +172,19 @@ function HomePage({ navigation, onNavigate }: PageProps) {
             </button>
           </div>
         </div>
+        {duninhoImages.length > 0 && (
+          <div className="hero-mascot" aria-hidden="true">
+            <div className="hero-mascot__disk" />
+            {duninhoImages.map((image, index) => (
+              <div
+                key={image}
+                className={`hero-mascot__image ${index === activeDuninho ? 'is-active' : ''}`}
+              >
+                <img src={image} alt="" decoding="async" />
+              </div>
+            ))}
+          </div>
+        )}
       </header>
 
       <main>
