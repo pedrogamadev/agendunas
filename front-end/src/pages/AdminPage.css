@@ -1679,6 +1679,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex: 0 0 32px;
   width: 32px;
   height: 32px;
   border-radius: 50%;
