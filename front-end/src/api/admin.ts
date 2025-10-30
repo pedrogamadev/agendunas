@@ -39,10 +39,18 @@ export type ParticipantRow = {
 
 export type SessionSummary = {
   id: string
+  trailId: string
   trailName: string
-  scheduleLabel: string
+  startsAt: string
+  timeLabel: string
   occupancy: number
   capacityLabel: string
+  capacity: number
+  totalParticipants: number
+  availableSpots: number
+  status: TrailSessionStatus
+  primaryGuideName: string | null
+  meetingPoint: string | null
 }
 
 export type EventCard = {
@@ -50,6 +58,7 @@ export type EventCard = {
   title: string
   description: string
   dateLabel: string
+  location?: string | null
   status?: string
   statusTone?: string
   tag?: string

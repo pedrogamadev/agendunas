@@ -81,10 +81,19 @@ type SectionConfig = {
 
 type DashboardSession = {
   id: string
+  trailId: string
   name: string
-  schedule: string
+  startsAt: string
+  time: string
   occupancy: number
-  capacity: string
+  capacityLabel: string
+  capacity: number
+  totalParticipants: number
+  availableSpots: number
+  status: TrailSessionStatus
+  guideName: string
+  meetingPoint: string | null
+  rainProbability?: number | null
 }
 
 type DashboardEventHighlight = {
@@ -92,6 +101,7 @@ type DashboardEventHighlight = {
   title: string
   description: string
   date: string
+  location?: string | null
 }
 
 type DashboardActivity = {
@@ -304,6 +314,88 @@ const timeFormatter = new Intl.DateTimeFormat('pt-BR', {
   hour: '2-digit',
   minute: '2-digit',
 })
+
+const WEATHER_LOCATION = {
+  latitude: '-5.81063',
+  longitude: '-35.19756',
+  timezone: 'America/Recife',
+}
+
+const WEATHER_CONDITION_LABELS: Record<string, string> = {
+  clear: 'Céu limpo',
+  mostlyClear: 'Parcialmente aberto',
+  partlyCloudy: 'Parcialmente nublado',
+  overcast: 'Encoberto',
+  fog: 'Nevoeiro',
+  drizzle: 'Garoa',
+  freezingDrizzle: 'Garoa congelante',
+  rainLight: 'Chuva leve',
+  rainHeavy: 'Chuva forte',
+  freezingRain: 'Chuva congelante',
+  snow: 'Neve',
+  thunderstorm: 'Tempestade',
+  unknown: 'Condição desconhecida',
+}
+
+const formatWeatherCondition = (code: number): string => {
+  if (code === 0) return WEATHER_CONDITION_LABELS.clear
+  if (code === 1) return WEATHER_CONDITION_LABELS.mostlyClear
+  if (code === 2) return WEATHER_CONDITION_LABELS.partlyCloudy
+  if (code === 3) return WEATHER_CONDITION_LABELS.overcast
+  if (code === 45 || code === 48) return WEATHER_CONDITION_LABELS.fog
+  if (code === 51 || code === 53 || code === 55) return WEATHER_CONDITION_LABELS.drizzle
+  if (code === 56 || code === 57) return WEATHER_CONDITION_LABELS.freezingDrizzle
+  if (code === 61 || code === 63 || code === 80 || code === 81) return WEATHER_CONDITION_LABELS.rainLight
+  if (code === 65 || code === 82) return WEATHER_CONDITION_LABELS.rainHeavy
+  if (code === 66 || code === 67) return WEATHER_CONDITION_LABELS.freezingRain
+  if (code === 71 || code === 73 || code === 75 || code === 77 || code === 85 || code === 86)
+    return WEATHER_CONDITION_LABELS.snow
+  if (code === 95 || code === 96 || code === 99) return WEATHER_CONDITION_LABELS.thunderstorm
+  return WEATHER_CONDITION_LABELS.unknown
+}
+
+const formatWeatherHourKey = (isoDate: string): string => {
+  const date = new Date(isoDate)
+  if (Number.isNaN(date.getTime())) {
+    return isoDate
+  }
+
+  const localString = date.toLocaleString('sv-SE', {
+    timeZone: WEATHER_LOCATION.timezone,
+    hour12: false,
+  })
+
+  const [datePart, timePart = '00:00:00'] = localString.split(' ')
+  const hourMinute = timePart.slice(0, 5)
+  return `${datePart}T${hourMinute}`
+}
+
+type WeatherForecastEntry = {
+  time: string
+  hourLabel: string
+  temperature: number
+  precipitationProbability: number | null
+  condition: string
+}
+
+type DashboardWeatherData = {
+  updatedAt: string
+  current: {
+    time: string
+    temperature: number
+    condition: string
+    precipitationProbability: number | null
+    humidity: number | null
+    windSpeed: number | null
+  }
+  forecast: WeatherForecastEntry[]
+  precipitationByHour: Record<string, number | null>
+}
+
+type DashboardWeatherState =
+  | { status: 'idle' | 'loading' }
+  | { status: 'error'; message: string }
+  | { status: 'success'; data: DashboardWeatherData }
 
 const slugify = (value: string) =>
   value
@@ -629,6 +721,7 @@ const BarChart = ({ data }: { data: ChartDatum[] }) => {
 type SectionBuilderParams = {
   key: SectionKey
   data: AdminPageData
+  weatherState: DashboardWeatherState
   trailsSection: SectionConfig
   guidesSection: SectionConfig
   sessionWizardFeedback: { message: string; tone: 'success' | 'error' } | null
@@ -659,6 +752,7 @@ type SectionBuilderParams = {
 const buildSection = ({
   key,
   data,
+  weatherState,
   trailsSection,
   guidesSection,
   sessionWizardFeedback,
@@ -685,7 +779,85 @@ const buildSection = ({
   }
 
   switch (key) {
-    case 'dashboard':
+    case 'dashboard': {
+      const precipitationByHour =
+        weatherState.status === 'success' ? weatherState.data.precipitationByHour : null
+
+      const todaysTrails = data.todaysTrails.map((trail) => ({
+        ...trail,
+        rainProbability: precipitationByHour
+          ? precipitationByHour[formatWeatherHourKey(trail.startsAt)] ?? null
+          : null,
+      }))
+
+      const renderWeatherCard = () => {
+        if (weatherState.status === 'loading' || weatherState.status === 'idle') {
+          return <p className="admin-empty-state">Carregando condições do parque...</p>
+        }
+
+        if (weatherState.status === 'error') {
+          return <p className="admin-error-state">{weatherState.message}</p>
+        }
+
+        const { current, forecast } = weatherState.data
+        const updatedLabel = timeFormatter.format(new Date(current.time))
+
+        return (
+          <div className="admin-weather-card">
+            <div className="admin-weather__current">
+              <div className="admin-weather__temp">{Math.round(current.temperature)}°C</div>
+              <div className="admin-weather__details">
+                <strong>{current.condition}</strong>
+                <span>Atualizado às {updatedLabel}</span>
+                <span>
+                  Prob. de chuva:{' '}
+                  {typeof current.precipitationProbability === 'number'
+                    ? `${current.precipitationProbability}%`
+                    : '—'}
+                </span>
+                <span>
+                  Umidade:{' '}
+                  {typeof current.humidity === 'number' ? `${current.humidity}%` : '—'}
+                </span>
+                <span>
+                  Vento:{' '}
+                  {typeof current.windSpeed === 'number'
+                    ? `${Math.round(current.windSpeed)} km/h`
+                    : '—'}
+                </span>
+              </div>
+            </div>
+            <div className="admin-weather__forecast">
+              <h3>Previsão para hoje</h3>
+              {forecast.length === 0 ? (
+                <p className="admin-empty-state admin-empty-state--inline">
+                  Previsão indisponível para o restante do dia.
+                </p>
+              ) : (
+                <ul>
+                  {forecast.map((entry) => (
+                    <li key={entry.time}>
+                      <span>{entry.hourLabel}</span>
+                      <span>
+                        {typeof entry.temperature === 'number'
+                          ? `${Math.round(entry.temperature)}°C`
+                          : '—'}
+                      </span>
+                      <span>
+                        {typeof entry.precipitationProbability === 'number'
+                          ? `${entry.precipitationProbability}%`
+                          : '—'}
+                      </span>
+                      <span>{entry.condition}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        )
+      }
+
       return {
         title: 'Dashboard',
         description: 'Visão geral da operação do Parque das Dunas',
@@ -706,38 +878,92 @@ const buildSection = ({
               <section className="admin-card">
                 <header className="admin-card__header">
                   <h2>Trilhas de Hoje</h2>
-                  <span>Ocupação por trilha</span>
+                  <span>Agenda diária e ocupação por sessão</span>
                 </header>
                 <div className="admin-card__content">
-                  <ul className="admin-trail-list">
-                    {data.todaysTrails.map((trail) => (
-                      <li key={trail.id}>
-                        <div className="admin-trail-list__meta">
-                          <strong>{trail.name}</strong>
-                          <span>{trail.schedule}</span>
-                        </div>
-                        <div className="admin-trail-list__capacity">
-                          <span>{trail.capacity}</span>
-                          <span>{trail.occupancy}%</span>
-                        </div>
-                        <div className="admin-progress">
-                          <div className="admin-progress__bar" style={{ width: `${trail.occupancy}%` }} />
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
+                  {todaysTrails.length === 0 ? (
+                    <p className="admin-empty-state">Nenhuma sessão programada para hoje.</p>
+                  ) : (
+                    <ul className="admin-trail-list">
+                      {todaysTrails.map((trail) => {
+                        const statusTone = SESSION_STATUS_LABELS[trail.status]
+                        return (
+                          <li key={trail.id} className="admin-trail-list__item">
+                            <div className="admin-trail-list__meta">
+                              <div>
+                                <strong>{trail.name}</strong>
+                                <span>{trail.time}</span>
+                              </div>
+                              <span
+                                className={`admin-status-badge admin-status-badge--${statusTone.tone}`}
+                              >
+                                {statusTone.label}
+                              </span>
+                            </div>
+                            <div className="admin-trail-list__details">
+                              <div>
+                                <span>Guia responsável</span>
+                                <strong>{trail.guideName}</strong>
+                              </div>
+                              <div>
+                                <span>Participantes</span>
+                                <strong>
+                                  {trail.totalParticipants}/{trail.capacity}
+                                </strong>
+                              </div>
+                              <div>
+                                <span>Vagas livres</span>
+                                <strong>{trail.availableSpots}</strong>
+                              </div>
+                              <div>
+                                <span>Prob. de chuva</span>
+                                <strong>
+                                  {typeof trail.rainProbability === 'number'
+                                    ? `${trail.rainProbability}%`
+                                    : '—'}
+                                </strong>
+                              </div>
+                            </div>
+                            {trail.meetingPoint && (
+                              <div className="admin-trail-list__note">
+                                Ponto de encontro: {trail.meetingPoint}
+                              </div>
+                            )}
+                            <div className="admin-trail-list__capacity">
+                              <span>{trail.capacityLabel}</span>
+                              <span>{trail.occupancy}%</span>
+                            </div>
+                            <div className="admin-progress">
+                              <div
+                                className="admin-progress__bar"
+                                style={{ width: `${Math.min(trail.occupancy, 100)}%` }}
+                              />
+                            </div>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  )}
                 </div>
               </section>
               <section className="admin-card">
                 <header className="admin-card__header">
-                  <h2>Clima & Condições</h2>
-                  <span>Integração meteorológica em desenvolvimento</span>
+                  <h2>Atividade Recente</h2>
+                  <span>Notificações operacionais do sistema</span>
                 </header>
                 <div className="admin-card__content">
-                  <p className="admin-empty-state">
-                    Os dados de clima serão exibidos assim que a integração com a estação
-                    meteorológica for concluída.
-                  </p>
+                  {data.recentActivity.length === 0 ? (
+                    <p className="admin-empty-state">Nenhuma atividade registrada nas últimas horas.</p>
+                  ) : (
+                    <ul className="admin-activity-list">
+                      {data.recentActivity.map((item) => (
+                        <li key={item.id}>
+                          <span className="admin-activity-list__time">{item.time}</span>
+                          <p>{item.text}</p>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               </section>
             </div>
@@ -745,42 +971,41 @@ const buildSection = ({
               <section className="admin-card">
                 <header className="admin-card__header">
                   <h2>Próximos Eventos</h2>
-                  <span>Planejamento para os próximos dias</span>
+                  <span>Eventos publicados e confirmados</span>
                 </header>
                 <div className="admin-card__content">
-                  <ul className="admin-event-list">
-                    {data.upcomingEvents.map((event) => (
-                      <li key={event.id}>
-                        <div>
-                          <strong>{event.title}</strong>
-                          <span>{event.description}</span>
-                        </div>
-                        <span className="admin-event-list__date">{event.date}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  {data.upcomingEvents.length === 0 ? (
+                    <p className="admin-empty-state">Nenhum evento ativo nos próximos dias.</p>
+                  ) : (
+                    <ul className="admin-event-list">
+                      {data.upcomingEvents.map((event) => (
+                        <li key={event.id}>
+                          <div>
+                            <strong>{event.title}</strong>
+                            <span>{event.description}</span>
+                            {event.location ? (
+                              <span className="admin-event-list__location">{event.location}</span>
+                            ) : null}
+                          </div>
+                          <span className="admin-event-list__date">{event.date}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               </section>
               <section className="admin-card">
                 <header className="admin-card__header">
-                  <h2>Atividade Recente</h2>
-                  <span>Interações nas últimas 24h</span>
+                  <h2>Clima & Condições</h2>
+                  <span>Monitoramento atualizado a cada 10 minutos</span>
                 </header>
-                <div className="admin-card__content">
-                  <ul className="admin-activity-list">
-                    {data.recentActivity.map((item) => (
-                      <li key={item.id}>
-                        <span className="admin-activity-list__time">{item.time}</span>
-                        <p>{item.text}</p>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                <div className="admin-card__content">{renderWeatherCard()}</div>
               </section>
             </div>
           </div>
         ),
       }
+    }
     case 'agendamentos':
       return {
         title: 'Criar turma',
@@ -836,10 +1061,10 @@ const buildSection = ({
                         <li key={trail.id}>
                           <div className="admin-session-control__list-header">
                             <strong>{trail.name}</strong>
-                            <span>{trail.schedule}</span>
+                            <span>{trail.time}</span>
                           </div>
                           <div className="admin-session-control__list-meta">
-                            <span>{trail.capacity}</span>
+                            <span>{trail.capacityLabel}</span>
                             <span>{trail.occupancy}%</span>
                           </div>
                           <div className="admin-session-control__progress" aria-hidden="true">
@@ -1286,6 +1511,7 @@ function AdminPage() {
   const [overview, setOverview] = useState<AdminOverview | null>(null)
   const [overviewError, setOverviewError] = useState<string | null>(null)
   const [isLoadingOverview, setIsLoadingOverview] = useState(true)
+  const [weatherState, setWeatherState] = useState<DashboardWeatherState>({ status: 'idle' })
   const [activeSection, setActiveSection] = useState<SectionKey>('dashboard')
   const [guidesState, setGuidesState] = useState<GuidesState>({
     items: [],
@@ -1549,6 +1775,119 @@ function AdminPage() {
     },
     [trailsState.items],
   )
+
+  const fetchDashboardWeather = useCallback(async () => {
+    setWeatherState((previous) => (previous.status === 'idle' ? { status: 'loading' } : previous))
+
+    try {
+      const params = new URLSearchParams({
+        latitude: WEATHER_LOCATION.latitude,
+        longitude: WEATHER_LOCATION.longitude,
+        hourly: 'temperature_2m,precipitation_probability,relativehumidity_2m,weathercode,wind_speed_10m',
+        current_weather: 'true',
+        timezone: WEATHER_LOCATION.timezone,
+        forecast_days: '1',
+      })
+
+      const response = await fetch(`https://api.open-meteo.com/v1/forecast?${params.toString()}`)
+
+      if (!response.ok) {
+        throw new Error('Não foi possível atualizar as informações meteorológicas.')
+      }
+
+      const payload = await response.json()
+      const currentWeather = payload?.current_weather
+      const hourly = payload?.hourly
+
+      if (
+        !currentWeather ||
+        typeof currentWeather.temperature !== 'number' ||
+        typeof currentWeather.weathercode !== 'number' ||
+        typeof currentWeather.time !== 'string' ||
+        !hourly ||
+        !Array.isArray(hourly.time) ||
+        hourly.time.length === 0
+      ) {
+        throw new Error('Dados meteorológicos indisponíveis no momento.')
+      }
+
+      const times = hourly.time as string[]
+      const precipitationSeries = (hourly.precipitation_probability ?? []) as Array<number | null>
+      const temperatureSeries = (hourly.temperature_2m ?? []) as Array<number | null>
+      const humiditySeries = (hourly.relativehumidity_2m ?? []) as Array<number | null>
+      const weatherCodeSeries = (hourly.weathercode ?? []) as Array<number | null>
+
+      const precipitationByHour: Record<string, number | null> = {}
+      times.forEach((time, index) => {
+        const key = time.length > 16 ? time.slice(0, 16) : time
+        const rawValue = precipitationSeries[index]
+        precipitationByHour[key] =
+          typeof rawValue === 'number'
+            ? Math.max(0, Math.min(100, Math.round(rawValue)))
+            : rawValue ?? null
+      })
+
+      const currentIndex = times.findIndex((time) => time === currentWeather.time)
+      const currentHumidity =
+        currentIndex >= 0 && typeof humiditySeries[currentIndex] === 'number'
+          ? Math.max(0, Math.min(100, Math.round(humiditySeries[currentIndex] as number)))
+          : null
+      const currentPrecipitation =
+        currentIndex >= 0 ? precipitationByHour[times[currentIndex]] ?? null : null
+
+      const currentWindSpeed =
+        typeof currentWeather.windspeed === 'number' ? currentWeather.windspeed : null
+
+      const currentCondition = formatWeatherCondition(currentWeather.weathercode)
+
+      const currentDay = currentWeather.time.slice(0, 10)
+      const forecast: WeatherForecastEntry[] = []
+
+      times.forEach((time, index) => {
+        if (time <= currentWeather.time) {
+          return
+        }
+
+        if (time.slice(0, 10) !== currentDay) {
+          return
+        }
+
+        const temperature = temperatureSeries[index]
+        const code = weatherCodeSeries[index]
+
+        forecast.push({
+          time,
+          hourLabel: timeFormatter.format(new Date(time)),
+          temperature: typeof temperature === 'number' ? temperature : null,
+          precipitationProbability: precipitationByHour[time.length > 16 ? time.slice(0, 16) : time] ?? null,
+          condition: typeof code === 'number' ? formatWeatherCondition(code) : WEATHER_CONDITION_LABELS.unknown,
+        })
+      })
+
+      setWeatherState({
+        status: 'success',
+        data: {
+          updatedAt: currentWeather.time,
+          current: {
+            time: currentWeather.time,
+            temperature: currentWeather.temperature,
+            condition: currentCondition,
+            precipitationProbability: currentPrecipitation,
+            humidity: currentHumidity,
+            windSpeed: currentWindSpeed,
+          },
+          forecast,
+          precipitationByHour,
+        },
+      })
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível atualizar as informações meteorológicas.'
+      setWeatherState({ status: 'error', message })
+    }
+  }, [])
 
   const loadOverview = useCallback(async () => {
     setIsLoadingOverview(true)
@@ -2454,6 +2793,15 @@ function AdminPage() {
   )
 
   useEffect(() => {
+    void fetchDashboardWeather()
+    const interval = window.setInterval(() => {
+      void fetchDashboardWeather()
+    }, 10 * 60 * 1000)
+
+    return () => window.clearInterval(interval)
+  }, [fetchDashboardWeather])
+
+  useEffect(() => {
     loadOverview()
   }, [loadOverview])
 
@@ -2463,13 +2811,26 @@ function AdminPage() {
 
   const adminData = useMemo<AdminPageData>(() => {
     const todaysSessions = overview
-      ? overview.todaysSessions.map((session) => ({
-          id: session.id,
-          name: session.trailName,
-          schedule: session.scheduleLabel,
-          occupancy: session.occupancy,
-          capacity: session.capacityLabel,
-        }))
+      ? overview.todaysSessions
+          .slice()
+          .sort(
+            (a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime(),
+          )
+          .map((session) => ({
+            id: session.id,
+            trailId: session.trailId,
+            name: session.trailName,
+            startsAt: session.startsAt,
+            time: session.timeLabel,
+            occupancy: session.occupancy,
+            capacityLabel: session.capacityLabel,
+            capacity: session.capacity,
+            totalParticipants: session.totalParticipants,
+            availableSpots: session.availableSpots,
+            status: session.status,
+            guideName: session.primaryGuideName ?? 'A definir',
+            meetingPoint: session.meetingPoint,
+          }))
       : []
 
     const upcoming = overview
@@ -2478,6 +2839,7 @@ function AdminPage() {
           title: event.title,
           description: event.description,
           date: event.dateLabel,
+          location: event.location ?? null,
         }))
       : []
 
@@ -3293,6 +3655,7 @@ function AdminPage() {
       buildSection({
         key: activeSection,
         data: adminData,
+        weatherState,
         trailsSection,
         guidesSection,
         sessionWizardFeedback,

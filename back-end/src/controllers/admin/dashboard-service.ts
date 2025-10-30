@@ -1,3 +1,4 @@
+import type { BookingStatus } from '@prisma/client'
 import prisma from '../../lib/prisma.js'
 import {
   calculateOccupancy,
@@ -8,7 +9,7 @@ import {
   formatTime,
   toISODate,
 } from './formatters.js'
-import { normalizeTrail, trailInclude, trailSessionsInclude } from './trail-service.js'
+import { activeBookingStatuses, normalizeTrail, trailInclude, trailSessionsInclude } from './trail-service.js'
 import type {
   ActivityItem,
   AdminOverview,
@@ -95,11 +96,10 @@ export async function fetchTodaysSessions(): Promise<SessionSummary[]> {
         select: {
           id: true,
           name: true,
-          maxGroupSize: true,
         },
       },
-      primaryGuide: { select: { id: true, name: true } },
-      bookings: { select: { participantsCount: true } },
+      primaryGuide: { select: { cpf: true, name: true } },
+      bookings: { select: { participantsCount: true, status: true } },
     },
   })
 
@@ -108,15 +108,28 @@ export async function fetchTodaysSessions(): Promise<SessionSummary[]> {
   return sessions.map((session: SessionRecord): SessionSummary => {
     let occupied = 0
     for (const booking of session.bookings) {
-      occupied += booking.participantsCount
+      if (activeBookingStatuses.includes(booking.status as BookingStatus)) {
+        occupied += booking.participantsCount
+      }
     }
+
+    const startsAtISO = session.startsAt.toISOString()
+    const availableSpots = Math.max(0, session.capacity - occupied)
 
     return {
       id: session.id,
+      trailId: session.trail.id,
       trailName: session.trail.name,
-      scheduleLabel: `${formatTime(session.startsAt)} • Guia: ${session.primaryGuide?.name ?? 'A definir'}`,
+      startsAt: startsAtISO,
+      timeLabel: formatTime(session.startsAt),
       occupancy: calculateOccupancy(occupied, session.capacity),
       capacityLabel: `${occupied} / ${session.capacity} vagas`,
+      capacity: session.capacity,
+      totalParticipants: occupied,
+      availableSpots,
+      status: session.status,
+      primaryGuideName: session.primaryGuide?.name ?? null,
+      meetingPoint: session.meetingPoint ?? null,
     }
   })
 }
@@ -124,7 +137,7 @@ export async function fetchTodaysSessions(): Promise<SessionSummary[]> {
 export async function fetchUpcomingEvents(limit = 4): Promise<EventCard[]> {
   const now = new Date()
   const events = await prisma.event.findMany({
-    where: { startsAt: { gte: now } },
+    where: { startsAt: { gte: now }, status: 'PUBLISHED' },
     orderBy: { startsAt: 'asc' },
     take: limit,
   })
@@ -136,6 +149,7 @@ export async function fetchUpcomingEvents(limit = 4): Promise<EventCard[]> {
     title: event.title,
     description: event.description,
     dateLabel: `${formatDate(event.startsAt)} • ${formatTime(event.startsAt)}`,
+    location: event.location ?? null,
     status: event.status,
     statusTone: event.status === 'PUBLISHED' ? 'success' : event.status === 'DRAFT' ? 'warning' : 'info',
     capacityLabel: event.capacity ? `${event.capacity} vagas` : null,
