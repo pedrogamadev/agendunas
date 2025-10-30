@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import type { PageProps } from '../App'
 import { useTranslation } from '../i18n/TranslationProvider'
 import { fetchFaunaFloraRecords, fetchPublicTrails } from '../api/public'
@@ -23,11 +23,21 @@ const duninhoImages = [
 function HomePage({ navigation, onNavigate }: PageProps) {
   const { content } = useTranslation()
   const home = content.home
+  const helper = home.helper
   const [activeTestimonial, setActiveTestimonial] = useState(0)
   const [activeHeroImage, setActiveHeroImage] = useState(0)
   const [activeDuninho, setActiveDuninho] = useState(0)
   const [trailCards, setTrailCards] = useState(home.trails.items)
   const [wildlifeCards, setWildlifeCards] = useState(home.wildlife.items)
+  const [isMascotDocked, setIsMascotDocked] = useState(false)
+  const [isFaqOpen, setIsFaqOpen] = useState(false)
+  const heroRef = useRef<HTMLElement | null>(null)
+  const floatingButtonRef = useRef<HTMLButtonElement | null>(null)
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null)
+  const wasFaqOpen = useRef(false)
+  const helperTitleId = useId()
+  const helperDescriptionId = useId()
+  const helperDialogId = useId()
   const testimonials = home.testimonials.items
   const highlights = home.about.highlights
   const trails = trailCards
@@ -141,9 +151,87 @@ function HomePage({ navigation, onNavigate }: PageProps) {
     return () => window.clearInterval(interval)
   }, [])
 
+  useEffect(() => {
+    const updateDocking = () => {
+      const element = heroRef.current
+      if (!element) {
+        return
+      }
+
+      const rect = element.getBoundingClientRect()
+      const viewportHeight = window.innerHeight || document.documentElement.clientHeight
+      const shouldDock = rect.top <= -32 || rect.bottom <= viewportHeight - 64
+      setIsMascotDocked((previous) => (previous !== shouldDock ? shouldDock : previous))
+    }
+
+    let frame = 0
+    const handleScroll = () => {
+      if (frame !== 0) {
+        return
+      }
+      frame = window.requestAnimationFrame(() => {
+        updateDocking()
+        frame = 0
+      })
+    }
+
+    updateDocking()
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    window.addEventListener('resize', handleScroll)
+
+    return () => {
+      if (frame !== 0) {
+        window.cancelAnimationFrame(frame)
+      }
+      window.removeEventListener('scroll', handleScroll)
+      window.removeEventListener('resize', handleScroll)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!isMascotDocked) {
+      setIsFaqOpen(false)
+    }
+  }, [isMascotDocked])
+
+  useEffect(() => {
+    if (!isFaqOpen) {
+      if (wasFaqOpen.current && isMascotDocked) {
+        floatingButtonRef.current?.focus()
+      }
+      wasFaqOpen.current = false
+      return undefined
+    }
+
+    wasFaqOpen.current = true
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const timer = window.setTimeout(() => {
+      closeButtonRef.current?.focus()
+    }, 0)
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsFaqOpen(false)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      window.clearTimeout(timer)
+      window.removeEventListener('keydown', handleKeyDown)
+      document.body.style.overflow = previousOverflow
+    }
+  }, [isFaqOpen, isMascotDocked])
+
+  const handleCloseFaq = () => {
+    setIsFaqOpen(false)
+  }
+
   return (
     <div className="home-page" id="home">
-      <header className="hero">
+      <header className="hero" ref={heroRef}>
         <div className="hero-background" aria-hidden="true">
           {heroImages.map((image, index) => (
             <div
@@ -173,16 +261,33 @@ function HomePage({ navigation, onNavigate }: PageProps) {
           </div>
         </div>
         {duninhoImages.length > 0 && (
-          <div className="hero-mascot" aria-hidden="true">
-            <div className="hero-mascot__disk" />
-            {duninhoImages.map((image, index) => (
-              <div
-                key={image}
-                className={`hero-mascot__image ${index === activeDuninho ? 'is-active' : ''}`}
-              >
-                <img src={image} alt="" decoding="async" />
+          <div className={`hero-mascot ${isMascotDocked ? 'is-docked' : ''}`} aria-hidden={!isMascotDocked}>
+            {!isMascotDocked && (
+              <div className="hero-mascot__carousel">
+                <div className="hero-mascot__disk" />
+                {duninhoImages.map((image, index) => (
+                  <div
+                    key={image}
+                    className={`hero-mascot__image ${index === activeDuninho ? 'is-active' : ''}`}
+                  >
+                    <img src={image} alt="" decoding="async" />
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
+            {isMascotDocked && (
+              <button
+                ref={floatingButtonRef}
+                type="button"
+                className="hero-mascot__button"
+                onClick={() => setIsFaqOpen(true)}
+                aria-label={helper.openLabel}
+                aria-expanded={isFaqOpen}
+                aria-controls={helperDialogId}
+              >
+                <img src="/images/duninho/duninho-ajuda.png" alt="" decoding="async" />
+              </button>
+            )}
           </div>
         )}
       </header>
@@ -329,6 +434,58 @@ function HomePage({ navigation, onNavigate }: PageProps) {
           </div>
         </section>
       </main>
+
+      {isFaqOpen && (
+        <div className="duninho-helper" role="presentation">
+          <button
+            type="button"
+            className="duninho-helper__backdrop"
+            aria-label={helper.closeLabel}
+            onClick={handleCloseFaq}
+          />
+          <div
+            className="duninho-helper__dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={helperTitleId}
+            aria-describedby={helperDescriptionId}
+            id={helperDialogId}
+          >
+            <div className="duninho-helper__header">
+              <div className="duninho-helper__title">
+                <h2 id={helperTitleId}>{helper.title}</h2>
+                <p id={helperDescriptionId}>{helper.description}</p>
+              </div>
+              <button
+                ref={closeButtonRef}
+                type="button"
+                className="duninho-helper__close"
+                onClick={handleCloseFaq}
+              >
+                {helper.closeLabel}
+              </button>
+            </div>
+            <div className="duninho-helper__body">
+              <figure className="duninho-helper__illustration">
+                <img src="/images/duninho/duninho-mapa.png" alt={helper.imageAlt} decoding="async" />
+              </figure>
+              <div className="duninho-helper__faq-wrapper">
+                <ul className="duninho-helper__faq">
+                  {helper.items.map((item) => (
+                    <li key={item.question}>
+                      <details>
+                        <summary>{item.question}</summary>
+                        <p>{item.answer}</p>
+                      </details>
+                    </li>
+                  ))}
+                </ul>
+                {helper.scrollHint && <p className="duninho-helper__hint">{helper.scrollHint}</p>}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

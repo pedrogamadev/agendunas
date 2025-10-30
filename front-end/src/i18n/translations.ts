@@ -31,6 +31,15 @@ type HomeTranslation = {
     primaryCta: string
     secondaryCta: string
   }
+  helper: {
+    openLabel: string
+    closeLabel: string
+    title: string
+    description: string
+    imageAlt: string
+    scrollHint?: string
+    items: { question: string; answer: string }[]
+  }
   about: {
     tag: string
     title: HighlightedTitle
@@ -592,6 +601,37 @@ const translations: Record<Language, TranslationContent> = {
           'Descubra os segredos da mata atlântica através de experiências únicas e inesquecíveis. Cada trilha é uma jornada de descoberta e conexão com a natureza selvagem.',
         primaryCta: 'Agendar Aventura',
         secondaryCta: 'Explorar Fauna & Flora',
+      },
+      helper: {
+        openLabel: 'Abrir dúvidas frequentes do Duninho',
+        closeLabel: 'Fechar dúvidas frequentes',
+        title: 'Como posso ajudar?',
+        description:
+          'O Duninho separou respostas rápidas para você explorar o Parque das Dunas com tranquilidade. Clique em uma pergunta para saber mais.',
+        imageAlt: 'Ilustração do Duninho apontando o mapa das trilhas',
+        scrollHint: 'Role para continuar vendo as respostas',
+        items: [
+          {
+            question: 'Preciso agendar com quanto tempo de antecedência?',
+            answer:
+              'Para garantir vaga com o seu guia favorito, recomendamos agendar com pelo menos 48 horas de antecedência. Aos fins de semana, as vagas costumam esgotar mais rápido.',
+          },
+          {
+            question: 'As trilhas são indicadas para toda a família?',
+            answer:
+              'Sim! Temos opções com diferentes níveis de dificuldade. Consulte a descrição de cada trilha para saber a idade mínima recomendada e se há necessidade de equipamentos específicos.',
+          },
+          {
+            question: 'O que levar no dia do passeio?',
+            answer:
+              'Use roupas leves, tênis fechado, protetor solar, repelente e traga uma garrafinha de água. Nossa equipe fornece equipamentos de segurança e orientações antes da saída.',
+          },
+          {
+            question: 'Como faço para remarcar ou cancelar?',
+            answer:
+              'Basta entrar em contato com nossa equipe até 24 horas antes do horário marcado. Você pode remarcar sem custos ou converter o valor em crédito para uma nova data.',
+          },
+        ],
       },
       about: {
         tag: 'Quem Somos',
@@ -1435,6 +1475,37 @@ const translations: Record<Language, TranslationContent> = {
           'Uncover the secrets of the Atlantic Forest through unique and unforgettable experiences. Each trail is a journey of discovery and connection with the wild.',
         primaryCta: 'Book an Adventure',
         secondaryCta: 'Explore Wildlife & Flora',
+      },
+      helper: {
+        openLabel: 'Open Duninho\'s quick answers',
+        closeLabel: 'Close help dialog',
+        title: 'How can I help?',
+        description:
+          'Duninho gathered the most common questions so you can explore Parque das Dunas with confidence. Tap a question to reveal the answer.',
+        imageAlt: 'Illustration of Duninho pointing at the trail map',
+        scrollHint: 'Scroll to keep exploring the answers',
+        items: [
+          {
+            question: 'How far in advance should I book?',
+            answer:
+              'To secure a spot with your favourite guide we suggest booking at least 48 hours ahead. Weekends tend to sell out faster.',
+          },
+          {
+            question: 'Are the trails suitable for the whole family?',
+            answer:
+              'Absolutely. We offer different difficulty levels. Check each trail\'s description for the recommended minimum age and any special gear requirements.',
+          },
+          {
+            question: 'What should I bring for the hike?',
+            answer:
+              'Wear light clothes, closed shoes, sunscreen, insect repellent and bring a reusable water bottle. Our team provides safety equipment and a briefing before departure.',
+          },
+          {
+            question: 'How do I reschedule or cancel?',
+            answer:
+              'Reach out to our team up to 24 hours before your scheduled time. You can reschedule at no cost or convert the amount into credit for a new date.',
+          },
+        ],
       },
       about: {
         tag: 'About Us',
