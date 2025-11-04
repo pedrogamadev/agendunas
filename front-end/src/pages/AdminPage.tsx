@@ -218,6 +218,28 @@ type TrailFormState = {
   guideCpfs: string[]
 }
 
+type TrailWizardStep = 'basic' | 'media' | 'capacity' | 'guides' | 'review'
+
+const TRAIL_WIZARD_STEPS: Array<{
+  id: TrailWizardStep
+  label: string
+  description: string
+}> = [
+  { id: 'basic', label: 'Informações básicas', description: 'Defina nome, status e resumo da experiência.' },
+  { id: 'media', label: 'Mídia e destaque', description: 'Configure imagem, selo e destaque para a home.' },
+  {
+    id: 'capacity',
+    label: 'Capacidade e duração',
+    description: 'Informe dificuldade, duração e limites de participantes.',
+  },
+  {
+    id: 'guides',
+    label: 'Guia e políticas',
+    description: 'Adicione ponto de encontro, descrição detalhada e guias habilitados.',
+  },
+  { id: 'review', label: 'Revisão e criar', description: 'Revise os dados antes de salvar a trilha.' },
+]
+
 type TrailsState = {
   items: AdminTrail[]
   guides: AdminTrailGuideOption[]
@@ -276,6 +298,12 @@ const TRAIL_STATUS_LABELS: Record<TrailStatus, string> = {
   ACTIVE: 'Ativa',
   INACTIVE: 'Indisponível',
   MAINTENANCE: 'Em manutenção',
+}
+
+const TRAIL_STATUS_TONES: Record<TrailStatus, 'success' | 'warning' | 'neutral'> = {
+  ACTIVE: 'success',
+  INACTIVE: 'neutral',
+  MAINTENANCE: 'warning',
 }
 
 const TRAIL_DIFFICULTY_LABELS: Record<TrailDifficulty, string> = {
@@ -1539,10 +1567,13 @@ function AdminPage() {
     error: null,
   })
   const [trailForm, setTrailForm] = useState<TrailFormState>(initialTrailFormState)
+  const [trailSearchTerm, setTrailSearchTerm] = useState('')
   const [editingTrailId, setEditingTrailId] = useState<string | null>(null)
   const [isSavingTrail, setIsSavingTrail] = useState(false)
   const [trailFeedback, setTrailFeedback] = useState<string | null>(null)
   const [trailFormError, setTrailFormError] = useState<string | null>(null)
+  const [isTrailWizardOpen, setIsTrailWizardOpen] = useState(false)
+  const [trailWizardStep, setTrailWizardStep] = useState<TrailWizardStep>(TRAIL_WIZARD_STEPS[0].id)
   const [isSessionWizardOpen, setIsSessionWizardOpen] = useState(false)
   const [sessionWizardStep, setSessionWizardStep] = useState<SessionWizardStep>(SESSION_WIZARD_STEPS[0])
   const [sessionWizardForm, setSessionWizardForm] = useState<SessionWizardFormState>(INITIAL_SESSION_WIZARD_FORM)
@@ -1961,6 +1992,7 @@ function AdminPage() {
     setTrailForm(initialTrailFormState)
     setEditingTrailId(null)
     setTrailFormError(null)
+    setTrailWizardStep(TRAIL_WIZARD_STEPS[0].id)
   }, [])
 
   const resetSessionWizard = useCallback(() => {
@@ -2450,6 +2482,7 @@ function AdminPage() {
     setTrailFeedback(null)
     setTrailFormError(null)
     setTrailsState((state) => ({ ...state, error: null }))
+    setIsTrailWizardOpen(true)
   }, [resetTrailForm])
 
   const handleEditTrail = useCallback((trail: AdminTrail) => {
@@ -2473,12 +2506,12 @@ function AdminPage() {
     setTrailFeedback(null)
     setTrailFormError(null)
     setTrailsState((state) => ({ ...state, error: null }))
+    setTrailWizardStep(TRAIL_WIZARD_STEPS[0].id)
+    setIsTrailWizardOpen(true)
   }, [])
 
   const handleTrailSubmit = useCallback(
-    async (event: FormEvent<HTMLFormElement>) => {
-      event.preventDefault()
-
+    async () => {
       const trimmedName = trailForm.name.trim()
       const trimmedSlug = trailForm.slug.trim()
       const trimmedDescription = trailForm.description.trim()
@@ -2566,6 +2599,8 @@ function AdminPage() {
           editingTrailId ? 'Trilha atualizada com sucesso.' : 'Trilha cadastrada com sucesso.',
         )
         resetTrailForm()
+        setIsTrailWizardOpen(false)
+        setTrailWizardStep(TRAIL_WIZARD_STEPS[0].id)
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Não foi possível salvar a trilha.'
         setTrailFormError(message)
@@ -2591,8 +2626,236 @@ function AdminPage() {
       editingTrailId,
       loadTrails,
       resetTrailForm,
+      setIsTrailWizardOpen,
+      setTrailWizardStep,
     ],
   )
+
+  const validateTrailWizardStep = useCallback(
+    (step: TrailWizardStep) => {
+      if (step === 'basic') {
+        if (!trailForm.name.trim()) {
+          setTrailFormError('Informe o nome da trilha.')
+          return false
+        }
+
+        if (!trailForm.slug.trim()) {
+          setTrailFormError('Informe o identificador (slug) da trilha.')
+          return false
+        }
+      }
+
+      if (step === 'capacity') {
+        const parsedDuration = Number.parseInt(trailForm.durationMinutes, 10)
+        if (!Number.isFinite(parsedDuration) || parsedDuration < 10) {
+          setTrailFormError('Informe a duração mínima em minutos (a partir de 10).')
+          return false
+        }
+
+        const parsedCapacity = Number.parseInt(trailForm.maxGroupSize, 10)
+        if (!Number.isFinite(parsedCapacity) || parsedCapacity < 1) {
+          setTrailFormError('Informe a capacidade máxima de participantes (mínimo 1).')
+          return false
+        }
+
+        const basePriceInput = trailForm.basePrice.trim().replace(',', '.')
+        if (basePriceInput.length > 0) {
+          const parsedBasePrice = Number.parseFloat(basePriceInput)
+          if (!Number.isFinite(parsedBasePrice) || parsedBasePrice < 0) {
+            setTrailFormError('Informe um valor válido para o preço base ou deixe em branco.')
+            return false
+          }
+        }
+      }
+
+      if (step === 'guides') {
+        const trimmedDescription = trailForm.description.trim()
+        if (!trimmedDescription || trimmedDescription.length < 20) {
+          setTrailFormError('Descreva a trilha com pelo menos 20 caracteres.')
+          return false
+        }
+      }
+
+      setTrailFormError(null)
+      return true
+    },
+    [
+      trailForm.name,
+      trailForm.slug,
+      trailForm.durationMinutes,
+      trailForm.maxGroupSize,
+      trailForm.basePrice,
+      trailForm.description,
+    ],
+  )
+
+  const handleTrailWizardNext = useCallback(() => {
+    if (!validateTrailWizardStep(trailWizardStep)) {
+      return
+    }
+
+    const currentIndex = TRAIL_WIZARD_STEPS.findIndex((step) => step.id === trailWizardStep)
+    const nextStep = TRAIL_WIZARD_STEPS[currentIndex + 1]
+
+    if (nextStep) {
+      setTrailWizardStep(nextStep.id)
+    }
+  }, [trailWizardStep, validateTrailWizardStep])
+
+  const handleTrailWizardPrevious = useCallback(() => {
+    const currentIndex = TRAIL_WIZARD_STEPS.findIndex((step) => step.id === trailWizardStep)
+    const previousStep = TRAIL_WIZARD_STEPS[currentIndex - 1]
+
+    if (previousStep) {
+      setTrailWizardStep(previousStep.id)
+      setTrailFormError(null)
+    }
+  }, [trailWizardStep])
+
+  const handleTrailWizardStepSelect = useCallback(
+    (step: TrailWizardStep) => {
+      if (step === trailWizardStep) {
+        return
+      }
+
+      const currentIndex = TRAIL_WIZARD_STEPS.findIndex((item) => item.id === trailWizardStep)
+      const targetIndex = TRAIL_WIZARD_STEPS.findIndex((item) => item.id === step)
+
+      if (targetIndex === -1 || targetIndex > currentIndex) {
+        return
+      }
+
+      setTrailWizardStep(step)
+      setTrailFormError(null)
+    },
+    [trailWizardStep],
+  )
+
+  const handleTrailWizardClose = useCallback(() => {
+    setIsTrailWizardOpen(false)
+    resetTrailForm()
+  }, [resetTrailForm])
+
+  const handleTrailWizardFormSubmit = useCallback(
+    async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault()
+      await handleTrailSubmit()
+    },
+    [handleTrailSubmit],
+  )
+
+  const filteredTrailItems = useMemo(() => {
+    const query = trailSearchTerm.trim().toLowerCase()
+
+    if (!query) {
+      return trailsState.items
+    }
+
+    return trailsState.items.filter((trail) => {
+      const name = trail.name.toLowerCase()
+      const slug = trail.slug.toLowerCase()
+      return name.includes(query) || slug.includes(query)
+    })
+  }, [trailSearchTerm, trailsState.items])
+
+  const activeHighlightedTrails = useMemo(
+    () =>
+      trailsState.items.filter((trail) => trail.highlight && trail.status === 'ACTIVE').length,
+    [trailsState.items],
+  )
+
+  const totalTrailsCount = trailsState.stats?.total ?? trailsState.items.length
+  const activeTrailsCount = useMemo(() => {
+    if (trailsState.stats) {
+      return trailsState.stats.byStatus.ACTIVE ?? 0
+    }
+
+    return trailsState.items.filter((trail) => trail.status === 'ACTIVE').length
+  }, [trailsState.items, trailsState.stats])
+
+  const highlightTrailsCount = useMemo(() => {
+    if (trailsState.stats) {
+      return trailsState.stats.highlights
+    }
+
+    return trailsState.items.filter((trail) => trail.highlight).length
+  }, [trailsState.items, trailsState.stats])
+
+  const upcomingSessionsCount = useMemo(() => {
+    if (trailsState.stats) {
+      return trailsState.stats.upcomingSessions
+    }
+
+    return trailsState.items.reduce((total, trail) => total + trail.upcomingSessions, 0)
+  }, [trailsState.items, trailsState.stats])
+
+  const averageCapacityLabel = useMemo(() => {
+    if (trailsState.stats) {
+      return `${trailsState.stats.averageCapacity} pessoas`
+    }
+
+    if (trailsState.items.length === 0) {
+      return '—'
+    }
+
+    const totalCapacity = trailsState.items.reduce((total, trail) => total + trail.maxGroupSize, 0)
+    const average = Math.round(totalCapacity / trailsState.items.length)
+    return `${average} pessoas`
+  }, [trailsState.items, trailsState.stats])
+
+  const currentTrailWizardIndex = useMemo(
+    () => Math.max(0, TRAIL_WIZARD_STEPS.findIndex((step) => step.id === trailWizardStep)),
+    [trailWizardStep],
+  )
+
+  const isFinalTrailWizardStep = currentTrailWizardIndex === TRAIL_WIZARD_STEPS.length - 1
+  const isFirstTrailWizardStep = currentTrailWizardIndex === 0
+
+  const trailWizardSummary = useMemo(() => {
+    const summary = trailForm.summary.trim()
+    if (summary) {
+      return summary
+    }
+
+    const description = trailForm.description.trim()
+    if (description) {
+      return description
+    }
+
+    return 'A descrição da trilha aparecerá aqui.'
+  }, [trailForm.description, trailForm.summary])
+
+  const previewDurationLabel = useMemo(() => {
+    const parsed = Number.parseInt(trailForm.durationMinutes, 10)
+    return Number.isFinite(parsed) ? formatTrailDuration(parsed) : '—'
+  }, [trailForm.durationMinutes])
+
+  const previewCapacityLabel = useMemo(() => {
+    const trimmed = trailForm.maxGroupSize.trim()
+    if (!trimmed) {
+      return 'Capacidade a definir'
+    }
+
+    const parsed = Number.parseInt(trimmed, 10)
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      return 'Capacidade a definir'
+    }
+
+    return `${parsed} pessoas`
+  }, [trailForm.maxGroupSize])
+
+  const previewBasePriceLabel = useMemo(() => {
+    const trimmed = trailForm.basePrice.trim().replace(',', '.')
+    if (!trimmed) {
+      return '—'
+    }
+
+    const parsed = Number.parseFloat(trimmed)
+    return Number.isFinite(parsed) && parsed >= 0 ? currencyFormatter.format(parsed) : '—'
+  }, [trailForm.basePrice])
+
+  const previewStatusTone = TRAIL_STATUS_TONES[trailForm.status]
+  const previewStatusLabel = TRAIL_STATUS_LABELS[trailForm.status]
 
   const handleDeleteTrail = useCallback(
     async (trail: AdminTrail) => {
@@ -2608,6 +2871,7 @@ function AdminPage() {
         await deleteAdminTrail(trail.id)
         if (editingTrailId === trail.id) {
           resetTrailForm()
+          setIsTrailWizardOpen(false)
         }
         await loadTrails()
         setTrailFeedback('Trilha removida com sucesso.')
@@ -2617,7 +2881,7 @@ function AdminPage() {
         setTrailFormError(message)
       }
     },
-    [editingTrailId, loadTrails, resetTrailForm],
+    [editingTrailId, loadTrails, resetTrailForm, setIsTrailWizardOpen],
   )
 
   const handleTrailSelectionChange = useCallback((event: ChangeEvent<HTMLSelectElement>) => {
@@ -2943,396 +3207,186 @@ function AdminPage() {
     ),
     content: (
       <div className="admin-trails">
-        <section className="admin-card admin-trails__form">
-          <header className="admin-card__header">
-            <h2>{editingTrailId ? 'Editar trilha' : 'Cadastrar trilha'}</h2>
-            <span>
-              {editingTrailId
-                ? 'Atualize informações operacionais, capacidade e guias atribuídos.'
-                : 'Preencha os dados para criar uma nova trilha disponível para agendamento.'}
-            </span>
-          </header>
-          <form className="admin-trails__form-fields" onSubmit={handleTrailSubmit}>
-            <div className="admin-trails__grid">
-              <label>
-                Nome da trilha
-                <input
-                  type="text"
-                  value={trailForm.name}
-                  onChange={(event) => setTrailForm((prev) => ({ ...prev, name: event.target.value }))}
-                  placeholder="Ex.: Trilha das Dunas"
-                  required
-                />
-              </label>
-              <label>
-                Identificador (slug)
-                <input
-                  type="text"
-                  value={trailForm.slug}
-                  onChange={(event) => setTrailForm((prev) => ({ ...prev, slug: event.target.value }))}
-                  placeholder="ex.: trilha-das-dunas"
-                  required
-                />
-                <small>Utilizado em URLs e integrações com o portal.</small>
-              </label>
-              <label>
-                Status
-                <select
-                  value={trailForm.status}
-                  onChange={(event) =>
-                    setTrailForm((prev) => ({ ...prev, status: event.target.value as TrailStatus }))
-                  }
-                >
-                  <option value="ACTIVE">Ativa</option>
-                  <option value="MAINTENANCE">Em manutenção</option>
-                  <option value="INACTIVE">Indisponível</option>
-                </select>
-              </label>
-              <label>
-                Dificuldade
-                <select
-                  value={trailForm.difficulty}
-                  onChange={(event) =>
-                    setTrailForm((prev) => ({
-                      ...prev,
-                      difficulty: event.target.value as TrailDifficulty,
-                    }))
-                  }
-                >
-                  <option value="EASY">Leve</option>
-                  <option value="MODERATE">Moderada</option>
-                  <option value="HARD">Intensa</option>
-                </select>
-              </label>
-              <label>
-                Duração (minutos)
-                <input
-                  type="number"
-                  min={10}
-                  value={trailForm.durationMinutes}
-                  onChange={(event) =>
-                    setTrailForm((prev) => ({ ...prev, durationMinutes: event.target.value }))
-                  }
-                  required
-                />
-              </label>
-              <label>
-                Capacidade máxima
-                <input
-                  type="number"
-                  min={1}
-                  value={trailForm.maxGroupSize}
-                  onChange={(event) =>
-                    setTrailForm((prev) => ({ ...prev, maxGroupSize: event.target.value }))
-                  }
-                  required
-                />
-              </label>
-              <label>
-                Preço base (R$)
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  value={trailForm.basePrice}
-                  onChange={(event) => setTrailForm((prev) => ({ ...prev, basePrice: event.target.value }))}
-                  placeholder="Ex.: 85,00"
-                />
-                <small>Deixe em branco para manter o valor configurado no sistema.</small>
-              </label>
-              <label>
-                Selo/Badge
-                <input
-                  type="text"
-                  value={trailForm.badgeLabel}
-                  onChange={(event) =>
-                    setTrailForm((prev) => ({ ...prev, badgeLabel: event.target.value }))
-                  }
-                  placeholder="Ex.: Destaque"
-                />
-              </label>
-              <label>
-                Ponto de encontro
-                <input
-                  type="text"
-                  value={trailForm.meetingPoint}
-                  onChange={(event) =>
-                    setTrailForm((prev) => ({ ...prev, meetingPoint: event.target.value }))
-                  }
-                  placeholder="Ex.: Centro de Visitantes"
-                />
-              </label>
-              <label>
-                Imagem (URL)
-                <input
-                  type="url"
-                  value={trailForm.imageUrl}
-                  onChange={(event) =>
-                    setTrailForm((prev) => ({ ...prev, imageUrl: event.target.value }))
-                  }
-                  placeholder="https://..."
-                />
-              </label>
-              <label className="admin-trails__full">
-                Resumo (opcional)
-                <textarea
-                  value={trailForm.summary}
-                  onChange={(event) => setTrailForm((prev) => ({ ...prev, summary: event.target.value }))}
-                  rows={3}
-                  placeholder="Descrição breve utilizada em cards e destaques"
-                />
-              </label>
-              <label className="admin-trails__full">
-                Descrição detalhada
-                <textarea
-                  value={trailForm.description}
-                  onChange={(event) =>
-                    setTrailForm((prev) => ({ ...prev, description: event.target.value }))
-                  }
-                  rows={4}
-                  placeholder="Explique a experiência, cuidados e atrativos da trilha"
-                  required
-                />
-              </label>
-              <label className="admin-trails__full">
-                Guias habilitados
-                <select
-                  multiple
-                  value={trailForm.guideCpfs}
-                  onChange={handleTrailGuideSelectionChange}
-                  size={Math.min(Math.max(trailsState.guides.length, 3), 6)}
-                >
-                  {trailsState.guides.map((guide) => (
-                    <option key={guide.cpf} value={guide.cpf}>
-                      {guide.name}
-                      {guide.speciality ? ` • ${guide.speciality}` : ''}
-                    </option>
-                  ))}
-                </select>
-                <small>Os guias selecionados poderão conduzir sessões desta trilha.</small>
-              </label>
-              <label className="admin-trails__checkbox">
-                <input
-                  type="checkbox"
-                  checked={trailForm.highlight}
-                  onChange={(event) =>
-                    setTrailForm((prev) => ({ ...prev, highlight: event.target.checked }))
-                  }
-                />
-                Destacar trilha no dashboard e no portal
-              </label>
+        <section className="admin-trails__hero">
+          <div className="admin-trails__hero-text">
+            <span className="admin-trails__hero-kicker">Portfólio de experiências</span>
+            <h2>Controle as trilhas disponíveis para agendamento</h2>
+            <p>Atualize destaques, disponibilidade e equipes responsáveis por cada trilha.</p>
+          </div>
+          <dl className="admin-trails__hero-stats">
+            <div>
+              <dt>Total de trilhas</dt>
+              <dd>{totalTrailsCount}</dd>
             </div>
-            <div className="admin-trails__form-actions">
-              {trailFormError ? (
-                <div className="admin-alert admin-alert--error">{trailFormError}</div>
-              ) : null}
-              <div className="admin-trails__form-buttons">
-                <button type="submit" className="admin-primary-button" disabled={isSavingTrail}>
-                  {isSavingTrail
-                    ? 'Salvando...'
-                    : editingTrailId
-                    ? 'Salvar alterações'
-                    : 'Cadastrar trilha'}
-                </button>
-                {editingTrailId ? (
-                  <button
-                    type="button"
-                    className="admin-secondary-button"
-                    onClick={handleStartNewTrail}
-                    disabled={isSavingTrail}
-                  >
-                    Cancelar edição
-                  </button>
-                ) : null}
-              </div>
+            <div>
+              <dt>Ativas</dt>
+              <dd>{activeTrailsCount}</dd>
             </div>
-          </form>
+            <div>
+              <dt>Destaques</dt>
+              <dd>{highlightTrailsCount}</dd>
+            </div>
+            <div>
+              <dt>Visíveis na home</dt>
+              <dd>{activeHighlightedTrails}</dd>
+            </div>
+          </dl>
         </section>
-        <div className="admin-trails__side">
-          <section className="admin-card admin-trails__stats">
-            <header className="admin-card__header">
-              <h2>Visão geral das trilhas</h2>
-              <span>Capacidade média, destaques e distribuição atual</span>
-            </header>
-            <div className="admin-card__content">
-              {trailsState.stats ? (
-                <>
-                  <div className="admin-trails__stats-grid">
-                    <div className="admin-trails__stat">
-                      <strong>Total</strong>
-                      <span>{trailsState.stats.total}</span>
-                    </div>
-                    <div className="admin-trails__stat">
-                      <strong>Destaques</strong>
-                      <span>{trailsState.stats.highlights}</span>
-                    </div>
-                    <div className="admin-trails__stat">
-                      <strong>Capacidade média</strong>
-                      <span>{trailsState.stats.averageCapacity} pessoas</span>
-                    </div>
-                    <div className="admin-trails__stat">
-                      <strong>Próximas sessões</strong>
-                      <span>{trailsState.stats.upcomingSessions}</span>
-                    </div>
-                  </div>
-                  <div className="admin-trails__stats-breakdown">
-                    <div>
-                      <h3>Status</h3>
-                      <ul>
-                        {(Object.entries(trailsState.stats.byStatus) as Array<[TrailStatus, number]>).map(
-                          ([status, value]) => (
-                            <li key={status}>
-                              <span>{TRAIL_STATUS_LABELS[status]}</span>
-                              <strong>{value}</strong>
-                            </li>
-                          ),
-                        )}
-                      </ul>
-                    </div>
-                    <div>
-                      <h3>Dificuldade</h3>
-                      <ul>
-                        {(
-                          Object.entries(trailsState.stats.byDifficulty) as Array<[
-                            TrailDifficulty,
-                            number,
-                          ]>
-                        ).map(([difficulty, value]) => (
-                          <li key={difficulty}>
-                            <span>{TRAIL_DIFFICULTY_LABELS[difficulty]}</span>
-                            <strong>{value}</strong>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <p className="admin-placeholder">Carregando métricas das trilhas...</p>
-              )}
+        <section className="admin-trails__controls">
+          <div className="admin-trails__search">
+            <label htmlFor="admin-trails-search" className="admin-trails__search-label">
+              Buscar trilha por nome
+            </label>
+            <div className="admin-trails__search-input">
+              <input
+                id="admin-trails-search"
+                type="search"
+                placeholder="Buscar trilha por nome"
+                value={trailSearchTerm}
+                onChange={(event) => setTrailSearchTerm(event.target.value)}
+              />
             </div>
-          </section>
-          <section className="admin-card admin-trails__list">
-            <header className="admin-card__header">
-              <h2>Trilhas cadastradas</h2>
-              <span>Confira status, próximos horários e guias habilitados</span>
-            </header>
-            <div className="admin-card__content">
-              {trailsState.error ? (
-                <div className="admin-alert admin-alert--error">{trailsState.error}</div>
-              ) : null}
-              {trailFeedback ? (
-                <div className="admin-alert admin-alert--success">{trailFeedback}</div>
-              ) : null}
-              {trailsState.isLoading && trailsState.items.length === 0 ? (
-                <p className="admin-placeholder">Carregando trilhas cadastradas...</p>
-              ) : null}
-              {trailsState.isLoading && trailsState.items.length > 0 ? (
-                <p className="admin-placeholder">Atualizando lista de trilhas...</p>
-              ) : null}
-              {!trailsState.isLoading && trailsState.items.length === 0 ? (
-                <p className="admin-placeholder">Nenhuma trilha cadastrada até o momento.</p>
-              ) : null}
-              {trailsState.items.length > 0 ? (
-                <ul className="admin-trails__items">
-                  {trailsState.items.map((trail) => {
-                    const statusTone =
-                      trail.status === 'ACTIVE'
-                        ? 'success'
-                        : trail.status === 'MAINTENANCE'
-                        ? 'warning'
-                        : 'neutral'
-                    const basePriceLabel =
-                      trail.basePrice !== null ? currencyFormatter.format(trail.basePrice) : '—'
-                    const nextSessionLabel = trail.nextSessionStartsAt
-                      ? new Date(trail.nextSessionStartsAt).toLocaleString('pt-BR', {
-                          dateStyle: 'short',
-                          timeStyle: 'short',
-                        })
-                      : 'Sem agendamentos futuros'
-                    const lastSessionLabel = trail.lastSessionStartsAt
-                      ? new Date(trail.lastSessionStartsAt).toLocaleDateString('pt-BR')
-                      : '—'
+          </div>
+          <div className="admin-trails__summary">
+            <span>
+              <strong>Capacidade média:</strong> {averageCapacityLabel}
+            </span>
+            <span>
+              <strong>Próximas sessões:</strong> {upcomingSessionsCount}
+            </span>
+          </div>
+        </section>
+        {trailsState.error ? (
+          <div className="admin-alert admin-alert--error">{trailsState.error}</div>
+        ) : null}
+        {trailFeedback ? (
+          <div className="admin-alert admin-alert--success">{trailFeedback}</div>
+        ) : null}
+        {trailsState.isLoading && trailsState.items.length === 0 ? (
+          <p className="admin-placeholder">Carregando trilhas cadastradas...</p>
+        ) : null}
+        {trailsState.isLoading && trailsState.items.length > 0 ? (
+          <p className="admin-placeholder">Atualizando lista de trilhas...</p>
+        ) : null}
+        {!trailsState.isLoading && filteredTrailItems.length === 0 ? (
+          <div className="admin-trails__empty">
+            <h3>Nenhuma trilha encontrada</h3>
+            <p>Verifique o termo buscado ou cadastre uma nova trilha.</p>
+          </div>
+        ) : null}
+        {filteredTrailItems.length > 0 ? (
+          <ul className="admin-trails__cards">
+            {filteredTrailItems.map((trail) => {
+              const statusTone = TRAIL_STATUS_TONES[trail.status]
+              const basePriceLabel =
+                trail.basePrice !== null ? currencyFormatter.format(trail.basePrice) : '—'
+              const nextSessionLabel = trail.nextSessionStartsAt
+                ? new Date(trail.nextSessionStartsAt).toLocaleString('pt-BR', {
+                    dateStyle: 'short',
+                    timeStyle: 'short',
+                  })
+                : 'Sem agendamentos futuros'
+              const guidesLabel = trail.guides.length
+                ? trail.guides
+                    .map((guide) => `${guide.name}${guide.isActive ? '' : ' (inativo)'}`)
+                    .join(', ')
+                : 'Nenhum guia vinculado'
+              const summary = trail.summary?.trim().length ? trail.summary : trail.description
+              const showHomeBadge = trail.highlight && trail.status === 'ACTIVE'
+              const imageAlt = `Imagem ilustrativa da trilha ${trail.name}`
 
-                    return (
-                      <li key={trail.id} className="admin-trails__item">
-                        <div className="admin-trails__item-header">
-                          <div>
-                            <h3>{trail.name}</h3>
-                            <span className="admin-trails__item-slug">{trail.slug}</span>
-                          </div>
-                          <div className="admin-trails__item-status">
-                            {trail.highlight ? (
-                              <span className="admin-tag admin-tag--success">Destaque</span>
-                            ) : null}
-                            <span className={`admin-tag admin-tag--${statusTone}`}>
-                              {TRAIL_STATUS_LABELS[trail.status]}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="admin-trails__item-body">
-                          <p>{trail.summary ?? trail.description}</p>
-                          <div className="admin-trails__item-meta">
-                            <span>
-                              <strong>Dificuldade:</strong> {TRAIL_DIFFICULTY_LABELS[trail.difficulty]}
-                            </span>
-                            <span>
-                              <strong>Duração:</strong> {formatTrailDuration(trail.durationMinutes)}
-                            </span>
-                            <span>
-                              <strong>Capacidade:</strong> {trail.maxGroupSize} pessoas
-                            </span>
-                            <span>
-                              <strong>Preço base:</strong> {basePriceLabel}
-                            </span>
-                          </div>
-                          <div className="admin-trails__item-meta">
-                            <span>
-                              <strong>Próxima sessão:</strong> {nextSessionLabel}
-                            </span>
-                            <span>
-                              <strong>Última sessão:</strong> {lastSessionLabel}
-                            </span>
-                            <span>
-                              <strong>Agendamentos futuros:</strong> {trail.upcomingSessions}
-                            </span>
-                          </div>
-                          <div className="admin-trails__item-guides">
-                            <strong>Guias:</strong>
-                            <span>
-                              {trail.guides.length
-                                ? trail.guides
-                                    .map((guide) => `${guide.name}${guide.isActive ? '' : ' (inativo)'}`)
-                                    .join(', ')
-                                : 'Nenhum guia vinculado'}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="admin-trails__item-actions">
-                          <button
-                            type="button"
-                            className="admin-secondary-button"
-                            onClick={() => handleEditTrail(trail)}
-                            disabled={isSavingTrail}
-                          >
-                            Editar
-                          </button>
-                          <button
-                            type="button"
-                            className="admin-secondary-button admin-secondary-button--danger"
-                            onClick={() => handleDeleteTrail(trail)}
-                            disabled={trailsState.isLoading}
-                          >
-                            Excluir
-                          </button>
-                        </div>
-                      </li>
-                    )
-                  })}
-                </ul>
-              ) : null}
-            </div>
-          </section>
-        </div>
+              return (
+                <li key={trail.id} className="admin-trails-card">
+                  <div className="admin-trails-card__media">
+                    {trail.imageUrl ? (
+                      <img src={trail.imageUrl} alt={imageAlt} loading="lazy" />
+                    ) : (
+                      <div className="admin-trails-card__media-placeholder" aria-hidden="true">
+                        <span>Sem imagem</span>
+                      </div>
+                    )}
+                    <div className="admin-trails-card__tags">
+                      {trail.badgeLabel ? (
+                        <span className="admin-trails-card__tag admin-trails-card__tag--badge">
+                          {trail.badgeLabel}
+                        </span>
+                      ) : null}
+                      {showHomeBadge ? (
+                        <span className="admin-trails-card__tag admin-trails-card__tag--highlight">
+                          Visível na home
+                        </span>
+                      ) : null}
+                      <span className={`admin-trails-card__tag admin-trails-card__tag--${statusTone}`}>
+                        {TRAIL_STATUS_LABELS[trail.status]}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="admin-trails-card__body">
+                    <header className="admin-trails-card__header">
+                      <h3>{trail.name}</h3>
+                      <span className="admin-trails-card__slug">{trail.slug}</span>
+                    </header>
+                    <p className="admin-trails-card__summary">{summary}</p>
+                    <dl className="admin-trails-card__meta">
+                      <div>
+                        <dt>Dificuldade</dt>
+                        <dd>{TRAIL_DIFFICULTY_LABELS[trail.difficulty]}</dd>
+                      </div>
+                      <div>
+                        <dt>Duração</dt>
+                        <dd>{formatTrailDuration(trail.durationMinutes)}</dd>
+                      </div>
+                      <div>
+                        <dt>Capacidade</dt>
+                        <dd>{trail.maxGroupSize} pessoas</dd>
+                      </div>
+                      <div>
+                        <dt>Preço base</dt>
+                        <dd>{basePriceLabel}</dd>
+                      </div>
+                    </dl>
+                    <dl className="admin-trails-card__meta admin-trails-card__meta--secondary">
+                      <div>
+                        <dt>Próxima sessão</dt>
+                        <dd>{nextSessionLabel}</dd>
+                      </div>
+                      <div>
+                        <dt>Sessões futuras</dt>
+                        <dd>{trail.upcomingSessions}</dd>
+                      </div>
+                      <div>
+                        <dt>Guias</dt>
+                        <dd>{guidesLabel}</dd>
+                      </div>
+                      <div>
+                        <dt>Ponto de encontro</dt>
+                        <dd>{trail.meetingPoint ?? '—'}</dd>
+                      </div>
+                    </dl>
+                  </div>
+                  <footer className="admin-trails-card__footer">
+                    <button
+                      type="button"
+                      className="admin-secondary-button"
+                      onClick={() => handleEditTrail(trail)}
+                      disabled={isSavingTrail}
+                    >
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      className="admin-secondary-button admin-secondary-button--danger"
+                      onClick={() => handleDeleteTrail(trail)}
+                      disabled={trailsState.isLoading}
+                    >
+                      Excluir
+                    </button>
+                  </footer>
+                </li>
+              )
+            })}
+          </ul>
+        ) : null}
       </div>
     ),
   }
@@ -3706,6 +3760,394 @@ function AdminPage() {
       header={{ title: section.title, description: section.description, actions: section.actions }}
     >
       {section.content}
+      {isTrailWizardOpen ? (
+        <div
+          className="admin-trail-wizard"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="trail-wizard-title"
+        >
+          <div className="admin-trail-wizard__backdrop" aria-hidden="true" onClick={handleTrailWizardClose} />
+          <div className="admin-trail-wizard__dialog" role="document">
+            <button
+              type="button"
+              className="admin-trail-wizard__close"
+              onClick={handleTrailWizardClose}
+              aria-label="Fechar"
+            >
+              ×
+            </button>
+            <header className="admin-trail-wizard__header">
+              <h2 id="trail-wizard-title">{editingTrailId ? 'Editar trilha' : 'Nova trilha'}</h2>
+              <p>Cadastre uma nova trilha em etapas.</p>
+              <ol className="admin-trail-wizard__steps">
+                {TRAIL_WIZARD_STEPS.map((step, index) => {
+                  const isActive = step.id === trailWizardStep
+                  const isCompleted = index < currentTrailWizardIndex
+
+                  return (
+                    <li key={step.id}>
+                      <button
+                        type="button"
+                        className={`admin-trail-wizard__step-button${
+                          isActive ? ' is-active' : isCompleted ? ' is-completed' : ''
+                        }`}
+                        onClick={() => handleTrailWizardStepSelect(step.id)}
+                        disabled={!isActive && !isCompleted}
+                        aria-current={isActive ? 'step' : undefined}
+                      >
+                        <span className="admin-trail-wizard__step-index">{index + 1}</span>
+                        <span className="admin-trail-wizard__step-text">
+                          <strong>{step.label}</strong>
+                          <small>{step.description}</small>
+                        </span>
+                      </button>
+                    </li>
+                  )
+                })}
+              </ol>
+            </header>
+            <form className="admin-trail-wizard__form" onSubmit={handleTrailWizardFormSubmit}>
+              <div className="admin-trail-wizard__body">
+                <div className="admin-trail-wizard__fields">
+                  {trailWizardStep === 'basic' ? (
+                    <div className="admin-trail-wizard__fieldset">
+                      <label>
+                        Nome da trilha
+                        <input
+                          type="text"
+                          value={trailForm.name}
+                          onChange={(event) =>
+                            setTrailForm((prev) => ({ ...prev, name: event.target.value }))
+                          }
+                          placeholder="Ex.: Trilha das Dunas"
+                          required
+                        />
+                      </label>
+                      <label>
+                        Identificador (slug)
+                        <input
+                          type="text"
+                          value={trailForm.slug}
+                          onChange={(event) =>
+                            setTrailForm((prev) => ({ ...prev, slug: event.target.value }))
+                          }
+                          placeholder="ex.: trilha-das-dunas"
+                          required
+                        />
+                        <small>Utilizado em URLs e integrações com o portal.</small>
+                      </label>
+                      <label>
+                        Status
+                        <select
+                          value={trailForm.status}
+                          onChange={(event) =>
+                            setTrailForm((prev) => ({
+                              ...prev,
+                              status: event.target.value as TrailStatus,
+                            }))
+                          }
+                        >
+                          <option value="ACTIVE">Ativa</option>
+                          <option value="MAINTENANCE">Em manutenção</option>
+                          <option value="INACTIVE">Indisponível</option>
+                        </select>
+                      </label>
+                      <label>
+                        Resumo (opcional)
+                        <textarea
+                          value={trailForm.summary}
+                          onChange={(event) =>
+                            setTrailForm((prev) => ({ ...prev, summary: event.target.value }))
+                          }
+                          rows={3}
+                          placeholder="Como você apresentaria esta trilha em poucas linhas?"
+                        />
+                      </label>
+                    </div>
+                  ) : null}
+                  {trailWizardStep === 'media' ? (
+                    <div className="admin-trail-wizard__fieldset">
+                      <label>
+                        Imagem destaque (URL)
+                        <input
+                          type="url"
+                          value={trailForm.imageUrl}
+                          onChange={(event) =>
+                            setTrailForm((prev) => ({ ...prev, imageUrl: event.target.value }))
+                          }
+                          placeholder="https://..."
+                        />
+                      </label>
+                      <label>
+                        Selo/Badge
+                        <input
+                          type="text"
+                          value={trailForm.badgeLabel}
+                          onChange={(event) =>
+                            setTrailForm((prev) => ({ ...prev, badgeLabel: event.target.value }))
+                          }
+                          placeholder="Ex.: Popular"
+                        />
+                      </label>
+                      <label className="admin-trail-wizard__checkbox">
+                        <input
+                          type="checkbox"
+                          checked={trailForm.highlight}
+                          onChange={(event) =>
+                            setTrailForm((prev) => ({ ...prev, highlight: event.target.checked }))
+                          }
+                        />
+                        Destacar trilha na home do portal e em materiais promocionais
+                      </label>
+                    </div>
+                  ) : null}
+                  {trailWizardStep === 'capacity' ? (
+                    <div className="admin-trail-wizard__fieldset">
+                      <label>
+                        Dificuldade
+                        <select
+                          value={trailForm.difficulty}
+                          onChange={(event) =>
+                            setTrailForm((prev) => ({
+                              ...prev,
+                              difficulty: event.target.value as TrailDifficulty,
+                            }))
+                          }
+                        >
+                          <option value="EASY">Leve</option>
+                          <option value="MODERATE">Moderada</option>
+                          <option value="HARD">Intensa</option>
+                        </select>
+                      </label>
+                      <label>
+                        Duração (minutos)
+                        <input
+                          type="number"
+                          min={10}
+                          value={trailForm.durationMinutes}
+                          onChange={(event) =>
+                            setTrailForm((prev) => ({ ...prev, durationMinutes: event.target.value }))
+                          }
+                          required
+                        />
+                      </label>
+                      <label>
+                        Capacidade máxima
+                        <input
+                          type="number"
+                          min={1}
+                          value={trailForm.maxGroupSize}
+                          onChange={(event) =>
+                            setTrailForm((prev) => ({ ...prev, maxGroupSize: event.target.value }))
+                          }
+                          required
+                        />
+                      </label>
+                      <label>
+                        Preço base (R$)
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          value={trailForm.basePrice}
+                          onChange={(event) =>
+                            setTrailForm((prev) => ({ ...prev, basePrice: event.target.value }))
+                          }
+                          placeholder="Ex.: 85,00"
+                        />
+                        <small>Deixe em branco para utilizar o valor padrão configurado no sistema.</small>
+                      </label>
+                    </div>
+                  ) : null}
+                  {trailWizardStep === 'guides' ? (
+                    <div className="admin-trail-wizard__fieldset">
+                      <label>
+                        Ponto de encontro
+                        <input
+                          type="text"
+                          value={trailForm.meetingPoint}
+                          onChange={(event) =>
+                            setTrailForm((prev) => ({ ...prev, meetingPoint: event.target.value }))
+                          }
+                          placeholder="Ex.: Centro de Visitantes"
+                        />
+                      </label>
+                      <label>
+                        Descrição detalhada
+                        <textarea
+                          value={trailForm.description}
+                          onChange={(event) =>
+                            setTrailForm((prev) => ({ ...prev, description: event.target.value }))
+                          }
+                          rows={4}
+                          placeholder="Explique o percurso, cuidados e diferenciais da experiência"
+                          required
+                        />
+                      </label>
+                      <label>
+                        Guias habilitados
+                        <select
+                          multiple
+                          value={trailForm.guideCpfs}
+                          onChange={handleTrailGuideSelectionChange}
+                          size={Math.min(Math.max(trailsState.guides.length, 4), 8)}
+                        >
+                          {trailsState.guides.map((guide) => (
+                            <option key={guide.cpf} value={guide.cpf}>
+                              {guide.name}
+                              {guide.speciality ? ` • ${guide.speciality}` : ''}
+                            </option>
+                          ))}
+                        </select>
+                        <small>Os guias selecionados poderão conduzir sessões desta trilha.</small>
+                      </label>
+                    </div>
+                  ) : null}
+                  {trailWizardStep === 'review' ? (
+                    <div className="admin-trail-wizard__fieldset admin-trail-wizard__fieldset--review">
+                      <h3>Revise antes de publicar</h3>
+                      <dl>
+                        <div>
+                          <dt>Nome da trilha</dt>
+                          <dd>{trailForm.name || '—'}</dd>
+                        </div>
+                        <div>
+                          <dt>Identificador</dt>
+                          <dd>{trailForm.slug || '—'}</dd>
+                        </div>
+                        <div>
+                          <dt>Status</dt>
+                          <dd>{TRAIL_STATUS_LABELS[trailForm.status]}</dd>
+                        </div>
+                        <div>
+                          <dt>Dificuldade</dt>
+                          <dd>{TRAIL_DIFFICULTY_LABELS[trailForm.difficulty]}</dd>
+                        </div>
+                        <div>
+                          <dt>Duração</dt>
+                          <dd>{previewDurationLabel}</dd>
+                        </div>
+                        <div>
+                          <dt>Capacidade</dt>
+                          <dd>{previewCapacityLabel}</dd>
+                        </div>
+                        <div>
+                          <dt>Preço base</dt>
+                          <dd>{previewBasePriceLabel}</dd>
+                        </div>
+                        <div>
+                          <dt>Ponto de encontro</dt>
+                          <dd>{trailForm.meetingPoint.trim() || '—'}</dd>
+                        </div>
+                        <div>
+                          <dt>Guias</dt>
+                          <dd>
+                            {trailForm.guideCpfs.length
+                              ? trailForm.guideCpfs
+                                  .map((cpf) => trailsState.guides.find((guide) => guide.cpf === cpf)?.name)
+                                  .filter(Boolean)
+                                  .join(', ')
+                              : 'Nenhum guia selecionado'}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>Descrição</dt>
+                          <dd>{trailForm.description.trim() || '—'}</dd>
+                        </div>
+                      </dl>
+                    </div>
+                  ) : null}
+                </div>
+                <aside className="admin-trail-wizard__preview">
+                  <h3>Pré-visualização</h3>
+                  <div className="admin-trail-wizard__preview-card">
+                    <div className="admin-trail-wizard__preview-media">
+                      {trailForm.imageUrl.trim() ? (
+                        <img src={trailForm.imageUrl} alt="Pré-visualização da imagem da trilha" />
+                      ) : (
+                        <div className="admin-trail-wizard__preview-placeholder">
+                          <span>Imagem da trilha</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="admin-trail-wizard__preview-content">
+                      <div className="admin-trail-wizard__preview-tags">
+                        {trailForm.badgeLabel.trim() ? (
+                          <span className="admin-trail-wizard__preview-tag admin-trail-wizard__preview-tag--badge">
+                            {trailForm.badgeLabel}
+                          </span>
+                        ) : null}
+                        {trailForm.highlight ? (
+                          <span className="admin-trail-wizard__preview-tag admin-trail-wizard__preview-tag--highlight">
+                            Visível na home
+                          </span>
+                        ) : null}
+                        <span
+                          className={`admin-trail-wizard__preview-tag admin-trail-wizard__preview-tag--${previewStatusTone}`}
+                        >
+                          {previewStatusLabel}
+                        </span>
+                      </div>
+                      <h4>{trailForm.name.trim() || 'Nome da trilha'}</h4>
+                      <p>{trailWizardSummary}</p>
+                      <ul className="admin-trail-wizard__preview-meta">
+                        <li>{TRAIL_DIFFICULTY_LABELS[trailForm.difficulty]}</li>
+                        <li>{previewDurationLabel}</li>
+                        <li>{previewCapacityLabel}</li>
+                      </ul>
+                      <div className="admin-trail-wizard__preview-extra">
+                        <span>
+                          <strong>Preço base:</strong> {previewBasePriceLabel}
+                        </span>
+                        <span>
+                          <strong>Ponto de encontro:</strong>{' '}
+                          {trailForm.meetingPoint.trim() || '—'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </aside>
+              </div>
+              {trailFormError ? (
+                <div className="admin-trail-wizard__error">{trailFormError}</div>
+              ) : null}
+              <footer className="admin-trail-wizard__actions">
+                <button type="button" className="admin-secondary-button" onClick={handleTrailWizardClose}>
+                  Cancelar
+                </button>
+                <div className="admin-trail-wizard__actions-nav">
+                  {!isFirstTrailWizardStep ? (
+                    <button
+                      type="button"
+                      className="admin-secondary-button"
+                      onClick={handleTrailWizardPrevious}
+                    >
+                      Etapa anterior
+                    </button>
+                  ) : null}
+                  {isFinalTrailWizardStep ? (
+                    <button type="submit" className="admin-primary-button" disabled={isSavingTrail}>
+                      {isSavingTrail
+                        ? 'Salvando...'
+                        : editingTrailId
+                        ? 'Salvar alterações'
+                        : 'Criar trilha'}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="admin-primary-button"
+                      onClick={handleTrailWizardNext}
+                    >
+                      Próxima etapa
+                    </button>
+                  )}
+                </div>
+              </footer>
+            </form>
+          </div>
+        </div>
+      ) : null}
       <AdminSessionWizard
         isOpen={isSessionWizardOpen}
         step={sessionWizardStep}
