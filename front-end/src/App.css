@@ -500,6 +500,7 @@ section {
   .duninho-helper__dialog {
     animation: none;
     transform: none;
+    opacity: 1;
   }
 
   .duninho-helper__faq details,
