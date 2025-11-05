@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import type { Trail } from '../../types/trail'
 
 const FOCUSABLE_SELECTORS = [
@@ -37,7 +38,7 @@ export function ViewTrailModal({ open, onOpenChange, trail }: ViewTrailModalProp
   const titleId = useMemo(() => `trail-modal-title-${trail.id}`, [trail.id])
 
   useEffect(() => {
-    if (!open) {
+    if (!open || typeof document === 'undefined') {
       return
     }
 
@@ -100,9 +101,24 @@ export function ViewTrailModal({ open, onOpenChange, trail }: ViewTrailModalProp
     }
   }, [open, onOpenChange])
 
+  useEffect(() => {
+    if (!open || typeof document === 'undefined') {
+      return
+    }
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+    }
+  }, [open])
+
   if (!open) {
     return null
   }
+
+  const modalRoot = typeof document !== 'undefined' ? document.body : null
 
   const tagLabels = [
     trail.badge,
@@ -146,7 +162,7 @@ export function ViewTrailModal({ open, onOpenChange, trail }: ViewTrailModalProp
   const guides = trail.guias ?? []
   const sessions = trail.sessoes ?? []
 
-  return (
+  const modalContent = (
     <div className="trail-modal">
       <div
         className="trail-modal__backdrop"
@@ -267,4 +283,10 @@ export function ViewTrailModal({ open, onOpenChange, trail }: ViewTrailModalProp
       </div>
     </div>
   )
+
+  if (!modalRoot) {
+    return null
+  }
+
+  return createPortal(modalContent, modalRoot)
 }
