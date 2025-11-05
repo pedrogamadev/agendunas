@@ -224,20 +224,38 @@ const TRAIL_WIZARD_STEPS: Array<{
   id: TrailWizardStep
   label: string
   description: string
+  shortLabel: string
 }> = [
-  { id: 'basic', label: 'Informações básicas', description: 'Defina nome, status e resumo da experiência.' },
-  { id: 'media', label: 'Mídia e destaque', description: 'Configure imagem, selo e destaque para a home.' },
+  {
+    id: 'basic',
+    label: 'Informações básicas',
+    description: 'Defina nome, status e resumo da experiência.',
+    shortLabel: 'Informações',
+  },
+  {
+    id: 'media',
+    label: 'Mídia e destaque',
+    description: 'Configure imagem, selo e destaque para a home.',
+    shortLabel: 'Mídia',
+  },
   {
     id: 'capacity',
     label: 'Capacidade e duração',
     description: 'Informe dificuldade, duração e limites de participantes.',
+    shortLabel: 'Capacidade',
   },
   {
     id: 'guides',
     label: 'Guia e políticas',
     description: 'Adicione ponto de encontro, descrição detalhada e guias habilitados.',
+    shortLabel: 'Guia',
   },
-  { id: 'review', label: 'Revisão e criar', description: 'Revise os dados antes de salvar a trilha.' },
+  {
+    id: 'review',
+    label: 'Revisão e criar',
+    description: 'Revise os dados antes de salvar a trilha.',
+    shortLabel: 'Revisão',
+  },
 ]
 
 type TrailsState = {
@@ -3778,34 +3796,46 @@ function AdminPage() {
               ×
             </button>
             <header className="admin-trail-wizard__header">
-              <h2 id="trail-wizard-title">{editingTrailId ? 'Editar trilha' : 'Nova trilha'}</h2>
-              <p>Cadastre uma nova trilha em etapas.</p>
-              <ol className="admin-trail-wizard__steps">
-                {TRAIL_WIZARD_STEPS.map((step, index) => {
-                  const isActive = step.id === trailWizardStep
-                  const isCompleted = index < currentTrailWizardIndex
+              <div className="admin-trail-wizard__title">
+                <h2 id="trail-wizard-title">{editingTrailId ? 'Editar trilha' : 'Nova trilha'}</h2>
+                <p>Cadastre uma nova trilha em etapas.</p>
+              </div>
+              <nav className="admin-trail-wizard__progress" aria-label="Etapas do cadastro da trilha">
+                <ol className="admin-trail-wizard__steps">
+                  {TRAIL_WIZARD_STEPS.map((step, index) => {
+                    const isActive = step.id === trailWizardStep
+                    const isCompleted = index < currentTrailWizardIndex
 
-                  return (
-                    <li key={step.id}>
-                      <button
-                        type="button"
-                        className={`admin-trail-wizard__step-button${
+                    return (
+                      <li
+                        key={step.id}
+                        className={`admin-trail-wizard__step${
                           isActive ? ' is-active' : isCompleted ? ' is-completed' : ''
                         }`}
-                        onClick={() => handleTrailWizardStepSelect(step.id)}
-                        disabled={!isActive && !isCompleted}
-                        aria-current={isActive ? 'step' : undefined}
                       >
-                        <span className="admin-trail-wizard__step-index">{index + 1}</span>
-                        <span className="admin-trail-wizard__step-text">
-                          <strong>{step.label}</strong>
-                          <small>{step.description}</small>
-                        </span>
-                      </button>
-                    </li>
-                  )
-                })}
-              </ol>
+                        <button
+                          type="button"
+                          className="admin-trail-wizard__step-button"
+                          onClick={() => handleTrailWizardStepSelect(step.id)}
+                          disabled={!isActive && !isCompleted}
+                          aria-current={isActive ? 'step' : undefined}
+                          aria-label={`${index + 1}ª etapa: ${step.label}`}
+                        >
+                          <span className="admin-trail-wizard__step-marker">
+                            <span className="admin-trail-wizard__step-number">{index + 1}</span>
+                            {isCompleted ? (
+                              <span className="admin-trail-wizard__step-check" aria-hidden="true">
+                                ✓
+                              </span>
+                            ) : null}
+                          </span>
+                          <span className="admin-trail-wizard__step-label">{step.shortLabel}</span>
+                        </button>
+                      </li>
+                    )
+                  })}
+                </ol>
+              </nav>
             </header>
             <form className="admin-trail-wizard__form" onSubmit={handleTrailWizardFormSubmit}>
               <div className="admin-trail-wizard__body">

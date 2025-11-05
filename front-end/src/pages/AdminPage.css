@@ -1424,86 +1424,173 @@
 .admin-trail-wizard__header {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 1.5rem;
 }
 
-.admin-trail-wizard__header h2 {
+@media (min-width: 960px) {
+  .admin-trail-wizard__header {
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 2rem;
+  }
+}
+
+.admin-trail-wizard__title {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 28rem;
+}
+
+.admin-trail-wizard__title h2 {
   margin: 0;
   font-size: 1.75rem;
 }
 
-.admin-trail-wizard__header p {
+.admin-trail-wizard__title p {
   margin: 0;
   color: rgba(20, 52, 40, 0.65);
 }
 
+.admin-trail-wizard__progress {
+  flex: 1;
+}
+
+
 .admin-trail-wizard__steps {
+  --wizard-step-gap: 1rem;
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: var(--wizard-step-gap);
 }
 
-@media (min-width: 720px) {
+@media (min-width: 640px) {
   .admin-trail-wizard__steps {
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    --wizard-step-gap: 1.25rem;
+    display: flex;
+    align-items: flex-start;
+    gap: var(--wizard-step-gap);
+  }
+}
+
+.admin-trail-wizard__step {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  text-align: center;
+}
+
+@media (min-width: 640px) {
+  .admin-trail-wizard__step {
+    flex: 1;
+  }
+
+  .admin-trail-wizard__step::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: calc(50% + 24px);
+    right: calc(-1 * var(--wizard-step-gap));
+    height: 2px;
+    transform: translateY(-50%);
+    background: rgba(20, 52, 40, 0.18);
+    z-index: 0;
+  }
+
+  .admin-trail-wizard__step:last-child::after {
+    display: none;
+  }
+
+  .admin-trail-wizard__step.is-completed::after,
+  .admin-trail-wizard__step.is-active::after {
+    background: rgba(44, 210, 130, 0.55);
   }
 }
 
 .admin-trail-wizard__step-button {
-  width: 100%;
+  border: none;
+  background: none;
+  padding: 0;
   display: flex;
-  gap: 0.75rem;
-  align-items: flex-start;
-  padding: 0.85rem 1rem;
-  border-radius: 16px;
-  border: 1px solid rgba(20, 52, 40, 0.12);
-  background: rgba(255, 255, 255, 0.95);
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
   color: #143428;
-  text-align: left;
   cursor: pointer;
-}
-
-.admin-trail-wizard__step-button.is-active {
-  border-color: rgba(44, 210, 130, 0.45);
-  box-shadow: 0 16px 32px rgba(44, 210, 130, 0.18);
-}
-
-.admin-trail-wizard__step-button.is-completed {
-  border-color: rgba(44, 210, 130, 0.3);
+  text-align: center;
 }
 
 .admin-trail-wizard__step-button:disabled {
   cursor: default;
-  opacity: 0.75;
+  opacity: 0.6;
 }
 
-.admin-trail-wizard__step-index {
+.admin-trail-wizard__step-button:focus-visible {
+  outline: 2px solid rgba(44, 210, 130, 0.8);
+  outline-offset: 4px;
+  border-radius: 999px;
+}
+
+.admin-trail-wizard__step-marker {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 2px solid rgba(20, 52, 40, 0.22);
+  background: rgba(255, 255, 255, 0.96);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: rgba(44, 210, 130, 0.16);
-  color: #15844f;
   font-weight: 700;
+  color: rgba(20, 52, 40, 0.6);
+  transition: all 0.2s ease;
+  z-index: 1;
 }
 
-.admin-trail-wizard__step-text {
+.admin-trail-wizard__step-number {
+  font-size: 1rem;
+}
+
+.admin-trail-wizard__step-check {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #2cd282;
+  color: #ffffff;
+  font-size: 0.75rem;
   display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(44, 210, 130, 0.35);
 }
 
-.admin-trail-wizard__step-text strong {
-  font-size: 0.95rem;
+.admin-trail-wizard__step-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: rgba(20, 52, 40, 0.6);
 }
 
-.admin-trail-wizard__step-text small {
-  color: rgba(20, 52, 40, 0.55);
-  font-size: 0.8rem;
+.admin-trail-wizard__step.is-active .admin-trail-wizard__step-marker,
+.admin-trail-wizard__step.is-completed .admin-trail-wizard__step-marker {
+  border-color: rgba(44, 210, 130, 0.75);
+  background: rgba(44, 210, 130, 0.16);
+  color: #0e6a3d;
+}
+
+.admin-trail-wizard__step.is-active .admin-trail-wizard__step-label,
+.admin-trail-wizard__step.is-completed .admin-trail-wizard__step-label {
+  color: #0e6a3d;
 }
 
 .admin-trail-wizard__form {
@@ -1517,11 +1604,12 @@
 
 .admin-trail-wizard__body {
   display: grid;
-  gap: 2rem;
+  gap: 1.5rem;
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   padding-right: 0.25rem;
+  align-items: flex-start;
 }
 
 @media (min-width: 960px) {
@@ -1613,6 +1701,14 @@
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  align-self: flex-start;
+}
+
+@media (min-width: 960px) {
+  .admin-trail-wizard__preview {
+    position: sticky;
+    top: 0;
+  }
 }
 
 .admin-trail-wizard__preview h3 {
