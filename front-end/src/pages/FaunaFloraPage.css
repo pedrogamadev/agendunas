@@ -1,0 +1,268 @@
+.faunaFlora {
+   --faunaFlora-hero-overlay: rgba(4, 24, 16, 0.86);
+   --faunaFlora-hero-overlay-strong: rgba(5, 43, 32, 0.78);
+   --faunaFlora-control-bg: rgba(255, 255, 255, 0.95);
+   --faunaFlora-control-shadow: 0 16px 32px rgba(16, 60, 38, 0.14);
+   --faunaFlora-card-bg: rgba(255, 255, 255, 0.97);
+   --faunaFlora-card-shadow: 0 25px 55px rgba(39, 140, 95, 0.14);
+   --faunaFlora-card-shadow-hover: 0 40px 75px rgba(39, 140, 95, 0.22);
+   min-height: 100%;
+   display: flex;
+   flex-direction: column;
+}
+
+.faunaFlora__hero {
+  background-image: linear-gradient(
+      120deg,
+      var(--faunaFlora-hero-overlay),
+      var(--faunaFlora-hero-overlay-strong)
+    ),
+    var(
+      --hero-background-image,
+      url('https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=2000&q=80')
+    );
+   background-size: cover;
+   background-position: center;
+   background-repeat: no-repeat;
+   color: #f4fff8;
+}
+
+.faunaFlora__heroContent {
+   display: grid;
+   gap: clamp(1rem, 3vw, 1.75rem);
+}
+
+.faunaFlora__controls {
+   display: flex;
+   flex-wrap: wrap;
+   gap: clamp(0.75rem, 3vw, 1.25rem);
+   align-items: stretch;
+   margin-top: clamp(1.25rem, 3vw, 2.25rem);
+}
+
+.faunaFlora__search {
+   flex: 1 1 280px;
+   display: inline-flex;
+   align-items: center;
+   gap: 0.75rem;
+   padding: 0.75rem 1.35rem;
+   border-radius: 999px;
+   background: var(--faunaFlora-control-bg);
+   box-shadow: inset 0 0 0 1px rgba(47, 162, 104, 0.2), var(--faunaFlora-control-shadow);
+   transition: box-shadow 220ms ease, transform 220ms ease;
+}
+
+.faunaFlora__search:focus-within {
+   box-shadow: inset 0 0 0 2px rgba(44, 210, 130, 0.4), 0 24px 48px rgba(20, 84, 52, 0.22);
+   transform: translateY(-1px);
+}
+
+.faunaFlora__searchIcon {
+   font-size: 1.1rem;
+   color: rgba(20, 52, 40, 0.55);
+}
+
+.faunaFlora__searchInput {
+   flex: 1;
+   border: none;
+   background: transparent;
+   color: var(--text-dark);
+   font-size: 1rem;
+}
+
+.faunaFlora__searchInput::placeholder {
+   color: rgba(20, 52, 40, 0.45);
+}
+
+.faunaFlora__searchInput:focus {
+   outline: none;
+}
+
+.faunaFlora__filters {
+   display: inline-flex;
+   align-items: center;
+   gap: 0.55rem;
+   padding: 0.4rem;
+   border-radius: 999px;
+   background: rgba(224, 251, 239, 0.92);
+   box-shadow: inset 0 0 0 1px rgba(47, 162, 104, 0.25);
+}
+
+.faunaFlora__filter {
+   border: none;
+   border-radius: 999px;
+   background: transparent;
+   padding: 0.5rem 1.45rem;
+   font-weight: 600;
+   color: rgba(24, 70, 52, 0.65);
+   cursor: pointer;
+   transition: color 180ms ease, background 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+}
+
+.faunaFlora__filter:hover,
+.faunaFlora__filter:focus-visible {
+   color: var(--brand-green-dark);
+}
+
+.faunaFlora__filter:focus-visible {
+   outline: none;
+   box-shadow: 0 0 0 3px rgba(44, 210, 130, 0.35);
+}
+
+.faunaFlora__filter.is-active,
+.faunaFlora__filter[aria-pressed='true'] {
+   background: linear-gradient(135deg, rgba(44, 210, 130, 0.95), rgba(35, 196, 255, 0.85));
+   color: #ffffff;
+   box-shadow: 0 20px 45px rgba(35, 182, 136, 0.28);
+}
+
+.faunaFlora__filter.is-active:hover,
+.faunaFlora__filter[aria-pressed='true']:hover {
+   transform: translateY(-1px);
+}
+
+.faunaFlora__main {
+   padding-top: clamp(3rem, 5vw, 4rem);
+}
+
+.faunaFlora__grid {
+   display: grid;
+   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+   gap: clamp(1.5rem, 4vw, 2.75rem);
+}
+
+.faunaFlora__card {
+   background: var(--faunaFlora-card-bg);
+   border-radius: var(--radius-md);
+   overflow: hidden;
+   color: var(--text-dark);
+   box-shadow: var(--faunaFlora-card-shadow);
+   transition: transform 220ms ease, box-shadow 220ms ease;
+}
+
+.faunaFlora__card:hover {
+   transform: translateY(-6px);
+   box-shadow: var(--faunaFlora-card-shadow-hover);
+}
+
+.faunaFlora__figure {
+   margin: 0;
+   display: flex;
+   flex-direction: column;
+   height: 100%;
+}
+
+.faunaFlora__image {
+   width: 100%;
+   height: 220px;
+   object-fit: cover;
+   transition: transform 280ms ease;
+}
+
+.faunaFlora__card:hover .faunaFlora__image {
+   transform: scale(1.03);
+}
+
+.faunaFlora__caption {
+   flex: 1;
+   display: grid;
+   align-content: start;
+   gap: 0.6rem;
+   padding: clamp(1.25rem, 4vw, 1.6rem);
+}
+
+.faunaFlora__meta {
+   display: flex;
+   align-items: center;
+   justify-content: space-between;
+   gap: 1rem;
+   flex-wrap: wrap;
+   font-size: 0.85rem;
+   color: rgba(24, 70, 52, 0.6);
+}
+
+.faunaFlora__type {
+   text-transform: uppercase;
+   letter-spacing: 0.08em;
+   font-weight: 700;
+   color: var(--fern-700);
+}
+
+.faunaFlora__type[data-type='fauna'] {
+   color: rgba(31, 122, 82, 0.95);
+}
+
+.faunaFlora__type[data-type='flora'] {
+   color: rgba(72, 122, 31, 0.95);
+}
+
+.faunaFlora__status {
+   display: inline-flex;
+   align-items: center;
+   gap: 0.4rem;
+   background: rgba(224, 251, 239, 0.9);
+   color: var(--fern-700);
+   padding: 0.3rem 0.85rem;
+   border-radius: 999px;
+   font-weight: 600;
+}
+
+.faunaFlora__name {
+   margin: 0.35rem 0 0;
+   font-size: 1.25rem;
+}
+
+.faunaFlora__scientificName {
+   margin: 0;
+   font-size: 0.92rem;
+   color: rgba(24, 70, 52, 0.63);
+   font-style: italic;
+}
+
+.faunaFlora__description {
+   margin: 0;
+   color: rgba(24, 70, 52, 0.75);
+   line-height: 1.55;
+}
+
+.faunaFlora__empty {
+   grid-column: 1 / -1;
+   margin: 0;
+   padding: clamp(1.75rem, 4vw, 2.25rem);
+   text-align: center;
+   background: rgba(233, 250, 243, 0.95);
+   border-radius: var(--radius-md);
+   color: rgba(24, 70, 52, 0.7);
+}
+
+@media (max-width: 960px) {
+   .faunaFlora__search {
+     flex: 1 1 100%;
+   }
+
+   .faunaFlora__filters {
+     width: 100%;
+     justify-content: center;
+     flex-wrap: wrap;
+   }
+}
+
+@media (max-width: 640px) {
+   .faunaFlora__controls {
+     flex-direction: column;
+     align-items: stretch;
+   }
+
+   .faunaFlora__grid {
+     grid-template-columns: 1fr;
+   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+   .faunaFlora__search,
+   .faunaFlora__filter,
+   .faunaFlora__card,
+   .faunaFlora__image {
+     transition: none;
+   }
+}
