@@ -2,8 +2,8 @@ import type { NextFunction, Request, Response } from 'express'
 import { z } from 'zod'
 import prisma from '../../lib/prisma.js'
 import { verifyPassword } from '../../lib/password.js'
-import { signToken } from '../../lib/token.js'
-import { buildUserPayload, usuarioAuthSelect } from './user-payload.js'
+import { signUsuarioToken } from '../../lib/token.js'
+import { buildUsuarioPayload, usuarioAuthSelect } from './user-payload.js'
 
 const loginSchema = z.object({
   cpf: z.string().min(11, 'Informe um CPF válido.'),
@@ -40,12 +40,13 @@ export async function login(
       return
     }
 
-    const token = signToken({ cpf: usuario.cpf, tipo: usuario.tipo })
+    const token = signUsuarioToken({ cpf: usuario.cpf, tipo: usuario.tipo })
 
     response.json({
       data: {
         token,
-        usuario: buildUserPayload(usuario),
+        usuario: buildUsuarioPayload(usuario),
+        cliente: null,
       },
       message: 'Login realizado com sucesso.',
     })

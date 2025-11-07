@@ -1,6 +1,7 @@
 import { apiRequest } from './client'
 
-export type AuthUser = {
+export type AuthUsuario = {
+  kind: 'usuario'
   cpf: string
   nome: string | null
   sobrenome: string | null
@@ -12,9 +13,22 @@ export type AuthUser = {
   fotoUrl?: string | null
 }
 
+export type AuthCliente = {
+  kind: 'cliente'
+  cpf: string
+  nome: string
+  sobrenome: string
+  email: string
+  dataNascimento: string | null
+  cidadeOrigem: string
+}
+
+export type AuthAccount = AuthUsuario | AuthCliente
+
 export type AuthResponse = {
   token: string
-  usuario: AuthUser | null
+  usuario: AuthUsuario | null
+  cliente: AuthCliente | null
 }
 
 export type AdminLoginPayload = {
@@ -63,5 +77,5 @@ export function customerRegister(payload: CustomerRegisterPayload) {
 }
 
 export function fetchProfile() {
-  return apiRequest<AuthUser>('/auth/me')
+  return apiRequest<AuthAccount>('/auth/me')
 }

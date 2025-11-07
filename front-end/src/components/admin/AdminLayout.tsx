@@ -24,11 +24,11 @@ type AdminLayoutProps = {
 }
 
 function AdminLayout({ sections, activeSection, onSelectSection, header, children }: AdminLayoutProps) {
-  const { user, logout, refresh } = useAuth()
+  const { usuario, logout, refresh } = useAuth()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement | null>(null)
 
-  const userName = user?.nome?.trim() || 'Usuário'
+  const userName = usuario?.nome?.trim() || 'Usuário'
   const userInitials = useMemo(() => {
     if (!userName) {
       return '??'
@@ -47,8 +47,8 @@ function AdminLayout({ sections, activeSection, onSelectSection, header, childre
       C: 'Suporte',
     }
 
-    return roleMap[user?.tipo ?? ''] ?? 'Usuário'
-  }, [user?.tipo])
+    return roleMap[usuario?.tipo ?? ''] ?? 'Usuário'
+  }, [usuario?.tipo])
 
   const toggleMenu = useCallback(() => {
     setIsMenuOpen((previous) => !previous)

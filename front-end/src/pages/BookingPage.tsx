@@ -98,7 +98,7 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
   const { content, language } = useTranslation()
   const booking = content.booking
   const guidesContent = content.guides
-  const { user, isAuthenticating } = useAuth()
+  const { account, isAuthenticating } = useAuth()
   const [guideOptions, setGuideOptions] = useState<GuideOption[]>(
     guidesContent.guides.map((guide) => ({ ...guide, databaseCpf: undefined })),
   )
@@ -137,6 +137,17 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
   const [participants, setParticipants] = useState<Array<{ fullName: string; cpf: string }>>([
     { fullName: '', cpf: '' },
   ])
+
+  const accountFirstName = (account?.nome ?? '').trim()
+  const accountLastName = (account?.sobrenome ?? '').trim()
+  const accountEmail = account
+    ? account.kind === 'cliente'
+      ? account.email.trim()
+      : account.email?.trim() ?? ''
+    : ''
+  const accountBirthDate = account?.dataNascimento ?? null
+  const accountCity = account?.cidadeOrigem ?? ''
+  const accountCpf = account?.cpf ?? ''
   const selectedTrailOption = useMemo(
     () => trailOptions.find((trail) => trail.id === selectedTrailId),
     [selectedTrailId, trailOptions],
@@ -228,44 +239,41 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
   const heroStyle = {
     '--hero-background-image': `url(${booking.hero.photo})`,
   } as CSSProperties
-  const isLoggedIn = Boolean(user)
-  const needsIdentityForm = !isLoggedIn || !user?.email || (!user?.nome && !user?.sobrenome)
+  const isLoggedIn = Boolean(account)
+  const needsIdentityForm =
+    !isLoggedIn || !accountEmail || (!accountFirstName && !accountLastName)
   const contactNameFromProfile = useMemo(() => {
-    if (!user) {
+    if (!account) {
       return ''
     }
 
     const parts: string[] = []
-    if (typeof user.nome === 'string' && user.nome.trim()) {
-      parts.push(user.nome.trim())
+    if (accountFirstName) {
+      parts.push(accountFirstName)
     }
-    if (typeof user.sobrenome === 'string' && user.sobrenome.trim()) {
-      parts.push(user.sobrenome.trim())
-    }
-
-    if (parts.length > 0) {
-      return parts.join(' ')
+    if (accountLastName) {
+      parts.push(accountLastName)
     }
 
-    return ''
-  }, [user])
-  const firstParticipantLocked = isLoggedIn && Boolean(contactNameFromProfile || user?.cpf)
-  const contactEmailFromProfile = typeof user?.email === 'string' ? user.email.trim() : ''
+    return parts.join(' ').trim()
+  }, [account, accountFirstName, accountLastName])
+  const firstParticipantLocked = isLoggedIn && Boolean(contactNameFromProfile || accountCpf)
+  const contactEmailFromProfile = accountEmail
   const formattedBirthDate = useMemo(() => {
-    if (!user?.dataNascimento) {
+    if (!accountBirthDate) {
       return ''
     }
 
-    const date = new Date(user.dataNascimento)
+    const date = new Date(accountBirthDate)
     if (Number.isNaN(date.getTime())) {
-      return user.dataNascimento
+      return accountBirthDate
     }
 
     const locale = language === 'pt' ? 'pt-BR' : 'en-US'
     return new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(date)
-  }, [language, user?.dataNascimento])
+  }, [accountBirthDate, language])
   const customerSummaryItems = useMemo(() => {
-    if (!user) {
+    if (!account) {
       return [] as { label: string; value: string }[]
     }
 
@@ -276,11 +284,11 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
     if (contactEmailFromProfile) {
       items.push({ label: booking.form.email, value: contactEmailFromProfile })
     }
-    if (user.cpf) {
-      items.push({ label: booking.form.documentLabel, value: formatCpf(user.cpf) })
+    if (accountCpf) {
+      items.push({ label: booking.form.documentLabel, value: formatCpf(accountCpf) })
     }
-    if (user.cidadeOrigem) {
-      items.push({ label: booking.form.originCityLabel, value: user.cidadeOrigem })
+    if (accountCity) {
+      items.push({ label: booking.form.originCityLabel, value: accountCity })
     }
     if (formattedBirthDate) {
       items.push({ label: booking.form.birthDateLabel, value: formattedBirthDate })
@@ -288,6 +296,9 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
 
     return items
   }, [
+    account,
+    accountCity,
+    accountCpf,
     booking.form.birthDateLabel,
     booking.form.documentLabel,
     booking.form.email,
@@ -296,7 +307,6 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
     contactEmailFromProfile,
     contactNameFromProfile,
     formattedBirthDate,
-    user,
   ])
   const showCustomerSummary = isLoggedIn && !needsIdentityForm && customerSummaryItems.length > 0
   const shouldShowAuthPrompt = !isLoggedIn && !isAuthenticating
@@ -315,14 +325,14 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
         if (firstParticipantLocked) {
           next[0] = {
             fullName: contactNameFromProfile || '',
-            cpf: user?.cpf ? sanitizeCpf(user.cpf) : '',
+            cpf: accountCpf ? sanitizeCpf(accountCpf) : '',
           }
         }
 
         return next
       })
     },
-    [contactNameFromProfile, firstParticipantLocked, user?.cpf],
+    [accountCpf, contactNameFromProfile, firstParticipantLocked],
   )
   useEffect(() => {
     const maxOption = participantOptions[participantOptions.length - 1]?.value ?? 1
@@ -361,12 +371,12 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
 
       next[0] = {
         fullName: contactNameFromProfile || '',
-        cpf: user?.cpf ? sanitizeCpf(user.cpf) : '',
+        cpf: accountCpf ? sanitizeCpf(accountCpf) : '',
       }
 
       return next
     })
-  }, [contactNameFromProfile, firstParticipantLocked, sanitizeCpf, user?.cpf])
+  }, [accountCpf, contactNameFromProfile, firstParticipantLocked, sanitizeCpf])
 
   useEffect(() => {
     if (!selectedGuide?.featuredTrailId) {

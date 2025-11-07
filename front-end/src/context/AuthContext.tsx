@@ -3,8 +3,10 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type {
   AdminLoginPayload,
   AdminRegisterPayload,
+  AuthAccount,
+  AuthCliente,
   AuthResponse,
-  AuthUser,
+  AuthUsuario,
   CustomerLoginPayload,
   CustomerRegisterPayload,
 } from '../api/auth'
@@ -18,7 +20,9 @@ import {
 import { getAuthToken, setAuthToken } from '../api/client'
 
 type AuthContextValue = {
-  user: AuthUser | null
+  account: AuthAccount | null
+  usuario: AuthUsuario | null
+  cliente: AuthCliente | null
   token: string | null
   isAuthenticating: boolean
   error: string | null
@@ -39,7 +43,7 @@ type AuthProviderProps = {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
-  const [user, setUser] = useState<AuthUser | null>(null)
+  const [account, setAccount] = useState<AuthAccount | null>(null)
   const [token, setToken] = useState<string | null>(() => {
     if (typeof window === 'undefined') {
       return null
@@ -56,11 +60,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setAuthToken(storedToken)
       fetchProfile()
         .then((profile) => {
-          setUser(profile)
+          setAccount(profile)
         })
         .catch(() => {
           setAuthToken(null)
-          setUser(null)
+          setAccount(null)
           if (typeof window !== 'undefined') {
             window.localStorage.removeItem(STORAGE_KEY)
           }
@@ -93,7 +97,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setToken(response.token)
       setAuthToken(response.token)
     }
-    setUser(response.usuario ?? null)
+    setAccount(response.usuario ?? response.cliente ?? null)
     setError(null)
     return response
   }, [])
@@ -168,7 +172,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const logout = useCallback(() => {
     setToken(null)
-    setUser(null)
+    setAccount(null)
     setError(null)
     setAuthToken(null)
     if (typeof window !== 'undefined') {
@@ -179,22 +183,27 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const refresh = useCallback(async () => {
     const activeToken = getAuthToken() ?? token
     if (!activeToken) {
-      setUser(null)
+      setAccount(null)
       return
     }
 
     try {
       const profile = await fetchProfile()
-      setUser(profile)
+      setAccount(profile)
     } catch (err) {
       logout()
       throw err
     }
   }, [logout, token])
 
+  const usuario = useMemo(() => (account?.kind === 'usuario' ? account : null), [account])
+  const cliente = useMemo(() => (account?.kind === 'cliente' ? account : null), [account])
+
   const value = useMemo<AuthContextValue>(
     () => ({
-      user,
+      account,
+      usuario,
+      cliente,
       token,
       isAuthenticating,
       error,
@@ -206,7 +215,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
       refresh,
     }),
     [
-      user,
+      account,
+      usuario,
+      cliente,
       token,
       isAuthenticating,
       error,

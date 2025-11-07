@@ -15,17 +15,34 @@ export async function authenticate(request: Request, response: Response, next: N
   try {
     const payload = verifyToken(token)
 
-    const usuario = await prisma.usuario.findUnique({
-      where: { cpf: payload.cpf },
-      select: { cpf: true, nome: true, tipo: true },
-    })
+    if (payload.scope === 'usuario') {
+      const usuario = await prisma.usuario.findUnique({
+        where: { cpf: payload.cpf },
+        select: { cpf: true, nome: true, tipo: true },
+      })
 
-    if (!usuario) {
-      response.status(401).json({ message: 'Sessão inválida.' })
-      return
+      if (!usuario) {
+        response.status(401).json({ message: 'Sessão inválida.' })
+        return
+      }
+
+      request.user = { ...usuario, kind: 'usuario' }
+      request.authenticated = { ...usuario, kind: 'usuario' as const }
+    } else {
+      const cliente = await prisma.cliente.findUnique({
+        where: { cpf: payload.cpf },
+        select: { cpf: true, nome: true },
+      })
+
+      if (!cliente) {
+        response.status(401).json({ message: 'Sessão inválida.' })
+        return
+      }
+
+      request.user = undefined
+      request.authenticated = { kind: 'cliente', cpf: cliente.cpf, nome: cliente.nome }
     }
 
-    request.user = usuario
     next()
   } catch (error) {
     response.status(401).json({ message: 'Sessão expirada ou token inválido.' })

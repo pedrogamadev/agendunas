@@ -64,8 +64,8 @@ function App() {
   const [navHeight, setNavHeight] = useState(0)
   const navRef = useRef<HTMLElement | null>(null)
   const { content, toggleLanguage } = useTranslation()
-  const { user, isAuthenticating, logout } = useAuth()
-  const isAdmin = user?.tipo === 'A'
+  const { account, usuario, isAuthenticating, logout } = useAuth()
+  const isAdmin = usuario?.tipo === 'A'
   const isCustomerLoginRoute =
     location.path === '/area-cliente' || location.path === '/login-cliente'
 
@@ -197,7 +197,7 @@ function App() {
     }
 
     if (location.path === '/admin') {
-      if (!user) {
+      if (!usuario) {
         navigate('/login', { search: 'redirect=/admin' })
         return
       }
@@ -206,7 +206,7 @@ function App() {
         navigate('/')
       }
     }
-  }, [isAdmin, isAuthenticating, location.path, navigate, user])
+  }, [isAdmin, isAuthenticating, location.path, navigate, usuario])
 
   const activeRoute = useMemo(
     () => routes.find((route) => route.path === location.path) ?? routes[0],
@@ -316,7 +316,7 @@ function App() {
               </svg>
               <span className="translation-toggle__label">{content.navigation.translationToggle.label}</span>
             </button>
-            {user ? (
+            {account ? (
               <button
                 type="button"
                 className="btn ghost"

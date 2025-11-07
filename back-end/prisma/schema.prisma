@@ -88,6 +88,20 @@ model Usuario {
   @@map("usuarios")
 }
 
+model Cliente {
+  cpf            String   @id
+  nome           String
+  sobrenome      String
+  email          String   @unique
+  senhaHash      String
+  dataNascimento DateTime
+  cidadeOrigem   String
+  criadoEm       DateTime @default(now())
+  atualizadoEm   DateTime @updatedAt
+
+  @@map("clientes")
+}
+
 model Convite {
   token        String      @id
   cpfConvidado String

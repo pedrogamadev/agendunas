@@ -2,8 +2,8 @@ import type { NextFunction, Request, Response } from 'express'
 import { z } from 'zod'
 import prisma from '../../lib/prisma.js'
 import { verifyPassword } from '../../lib/password.js'
-import { signToken } from '../../lib/token.js'
-import { buildUserPayload, usuarioAuthSelect } from './user-payload.js'
+import { signClienteToken } from '../../lib/token.js'
+import { buildClientePayload, clienteAuthSelect } from './user-payload.js'
 
 const customerLoginSchema = z.object({
   cpf: z.string().min(11, 'Informe um CPF válido.'),
@@ -28,32 +28,33 @@ export async function customerLogin(
       return
     }
 
-    const usuario = await prisma.usuario.findUnique({
+    const cliente = await prisma.cliente.findUnique({
       where: { cpf: normalizedCpf },
       select: {
-        ...usuarioAuthSelect,
+        ...clienteAuthSelect,
         senhaHash: true,
       },
     })
 
-    if (!usuario || usuario.tipo !== 'C') {
+    if (!cliente) {
       response.status(401).json({ message: 'CPF ou senha inválidos.' })
       return
     }
 
-    const senhaValida = await verifyPassword(payload.senha, usuario.senhaHash)
+    const senhaValida = await verifyPassword(payload.senha, cliente.senhaHash)
 
     if (!senhaValida) {
       response.status(401).json({ message: 'CPF ou senha inválidos.' })
       return
     }
 
-    const token = signToken({ cpf: usuario.cpf, tipo: usuario.tipo })
+    const token = signClienteToken({ cpf: cliente.cpf })
 
     response.json({
       data: {
         token,
-        usuario: buildUserPayload(usuario),
+        cliente: buildClientePayload(cliente),
+        usuario: null,
       },
       message: 'Login realizado com sucesso.',
     })

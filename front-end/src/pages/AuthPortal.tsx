@@ -40,7 +40,7 @@ function EyeIcon({ hidden }: { hidden: boolean }) {
 }
 
 function AuthPortal({ navigation, onNavigate, searchParams, initialMode, variant }: AuthPortalProps) {
-  const { adminLogin, adminRegister, error, isAuthenticating, user } = useAuth()
+  const { adminLogin, adminRegister, error, isAuthenticating, usuario, cliente } = useAuth()
   const [activeMode, setActiveMode] = useState<AuthMode>(initialMode)
   const [formError, setFormError] = useState<string | null>(null)
   const [lastSubmission, setLastSubmission] = useState<AuthMode | null>(null)
@@ -72,11 +72,16 @@ function AuthPortal({ navigation, onNavigate, searchParams, initialMode, variant
   }, [initialMode])
 
   useEffect(() => {
-    if (user) {
-      const destination = user.tipo === 'A' ? redirectTarget : '/'
+    if (usuario) {
+      const destination = usuario.tipo === 'A' ? redirectTarget : '/'
       onNavigate(destination)
+      return
     }
-  }, [user, redirectTarget, onNavigate])
+
+    if (cliente) {
+      onNavigate('/')
+    }
+  }, [cliente, onNavigate, redirectTarget, usuario])
 
   useEffect(() => {
     setFormError(null)

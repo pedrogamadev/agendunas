@@ -1,10 +1,9 @@
 import type { NextFunction, Request, Response } from 'express'
 import { z } from 'zod'
-import { TipoUsuario } from '@prisma/client'
 import prisma from '../../lib/prisma.js'
 import { hashPassword } from '../../lib/password.js'
-import { signToken } from '../../lib/token.js'
-import { buildUserPayload, usuarioAuthSelect } from './user-payload.js'
+import { signClienteToken } from '../../lib/token.js'
+import { buildClientePayload, clienteAuthSelect } from './user-payload.js'
 
 const customerRegisterSchema = z
   .object({
@@ -45,8 +44,8 @@ export async function customerRegister(
     const normalizedEmail = payload.email.trim().toLowerCase()
 
     const [existingByCpf, existingByEmail] = await Promise.all([
-      prisma.usuario.findUnique({ where: { cpf: normalizedCpf } }),
-      prisma.usuario.findUnique({ where: { email: normalizedEmail } }),
+      prisma.cliente.findUnique({ where: { cpf: normalizedCpf } }),
+      prisma.cliente.findUnique({ where: { email: normalizedEmail } }),
     ])
 
     if (existingByCpf) {
@@ -61,7 +60,7 @@ export async function customerRegister(
 
     const senhaHash = await hashPassword(payload.senha)
 
-    const usuario = await prisma.usuario.create({
+    const cliente = await prisma.cliente.create({
       data: {
         cpf: normalizedCpf,
         nome: payload.nome.trim(),
@@ -70,17 +69,17 @@ export async function customerRegister(
         dataNascimento: payload.dataNascimento,
         cidadeOrigem: payload.cidadeOrigem.trim(),
         senhaHash,
-        tipo: TipoUsuario.C,
       },
-      select: usuarioAuthSelect,
+      select: clienteAuthSelect,
     })
 
-    const token = signToken({ cpf: usuario.cpf, tipo: usuario.tipo })
+    const token = signClienteToken({ cpf: cliente.cpf })
 
     response.status(201).json({
       data: {
         token,
-        usuario: buildUserPayload(usuario),
+        cliente: buildClientePayload(cliente),
+        usuario: null,
       },
       message: 'Cadastro realizado com sucesso.',
     })

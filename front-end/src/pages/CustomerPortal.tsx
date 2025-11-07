@@ -49,7 +49,7 @@ function CustomerPortal({
   initialMode = 'login',
   variant = 'customer',
 }: CustomerPortalProps) {
-  const { customerLogin, customerRegister, error, isAuthenticating, user } = useAuth()
+  const { customerLogin, customerRegister, error, isAuthenticating, usuario, cliente } = useAuth()
   const [activeMode, setActiveMode] = useState<AuthMode>(initialMode)
   const [formError, setFormError] = useState<string | null>(null)
   const [lastSubmission, setLastSubmission] = useState<AuthMode | null>(null)
@@ -101,17 +101,18 @@ function CustomerPortal({
   }, [initialMode])
 
   useEffect(() => {
-    if (!user) {
+    const account = usuario ?? cliente
+    if (!account) {
       return
     }
 
-    if (user.tipo === 'A') {
+    if (usuario?.tipo === 'A') {
       onNavigate('/admin')
       return
     }
 
     onNavigate(redirectTarget)
-  }, [user, redirectTarget, onNavigate])
+  }, [cliente, onNavigate, redirectTarget, usuario])
 
   useEffect(() => {
     setFormError(null)

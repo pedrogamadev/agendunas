@@ -6,7 +6,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useTranslation } from '../../i18n/TranslationProvider'
 
 function Agendamento({ navigation, onNavigate, searchParams }: PageProps): JSX.Element {
-  const { user, isAuthenticating } = useAuth()
+  const { account, isAuthenticating } = useAuth()
   const { content, language } = useTranslation()
   const booking = content.booking
   const heroStyle = useMemo(
@@ -19,10 +19,10 @@ function Agendamento({ navigation, onNavigate, searchParams }: PageProps): JSX.E
   }, [onNavigate])
 
   const authLoadingMessage = language === 'pt' ? 'Verificando sessão...' : 'Checking session...'
-  const shouldShowAuthPrompt = !user && !isAuthenticating
-  const shouldShowAuthLoading = !user && isAuthenticating
+  const shouldShowAuthPrompt = !account && !isAuthenticating
+  const shouldShowAuthLoading = !account && isAuthenticating
 
-  if (user) {
+  if (account) {
     return <BookingPage navigation={navigation} onNavigate={onNavigate} searchParams={searchParams} />
   }
 

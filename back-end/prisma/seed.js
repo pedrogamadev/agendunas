@@ -24,6 +24,7 @@ async function main() {
   await prisma.faunaFloraRecord.deleteMany()
   await prisma.event.deleteMany()
   await prisma.convite.deleteMany()
+  await prisma.cliente.deleteMany()
   await prisma.usuario.deleteMany()
 
   const trails = await Promise.all([
@@ -102,12 +103,14 @@ async function main() {
     matheusPasswordHash,
     carraraPasswordHash,
     colaboradorPasswordHash,
+    clientePasswordHash,
   ] = await Promise.all([
     bcrypt.hash('Adm@123456', 10),
     bcrypt.hash('Davi@123456', 10),
     bcrypt.hash('Matheus@123456', 10),
     bcrypt.hash('Carrara@123456', 10),
     bcrypt.hash('Colab@123456', 10),
+    bcrypt.hash('Cliente@123456', 10),
   ])
 
   await prisma.usuario.create({
@@ -239,6 +242,18 @@ async function main() {
       { trailId: aroeira.id, guideCpf: carrara.cpf },
       { trailId: fozDoSol.id, guideCpf: davi.cpf },
     ],
+  })
+
+  await prisma.cliente.create({
+    data: {
+      cpf: '98765432100',
+      nome: 'Cliente Exemplo',
+      sobrenome: 'Portal',
+      email: 'cliente@agendunas.com',
+      senhaHash: clientePasswordHash,
+      dataNascimento: new Date('1990-05-20T00:00:00.000Z'),
+      cidadeOrigem: 'Natal/RN',
+    },
   })
 
   const upcomingBase = new Date()

@@ -2,8 +2,8 @@ import type { NextFunction, Request, Response } from 'express'
 import { z } from 'zod'
 import prisma from '../../lib/prisma.js'
 import { hashPassword } from '../../lib/password.js'
-import { signToken } from '../../lib/token.js'
-import { buildUserPayload, usuarioAuthSelect } from './user-payload.js'
+import { signUsuarioToken } from '../../lib/token.js'
+import { buildUsuarioPayload, usuarioAuthSelect } from './user-payload.js'
 
 const registerSchema = z.object({
   cpf: z.string().min(11, 'Informe um CPF válido.'),
@@ -99,12 +99,13 @@ export async function register(
       select: usuarioAuthSelect,
     })
 
-    const token = signToken({ cpf: payload.cpf, tipo: convite.tipo })
+    const token = signUsuarioToken({ cpf: payload.cpf, tipo: convite.tipo })
 
     response.status(201).json({
       data: {
         token,
-        usuario: buildUserPayload(usuario),
+        usuario: buildUsuarioPayload(usuario),
+        cliente: null,
       },
       message: 'Cadastro realizado com sucesso.',
     })
