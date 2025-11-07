@@ -29,6 +29,9 @@ function AdminLayout({ sections, activeSection, onSelectSection, header, childre
   const menuRef = useRef<HTMLDivElement | null>(null)
 
   const userName = usuario?.nome?.trim() || 'Usuário'
+  const userAvatarUrl = usuario?.fotoUrl ?? null
+  const userCpf = usuario?.cpf ?? null
+  const userGuide = usuario?.guia ?? null
   const userInitials = useMemo(() => {
     if (!userName) {
       return '??'
@@ -177,11 +180,7 @@ function AdminLayout({ sections, activeSection, onSelectSection, header, childre
                 aria-label="Abrir menu do usuário"
               >
                 <div className="admin-user-chip__avatar" aria-hidden="true">
-                  {user?.fotoUrl ? (
-                    <img src={user.fotoUrl} alt="Avatar do usuário" />
-                  ) : (
-                    <span>{userInitials}</span>
-                  )}
+                  {userAvatarUrl ? <img src={userAvatarUrl} alt="Avatar do usuário" /> : <span>{userInitials}</span>}
                 </div>
                 <div className="admin-user-chip__meta">
                   <span className="admin-user-chip__name">{userName}</span>
@@ -192,25 +191,21 @@ function AdminLayout({ sections, activeSection, onSelectSection, header, childre
                 <div className="admin-user-menu" role="menu">
                   <div className="admin-user-menu__profile">
                     <div className="admin-user-menu__avatar" aria-hidden="true">
-                      {user?.fotoUrl ? (
-                        <img src={user.fotoUrl} alt="Avatar do usuário" />
-                      ) : (
-                        <span>{userInitials}</span>
-                      )}
+                      {userAvatarUrl ? <img src={userAvatarUrl} alt="Avatar do usuário" /> : <span>{userInitials}</span>}
                     </div>
                     <div className="admin-user-menu__info">
                       <span className="admin-user-menu__name">{userName}</span>
                       <span className="admin-user-menu__role">{userRole}</span>
-                      {user?.cpf ? <span className="admin-user-menu__id">CPF: {user.cpf}</span> : null}
+                      {userCpf ? <span className="admin-user-menu__id">CPF: {userCpf}</span> : null}
                     </div>
                   </div>
                   <div className="admin-user-menu__actions">
                     <button type="button" className="admin-user-menu__action" onClick={handleRefreshProfile}>
                       Atualizar perfil
                     </button>
-                    {user?.guia?.nome ? (
+                    {userGuide?.nome ? (
                       <button type="button" className="admin-user-menu__action" onClick={closeMenu}>
-                        Guia: {user.guia.nome}
+                        Guia: {userGuide.nome}
                       </button>
                     ) : null}
                     <button type="button" className="admin-user-menu__action admin-user-menu__action--danger" onClick={handleLogout}>
