@@ -1,0 +1,19 @@
+# robots.txt para AgenDunas
+# Permite indexação de rotas públicas e bloqueia áreas administrativas
+
+User-agent: *
+Allow: /
+Allow: /guias
+Allow: /agendamento
+Allow: /fauna-e-flora
+
+# Bloquear áreas administrativas e de autenticação
+Disallow: /admin
+Disallow: /login
+Disallow: /cadastro
+Disallow: /login-cliente
+Disallow: /area-cliente
+
+# Sitemap
+Sitemap: https://www.agendunas.com.br/sitemap.xml
+

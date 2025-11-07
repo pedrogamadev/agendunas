@@ -2,9 +2,16 @@ import { useEffect, useId, useRef, useState } from 'react'
 import type { PageProps } from '../App'
 import { useTranslation } from '../i18n/TranslationProvider'
 import { fetchFaunaFloraRecords, fetchPublicTrails } from '../api/public'
+import { SeoHead } from '../components/SeoHead'
+import { LazyImage } from '../components/LazyImage'
 
+// Hero image principal (LCP candidate) - usar primeira imagem otimizada
+// Nota: As imagens externas devem ser convertidas para AVIF/WebP e hospedadas localmente
+// Por enquanto, mantemos a primeira URL como fallback, mas idealmente deve ser:
+// '/hero-1920.avif' com srcset para diferentes tamanhos
+const heroImagePrimary = 'https://semeia.org.br/wp-content/uploads/2025/07/IMG_20250619_081831285_HDR-edited-scaled.jpg'
 const heroImages = [
-  'https://semeia.org.br/wp-content/uploads/2025/07/IMG_20250619_081831285_HDR-edited-scaled.jpg',
+  heroImagePrimary,
   'https://portaln10.com.br/wp-content/uploads/2025/03/Parque-das-Dunas-em-Natal-se-destaca-entre-os-mais-visitados-do-Brasil-scaled.jpg',
   'https://semeia.org.br/wp-content/uploads/2025/07/IMG_20250619_095111763_HDR-edited-scaled.jpg',
   'https://diariodorn.com.br/wp-content/uploads/2024/05/titulo.png',
@@ -229,14 +236,79 @@ function HomePage({ navigation, onNavigate }: PageProps) {
     setIsFaqOpen(false)
   }
 
+  // Dados estruturados JSON-LD para SEO
+  const structuredData = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'Organization',
+        '@id': 'https://www.agendunas.com.br/#organization',
+        name: 'AgenDunas',
+        url: 'https://www.agendunas.com.br',
+        logo: {
+          '@type': 'ImageObject',
+          url: 'https://www.agendunas.com.br/agendunaslogo.png',
+        },
+        sameAs: [
+          // Adicionar redes sociais quando disponíveis
+        ],
+      },
+      {
+        '@type': 'WebSite',
+        '@id': 'https://www.agendunas.com.br/#website',
+        url: 'https://www.agendunas.com.br',
+        name: 'AgenDunas',
+        publisher: {
+          '@id': 'https://www.agendunas.com.br/#organization',
+        },
+        // SearchAction pode ser adicionado quando houver busca interna
+      },
+    ],
+  }
+
+  const heroTitle = `${home.hero.title.prefix}${home.hero.title.highlight}${home.hero.title.suffix ?? ''}`
+  const fullTitle = `${heroTitle} | Parque das Dunas - Natal-RN`
+
   return (
     <div className="home-page" id="home">
+      <SeoHead
+        title={fullTitle}
+        description={home.hero.description || 'Descubra a natureza preservada do Parque das Dunas em Natal-RN com trilhas guiadas. Agende sua aventura e viva uma experiência única na maior floresta urbana do Brasil.'}
+        canonicalUrl="https://www.agendunas.com.br/"
+        ogImage="/og-home.jpg"
+        preloadImages={[
+          { src: heroImagePrimary, type: 'image/jpeg' },
+        ]}
+        preloadFonts={[
+          // Nota: Para produção, usar fontes WOFF2 locais com preload
+          // Exemplo: { src: '/fonts/poppins-regular.woff2', type: 'font/woff2', as: 'font', crossorigin: 'anonymous' }
+        ]}
+        structuredData={structuredData}
+      />
       <header className="hero" ref={heroRef}>
         <div className="hero-background" aria-hidden="true">
-          {heroImages.map((image, index) => (
+          {/* Imagem principal otimizada para LCP */}
+          <img
+            src={heroImagePrimary}
+            alt="Entrada do Parque das Dunas em Natal-RN, maior floresta urbana do Brasil"
+            width={1920}
+            height={1080}
+            fetchPriority="high"
+            decoding="async"
+            className={`hero-background__image ${activeHeroImage === 0 ? 'is-active' : ''}`}
+            style={{
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+            }}
+          />
+          {/* Imagens secundárias para carrossel */}
+          {heroImages.slice(1).map((image, index) => (
             <div
               key={image}
-              className={`hero-background__image ${index === activeHeroImage ? 'is-active' : ''}`}
+              className={`hero-background__image ${index + 1 === activeHeroImage ? 'is-active' : ''}`}
               style={{ backgroundImage: `url(${image})` }}
             />
           ))}
@@ -252,10 +324,20 @@ function HomePage({ navigation, onNavigate }: PageProps) {
           </h1>
           <p>{home.hero.description}</p>
           <div className="hero-actions">
-            <button type="button" className="btn solid" onClick={() => onNavigate('/agendamento')}>
+            <button
+              type="button"
+              className="btn solid"
+              onClick={() => onNavigate('/agendamento')}
+              aria-label={`${home.hero.primaryCta} - Agendar trilha guiada no Parque das Dunas`}
+            >
               {home.hero.primaryCta}
             </button>
-            <button type="button" className="btn ghost" onClick={() => onNavigate('/fauna-e-flora')}>
+            <button
+              type="button"
+              className="btn ghost"
+              onClick={() => onNavigate('/fauna-e-flora')}
+              aria-label={`${home.hero.secondaryCta} - Conhecer fauna e flora do Parque das Dunas`}
+            >
               {home.hero.secondaryCta}
             </button>
           </div>
@@ -293,17 +375,17 @@ function HomePage({ navigation, onNavigate }: PageProps) {
       </header>
 
       <main>
-        <section className="home-section home-about" id="about">
+        <section className="home-section home-about" id="about" aria-labelledby="about-heading">
           <div className="home-about__content">
             {shouldShowAboutTag && <span className="section-tag">{home.about.tag}</span>}
-            <h2>
+            <h2 id="about-heading">
               {home.about.title.prefix}
               <span>{home.about.title.highlight}</span>
             </h2>
             <p>{home.about.description}</p>
-            <div className="highlights">
+            <div className="highlights" role="list">
               {highlights.map((item) => (
-                <div key={item.title} className="highlight-card">
+                <div key={item.title} className="highlight-card" role="listitem">
                   <span className="highlight-icon" aria-hidden="true">
                     {item.icon}
                   </span>
@@ -324,30 +406,40 @@ function HomePage({ navigation, onNavigate }: PageProps) {
           </div>
         </section>
 
-        <section className="home-section home-trails" id="booking">
+        <section className="home-section home-trails" id="booking" aria-labelledby="trails-heading">
           <div className="section-header">
             <span className="section-tag">{home.trails.tag}</span>
-            <h2>{home.trails.title}</h2>
+            <h2 id="trails-heading">{home.trails.title}</h2>
             <p>{home.trails.description}</p>
           </div>
-          <div className="trail-grid">
+          <div className="trail-grid" role="list">
             {trails.map((trail) => (
-              <article key={trail.name} className="trail-card">
-                <div className="trail-image" style={{ backgroundImage: `url(${trail.image})` }}>
+              <article key={trail.name} className="trail-card" role="listitem">
+                <div className="trail-image" style={{ backgroundImage: `url(${trail.image})` }} aria-hidden="true">
                   <span className="badge">{trail.badge}</span>
                 </div>
                 <div className="trail-body">
                   <h3>{trail.name}</h3>
                   <p>{trail.description}</p>
-                  <div className="trail-meta">
-                    <span>⏱ {trail.duration}</span>
-                    <span>🧗‍♀️ {trail.difficulty}</span>
-                    <span>👥 {trail.groups}</span>
-                  </div>
+                  <dl className="trail-meta">
+                    <div>
+                      <dt className="sr-only">Duração</dt>
+                      <dd>⏱ {trail.duration}</dd>
+                    </div>
+                    <div>
+                      <dt className="sr-only">Nível de dificuldade</dt>
+                      <dd>🧗‍♀️ {trail.difficulty}</dd>
+                    </div>
+                    <div>
+                      <dt className="sr-only">Capacidade</dt>
+                      <dd>👥 {trail.groups}</dd>
+                    </div>
+                  </dl>
                   <button
                     type="button"
                     className="btn link"
                     onClick={() => onNavigate('/agendamento')}
+                    aria-label={`Agendar trilha ${trail.name}`}
                   >
                     {home.trails.cta}
                   </button>
@@ -357,33 +449,45 @@ function HomePage({ navigation, onNavigate }: PageProps) {
           </div>
         </section>
 
-        <section className="home-section home-wildlife" id="wildlife">
+        <section className="home-section home-wildlife" id="wildlife" aria-labelledby="wildlife-heading">
           <div className="section-header">
             <span className="section-tag">{home.wildlife.tag}</span>
-            <h2>
+            <h2 id="wildlife-heading">
               {home.wildlife.title.prefix}
               <span>{home.wildlife.title.highlight}</span>
               {home.wildlife.title.suffix ?? ''}
             </h2>
             <p>{home.wildlife.description}</p>
           </div>
-          <div className="wildlife-grid">
+          <div className="wildlife-grid" role="list">
             {wildlife.map((animal) => (
-              <figure key={animal.name} className="wildlife-card">
-                <div className="wildlife-image" style={{ backgroundImage: `url(${animal.image})` }} />
+              <figure key={animal.name} className="wildlife-card" role="listitem">
+                <LazyImage
+                  src={animal.image}
+                  alt={`${animal.name} - Habitante da floresta do Parque das Dunas`}
+                  width={400}
+                  height={300}
+                  className="wildlife-image"
+                  aspectRatio="4/3"
+                />
                 <figcaption>{animal.name}</figcaption>
               </figure>
             ))}
           </div>
-          <button type="button" className="btn ghost" onClick={() => onNavigate('/fauna-e-flora')}>
+          <button
+            type="button"
+            className="btn ghost"
+            onClick={() => onNavigate('/fauna-e-flora')}
+            aria-label={`${home.wildlife.cta} - Explorar fauna e flora do Parque das Dunas`}
+          >
             {home.wildlife.cta}
           </button>
         </section>
 
-        <section className="home-section home-testimonials" id="testimonials">
+        <section className="home-section home-testimonials" id="testimonials" aria-labelledby="testimonials-heading">
           <div className="section-header">
             <span className="section-tag">{home.testimonials.tag}</span>
-            <h2>{home.testimonials.title}</h2>
+            <h2 id="testimonials-heading">{home.testimonials.title}</h2>
           </div>
           <div className="testimonial-slider" role="region" aria-live="polite">
             {testimonials.map((item, index) => (

@@ -239,6 +239,7 @@ function App() {
         className={`top-nav${
           isScrolled || isCustomerLoginRoute ? ' top-nav--scrolled' : ''
         }${isMenuOpen ? ' top-nav--open' : ''}`}
+        aria-label="Principal"
       >
         <a
           className="brand"
@@ -248,8 +249,9 @@ function App() {
             setIsMenuOpen(false)
             navigate('/')
           }}
+          aria-label="AgenDunas - Página inicial"
         >
-          <img className="brand-logo" src="/agendunaslogo.png" alt="Logo AgenDunas" />
+          <img className="brand-logo" src="/agendunaslogo.png" alt="Logo AgenDunas" width="40" height="40" />
           <span className="brand-text">AgenDunas</span>
         </a>
         <button
@@ -257,6 +259,7 @@ function App() {
           className={`top-nav__mobile-toggle${isMenuOpen ? ' is-active' : ''}`}
           aria-expanded={isMenuOpen}
           aria-controls="primary-navigation"
+          aria-label={isMenuOpen ? content.navigation.menuToggle.closeLabel : content.navigation.menuToggle.openLabel}
           onClick={() => setIsMenuOpen((current) => !current)}
         >
           <span className="sr-only">
@@ -267,22 +270,24 @@ function App() {
           <span aria-hidden="true" className="top-nav__mobile-icon" />
         </button>
         <div className={`top-nav__content${isMenuOpen ? ' is-open' : ''}`} id="primary-navigation">
-          <div className="nav-links">
+          <ul className="nav-links" role="list">
             {navRoutes.map((link) => (
-              <a
-                key={link.path}
-                href={link.path}
-                onClick={(event) => {
-                  event.preventDefault()
-                  setIsMenuOpen(false)
-                  navigate(link.path)
-                }}
-                className={`nav-link ${activeRoute.path === link.path ? 'active' : ''}`}
-              >
-                {link.labelKey ? content.navigation.links[link.labelKey]! : link.path}
-              </a>
+              <li key={link.path} role="listitem">
+                <a
+                  href={link.path}
+                  onClick={(event) => {
+                    event.preventDefault()
+                    setIsMenuOpen(false)
+                    navigate(link.path)
+                  }}
+                  className={`nav-link ${activeRoute.path === link.path ? 'active' : ''}`}
+                  aria-current={activeRoute.path === link.path ? 'page' : undefined}
+                >
+                  {link.labelKey ? content.navigation.links[link.labelKey]! : link.path}
+                </a>
+              </li>
             ))}
-          </div>
+          </ul>
           <div className="nav-actions">
             <button
               type="button"
@@ -342,6 +347,7 @@ function App() {
                 setIsMenuOpen(false)
                 navigate('/agendamento')
               }}
+              aria-label={`${content.navigation.scheduleButton} - Agendar trilha guiada`}
             >
               {content.navigation.scheduleButton}
             </button>

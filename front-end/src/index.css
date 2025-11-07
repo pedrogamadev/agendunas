@@ -1,3 +1,4 @@
+/* Fontes otimizadas com font-display: swap via Google Fonts */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700;800&display=swap');
 
 *,
@@ -41,4 +42,59 @@ button {
 
 #root {
   min-height: 100vh;
+}
+
+/* Acessibilidade: Screen reader only */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Acessibilidade: Tap targets mínimos (48x48px) */
+button:not(.brand):not(.top-nav__mobile-toggle),
+a:not(.brand) {
+  min-height: 48px;
+  min-width: 48px;
+}
+
+button,
+a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Acessibilidade: Focus visível melhorado */
+:focus-visible {
+  outline: 3px solid rgba(35, 196, 255, 0.8);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Acessibilidade: Respeitar prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Otimização: Aspect ratio para evitar CLS */
+.aspect-\[16\/9\] {
+  aspect-ratio: 16 / 9;
+}
+
+.aspect-\[4\/3\] {
+  aspect-ratio: 4 / 3;
 }
