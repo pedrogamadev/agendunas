@@ -3566,141 +3566,133 @@ function AdminPage() {
     ),
     content: (
       <div className="admin-guides">
-        <section className="admin-card admin-guides__list">
-          <header className="admin-card__header">
-            <h2>Guias cadastrados</h2>
-            <span>Acompanhe especialistas habilitados e suas trilhas qualificadas.</span>
-          </header>
-          <div className="admin-card__content">
-            {guidesState.error ? (
-              <div className="admin-alert admin-alert--error">{guidesState.error}</div>
-            ) : null}
-            {guideFeedback ? (
-              <div className="admin-alert admin-alert--success">{guideFeedback}</div>
-            ) : null}
-            {guidesState.isLoading && guidesState.items.length === 0 ? (
-              <p className="admin-placeholder">Carregando guias cadastrados...</p>
-            ) : null}
-            {guidesState.isLoading && guidesState.items.length > 0 ? (
-              <p className="admin-placeholder">Atualizando lista de guias...</p>
-            ) : null}
-            {!guidesState.isLoading && guidesState.items.length === 0 ? (
-              <p className="admin-placeholder">Nenhum guia cadastrado até o momento.</p>
-            ) : null}
-            {guidesState.items.length > 0 ? (
-              <ul className="admin-guide-cards">
-                {guidesState.items.map((guide) => {
-                  const languagesLabel = guide.languages.length
-                    ? guide.languages.join(', ')
-                    : 'Idiomas não informados'
-                  const certificationsLabel = guide.certifications.length
-                    ? guide.certifications.join(', ')
-                    : 'Certificações não informadas'
-                  const trails = guide.trails
-                  const experienceLabel = `${guide.experienceYears} ${
-                    guide.experienceYears === 1 ? 'ano' : 'anos'
-                  }`
-                  const featuredTrailName = guide.featuredTrail?.name ?? null
+        {guidesState.error ? (
+          <div className="admin-alert admin-alert--error">{guidesState.error}</div>
+        ) : null}
+        {guideFeedback ? (
+          <div className="admin-alert admin-alert--success">{guideFeedback}</div>
+        ) : null}
+        {guidesState.isLoading && guidesState.items.length === 0 ? (
+          <p className="admin-placeholder">Carregando guias cadastrados...</p>
+        ) : null}
+        {guidesState.isLoading && guidesState.items.length > 0 ? (
+          <p className="admin-placeholder">Atualizando lista de guias...</p>
+        ) : null}
+        {!guidesState.isLoading && guidesState.items.length === 0 ? (
+          <p className="admin-placeholder">Nenhum guia cadastrado até o momento.</p>
+        ) : null}
+        {guidesState.items.length > 0 ? (
+          <ul className="admin-guide-cards">
+            {guidesState.items.map((guide) => {
+              const languagesLabel = guide.languages.length
+                ? guide.languages.join(', ')
+                : 'Idiomas não informados'
+              const certificationsLabel = guide.certifications.length
+                ? guide.certifications.join(', ')
+                : 'Certificações não informadas'
+              const trails = guide.trails
+              const experienceLabel = `${guide.experienceYears} ${
+                guide.experienceYears === 1 ? 'ano' : 'anos'
+              }`
+              const featuredTrailName = guide.featuredTrail?.name ?? null
 
-                  return (
-                    <li key={guide.cpf} className="admin-guide-card">
-                      <div className="admin-guide-card__media">
-                        {guide.photoUrl ? (
-                          <img src={guide.photoUrl} alt={`Foto de ${guide.name}`} />
+              return (
+                <li key={guide.cpf} className="admin-guide-card">
+                  <div className="admin-guide-card__media">
+                    {guide.photoUrl ? (
+                      <img src={guide.photoUrl} alt={`Foto de ${guide.name}`} />
+                    ) : (
+                      <div className="admin-guide-card__placeholder" aria-hidden="true">
+                        {guide.name.trim().charAt(0).toUpperCase() || 'G'}
+                      </div>
+                    )}
+                  </div>
+                  <div className="admin-guide-card__body">
+                    <header className="admin-guide-card__header">
+                      <div>
+                        <h3>{guide.name}</h3>
+                        <div className="admin-guide-card__identifiers">
+                          <span>CPF: {formatCpf(guide.cpf)}</span>
+                          <span>Slug: {guide.slug}</span>
+                        </div>
+                      </div>
+                      <div className="admin-guide-card__tags">
+                        {guide.isFeatured ? (
+                          <span className="admin-tag admin-tag--success">Destaque</span>
+                        ) : null}
+                        {guide.isActive ? (
+                          <span className="admin-tag admin-tag--info">Ativo</span>
                         ) : (
-                          <div className="admin-guide-card__placeholder" aria-hidden="true">
-                            {guide.name.trim().charAt(0).toUpperCase() || 'G'}
-                          </div>
+                          <span className="admin-tag admin-tag--warning">Inativo</span>
                         )}
                       </div>
-                      <div className="admin-guide-card__body">
-                        <header className="admin-guide-card__header">
-                          <div>
-                            <h3>{guide.name}</h3>
-                            <div className="admin-guide-card__identifiers">
-                              <span>CPF: {formatCpf(guide.cpf)}</span>
-                              <span>Slug: {guide.slug}</span>
-                            </div>
-                          </div>
-                          <div className="admin-guide-card__tags">
-                            {guide.isFeatured ? (
-                              <span className="admin-tag admin-tag--success">Destaque</span>
-                            ) : null}
-                            {guide.isActive ? (
-                              <span className="admin-tag admin-tag--info">Ativo</span>
-                            ) : (
-                              <span className="admin-tag admin-tag--warning">Inativo</span>
-                            )}
-                          </div>
-                        </header>
-                        <p className="admin-guide-card__summary">
-                          {guide.summary?.trim().length
-                            ? guide.summary
-                            : 'Este guia ainda não possui resumo cadastrado.'}
-                        </p>
-                        <div className="admin-guide-card__meta">
-                          {guide.speciality ? (
-                            <span>
-                              <strong>Especialidade:</strong> {guide.speciality}
+                    </header>
+                    <p className="admin-guide-card__summary">
+                      {guide.summary?.trim().length
+                        ? guide.summary
+                        : 'Este guia ainda não possui resumo cadastrado.'}
+                    </p>
+                    <div className="admin-guide-card__meta">
+                      {guide.speciality ? (
+                        <span>
+                          <strong>Especialidade:</strong> {guide.speciality}
+                        </span>
+                      ) : null}
+                      <span>
+                        <strong>Experiência:</strong> {experienceLabel}
+                      </span>
+                      <span>
+                        <strong>Idiomas:</strong> {languagesLabel}
+                      </span>
+                      <span>
+                        <strong>Certificações:</strong> {certificationsLabel}
+                      </span>
+                    </div>
+                    <div className="admin-guide-card__trails">
+                      <strong>Trilhas habilitadas:</strong>
+                      {trails.length > 0 ? (
+                        <div className="admin-guide-card__chips">
+                          {trails.map((trail) => (
+                            <span key={trail.id} className="admin-guide-card__chip">
+                              {trail.name}
                             </span>
-                          ) : null}
-                          <span>
-                            <strong>Experiência:</strong> {experienceLabel}
-                          </span>
-                          <span>
-                            <strong>Idiomas:</strong> {languagesLabel}
-                          </span>
-                          <span>
-                            <strong>Certificações:</strong> {certificationsLabel}
-                          </span>
+                          ))}
                         </div>
-                        <div className="admin-guide-card__trails">
-                          <strong>Trilhas habilitadas:</strong>
-                          {trails.length > 0 ? (
-                            <div className="admin-guide-card__chips">
-                              {trails.map((trail) => (
-                                <span key={trail.id} className="admin-guide-card__chip">
-                                  {trail.name}
-                                </span>
-                              ))}
-                            </div>
-                          ) : (
-                            <span className="admin-guide-card__empty">
-                              Nenhuma trilha associada no momento.
-                            </span>
-                          )}
-                        </div>
-                        <div className="admin-guide-card__footer">
-                          <div className="admin-guide-card__featured">
-                            <strong>Trilha destaque:</strong> {featuredTrailName ?? 'Nenhuma'}
-                          </div>
-                          <div className="admin-guide-card__actions">
-                            <button
-                              type="button"
-                              className="admin-secondary-button"
-                              onClick={() => handleEditGuide(guide)}
-                              disabled={isSavingGuide}
-                            >
-                              Editar
-                            </button>
-                            <button
-                              type="button"
-                              className="admin-secondary-button admin-secondary-button--danger"
-                              onClick={() => handleDeleteGuide(guide)}
-                              disabled={guidesState.isLoading}
-                            >
-                              Excluir
-                            </button>
-                          </div>
-                        </div>
+                      ) : (
+                        <span className="admin-guide-card__empty">
+                          Nenhuma trilha associada no momento.
+                        </span>
+                      )}
+                    </div>
+                    <div className="admin-guide-card__footer">
+                      <div className="admin-guide-card__featured">
+                        <strong>Trilha destaque:</strong> {featuredTrailName ?? 'Nenhuma'}
                       </div>
-                    </li>
-                  )
-                })}
-              </ul>
-            ) : null}
-          </div>
-        </section>
+                      <div className="admin-guide-card__actions">
+                        <button
+                          type="button"
+                          className="admin-secondary-button"
+                          onClick={() => handleEditGuide(guide)}
+                          disabled={isSavingGuide}
+                        >
+                          Editar
+                        </button>
+                        <button
+                          type="button"
+                          className="admin-secondary-button admin-secondary-button--danger"
+                          onClick={() => handleDeleteGuide(guide)}
+                          disabled={guidesState.isLoading}
+                        >
+                          Excluir
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+        ) : null}
       </div>
     ),
   }
@@ -3762,67 +3754,56 @@ function AdminPage() {
     >
       {section.content}
       {isGuideWizardOpen ? (
-        <div
-          className="admin-trail-wizard admin-guide-wizard"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="guide-wizard-title"
-        >
+        <div className="admin-trail-wizard admin-guide-wizard" role="dialog" aria-modal="true" aria-label="Cadastro de guia">
           <div className="admin-trail-wizard__backdrop" aria-hidden="true" onClick={handleGuideWizardClose} />
+          <button
+            type="button"
+            className="admin-trail-wizard__close"
+            onClick={handleGuideWizardClose}
+            aria-label="Fechar"
+          >
+            ×
+          </button>
           <div className="admin-trail-wizard__dialog" role="document">
-            <button
-              type="button"
-              className="admin-trail-wizard__close"
-              onClick={handleGuideWizardClose}
-              aria-label="Fechar"
-            >
-              ×
-            </button>
-            <header className="admin-trail-wizard__header">
-              <div className="admin-trail-wizard__title">
-                <h2 id="guide-wizard-title">{editingGuideCpf ? 'Editar guia' : 'Novo guia'}</h2>
-                <p>{currentGuideWizardStep.description}</p>
-              </div>
-              <nav className="admin-trail-wizard__progress" aria-label="Etapas do cadastro do guia">
-                <ol className="admin-trail-wizard__steps">
-                  {GUIDE_WIZARD_STEPS.map((step, index) => {
-                    const isActive = step.id === guideWizardStep
-                    const isCompleted = index < currentGuideWizardIndex
-
-                    return (
-                      <li
-                        key={step.id}
-                        className={`admin-trail-wizard__step${
-                          isActive ? ' is-active' : isCompleted ? ' is-completed' : ''
-                        }`}
-                      >
-                        <button
-                          type="button"
-                          className="admin-trail-wizard__step-button"
-                          onClick={() => handleGuideWizardStepSelect(step.id)}
-                          disabled={!isActive && !isCompleted}
-                          aria-current={isActive ? 'step' : undefined}
-                          aria-label={`${index + 1}ª etapa: ${step.label}`}
-                        >
-                          <span className="admin-trail-wizard__step-marker">
-                            <span className="admin-trail-wizard__step-number">{index + 1}</span>
-                            {isCompleted ? (
-                              <span className="admin-trail-wizard__step-check" aria-hidden="true">
-                                ✓
-                              </span>
-                            ) : null}
-                          </span>
-                          <span className="admin-trail-wizard__step-label">{step.shortLabel}</span>
-                        </button>
-                      </li>
-                    )
-                  })}
-                </ol>
-              </nav>
-            </header>
             <form className="admin-trail-wizard__form" onSubmit={handleGuideWizardFormSubmit}>
               <div className="admin-trail-wizard__body">
                 <div className="admin-trail-wizard__fields">
+                  <nav className="admin-trail-wizard__progress" aria-label="Etapas do cadastro do guia">
+                    <ol className="admin-trail-wizard__steps">
+                      {GUIDE_WIZARD_STEPS.map((step, index) => {
+                        const isActive = step.id === guideWizardStep
+                        const isCompleted = index < currentGuideWizardIndex
+
+                        return (
+                          <li
+                            key={step.id}
+                            className={`admin-trail-wizard__step${
+                              isActive ? ' is-active' : isCompleted ? ' is-completed' : ''
+                            }`}
+                          >
+                            <button
+                              type="button"
+                              className="admin-trail-wizard__step-button"
+                              onClick={() => handleGuideWizardStepSelect(step.id)}
+                              disabled={!isActive && !isCompleted}
+                              aria-current={isActive ? 'step' : undefined}
+                              aria-label={`${index + 1}ª etapa: ${step.label}`}
+                            >
+                              <span className="admin-trail-wizard__step-marker">
+                                <span className="admin-trail-wizard__step-number">{index + 1}</span>
+                                {isCompleted ? (
+                                  <span className="admin-trail-wizard__step-check" aria-hidden="true">
+                                    ✓
+                                  </span>
+                                ) : null}
+                              </span>
+                              <span className="admin-trail-wizard__step-label">{step.shortLabel}</span>
+                            </button>
+                          </li>
+                        )
+                      })}
+                    </ol>
+                  </nav>
                   {guideWizardStep === 'identity' ? (
                     <div className="admin-trail-wizard__fieldset">
                       <label>
