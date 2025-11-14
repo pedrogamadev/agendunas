@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from 'express'
 import { ZodError } from 'zod'
+import logger from '../lib/logger.js'
 
 type ApiError = Error & {
   statusCode?: number
@@ -12,6 +13,15 @@ export function errorHandler(error: unknown, request: Request, response: Respons
   }
 
   if (error instanceof ZodError) {
+    logger.warn(
+      {
+        path: request.path,
+        method: request.method,
+        issues: error.issues,
+      },
+      'Validation error',
+    )
+
     response.status(400).json({
       message: 'Dados inválidos enviados para a API.',
       issues: error.issues.map((issue) => ({
@@ -34,8 +44,26 @@ export function errorHandler(error: unknown, request: Request, response: Respons
       : 'Erro inesperado ao processar a solicitação.'
 
   if (statusCode === 500) {
-    // eslint-disable-next-line no-console
-    console.error('[API] Unhandled error:', normalizedError)
+    logger.error(
+      {
+        err: normalizedError,
+        path: request.path,
+        method: request.method,
+        ip: request.ip,
+        userAgent: request.get('user-agent'),
+      },
+      'Unhandled error',
+    )
+  } else {
+    logger.warn(
+      {
+        err: normalizedError,
+        path: request.path,
+        method: request.method,
+        statusCode,
+      },
+      'Request error',
+    )
   }
 
   response.status(statusCode).json({ message })

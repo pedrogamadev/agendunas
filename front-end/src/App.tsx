@@ -1,17 +1,19 @@
 import './App.css'
 import type { JSX, ReactNode } from 'react'
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import Footer from './components/Footer'
 import { useTranslation } from './i18n/TranslationProvider'
 import { useAuth } from './context/AuthContext'
-import AdminPage from './pages/AdminPage'
-import CustomerAuthPage from './pages/CustomerAuthPage'
-import FaunaFloraPage from './pages/FaunaFloraPage'
-import GuidesPage from './pages/GuidesPage'
-import HomePage from './pages/HomePage'
-import LoginPage from './pages/LoginPage'
-import RegisterPage from './pages/RegisterPage'
-import Agendamento from './app/pages/Agendamento'
+
+// Lazy load de páginas pesadas
+const AdminPage = lazy(() => import('./pages/AdminPage'))
+const CustomerAuthPage = lazy(() => import('./pages/CustomerAuthPage'))
+const FaunaFloraPage = lazy(() => import('./pages/FaunaFloraPage'))
+const GuidesPage = lazy(() => import('./pages/GuidesPage'))
+const HomePage = lazy(() => import('./pages/HomePage'))
+const LoginPage = lazy(() => import('./pages/LoginPage'))
+const RegisterPage = lazy(() => import('./pages/RegisterPage'))
+const Agendamento = lazy(() => import('./app/pages/Agendamento'))
 
 type RouteComponent = (props: PageProps) => JSX.Element
 
@@ -366,7 +368,32 @@ function App() {
 
   return (
     <div className={`app route-${activeRoute.path.replace('/', '') || 'home'}`}>
-      <Page navigation={navigation} onNavigate={navigate} searchParams={searchParams} />
+      <Suspense
+        fallback={
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minHeight: '50vh',
+            }}
+          >
+            <div
+              style={{
+                width: '40px',
+                height: '40px',
+                border: '3px solid rgba(20, 52, 40, 0.1)',
+                borderTopColor: 'rgba(20, 52, 40, 0.4)',
+                borderRadius: '50%',
+                animation: 'spin 0.8s linear infinite',
+              }}
+              aria-label="Carregando página"
+            />
+          </div>
+        }
+      >
+        <Page navigation={navigation} onNavigate={navigate} searchParams={searchParams} />
+      </Suspense>
       <Footer onNavigate={navigate} />
     </div>
   )

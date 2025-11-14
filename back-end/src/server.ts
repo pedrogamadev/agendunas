@@ -1,8 +1,8 @@
 import app from './app.js'
+import logger from './lib/logger.js'
 
 const port = Number.parseInt(process.env.PORT ?? '3001', 10)
 
 app.listen(port, () => {
-  // eslint-disable-next-line no-console
-  console.log(`API AgenDunas disponível em http://localhost:${port}`)
+  logger.info({ port }, 'API AgenDunas iniciada')
 })

@@ -1,5 +1,7 @@
 import type { NextFunction, Request, Response } from 'express'
 import prisma from '../../lib/prisma.js'
+import { cache } from '../../lib/cache.js'
+import logger from '../../lib/logger.js'
 import { calculateOccupancy, formatDate, formatDateTimeLabel, formatTime } from '../admin/formatters.js'
 
 type GuideSummary = {
@@ -55,6 +57,16 @@ type PublicTrail = {
 
 export async function getTrails(_request: Request, response: Response, next: NextFunction): Promise<void> {
   try {
+    const cacheKey = 'public:trails'
+    const cached = cache.get<PublicTrail[]>(cacheKey)
+
+    if (cached) {
+      logger.debug({ cacheKey }, 'Cache hit for trails')
+      response.json({ data: cached })
+      return
+    }
+
+    logger.debug({ cacheKey }, 'Cache miss for trails')
     const now = new Date()
     const trails = await prisma.trail.findMany({
       where: { status: 'ACTIVE' },
@@ -206,6 +218,8 @@ export async function getTrails(_request: Request, response: Response, next: Nex
       }
     })
 
+    // Cache por 30 segundos (dados públicos que mudam pouco)
+    cache.set(cacheKey, normalized, 30000)
     response.json({ data: normalized })
   } catch (error) {
     next(error)
