@@ -103,6 +103,20 @@ describe('Public API integration', () => {
     expect(trailData.sessions[0].slots[0].contactPhone).toBe('11987654321')
   })
 
+  it('returns zero available spots when there are no upcoming sessions', async () => {
+    const trail = createTrail({ id: 'trail-no-sessions', slug: 'trilha-sem-sessao' })
+
+    prismaMock.addTrail(trail)
+
+    const response = await request(app).get('/api/trails')
+
+    expect(response.status).toBe(200)
+    expect(response.body.data).toHaveLength(1)
+
+    const [trailData] = response.body.data as Array<{ availableSpots: number }>
+    expect(trailData.availableSpots).toBe(0)
+  })
+
   it('prevents overbooking with transactional locking', async () => {
     const trail = createTrail({ id: 'trail-2', slug: 'trilha-2', name: 'Trilha 2' })
     const guide = createGuide({ cpf: '98765432100', slug: 'guia-2' })

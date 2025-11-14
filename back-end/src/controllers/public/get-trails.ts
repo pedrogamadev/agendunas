@@ -110,7 +110,7 @@ export async function getTrails(_request: Request, response: Response, next: Nex
       >()
 
       let upcomingSession: (typeof trail.sessions)[number] | null = null
-      let upcomingAvailableSpots = trail.maxGroupSize
+      let upcomingAvailableSpots = 0
 
       for (const session of trail.sessions) {
         const sessionDate = session.startsAt.toISOString().slice(0, 10)
