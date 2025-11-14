@@ -41,6 +41,7 @@ import {
   type TrailStatus,
 } from '../api/admin'
 import { formatCpf, formatCpfForInput, sanitizeCpf } from '../utils/cpf'
+import { formatPhoneForWhatsApp, sanitizePhoneNumber } from '../utils/phone'
 import { TrailsPage } from './admin/TrailsPage'
 import type { Trail } from '../types/trail'
 import './AdminPage.css'
@@ -571,7 +572,6 @@ const applyMessageVariables = (template: string, variables: Record<string, strin
   }, template)
 }
 
-const sanitizePhoneNumber = (value: string) => value.replace(/\D/g, '')
 
 const sidebarSections = [
   {
@@ -2206,10 +2206,11 @@ function AdminPage() {
 
         const template = messageTemplates[templateId] ?? DEFAULT_MESSAGE_TEMPLATES[templateId]
 
+        const participantPhone = participant.phone ?? participant.contactPhone ?? ''
         setWhatsappDialog({
           participantId: participant.id,
           participantName: participant.fullName,
-          phone: participant.phone ?? participant.contactPhone ?? '',
+          phone: sanitizePhoneNumber(participantPhone),
           templateId,
           message: applyMessageVariables(template, variables),
           variables,
@@ -2438,7 +2439,9 @@ function AdminPage() {
 
   const handleWhatsappPhoneChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
     const nextValue = event.target.value
-    setWhatsappDialog((prev) => (prev ? { ...prev, phone: nextValue } : prev))
+    // Sanitiza o número para garantir que contenha apenas dígitos
+    const sanitizedPhone = sanitizePhoneNumber(nextValue)
+    setWhatsappDialog((prev) => (prev ? { ...prev, phone: sanitizedPhone } : prev))
   }, [])
 
   const handleWhatsappTemplateChange = useCallback(
@@ -2470,14 +2473,17 @@ function AdminPage() {
       return
     }
 
-    const phone = sanitizePhoneNumber(whatsappDialog.phone)
+    // Formata o número para o formato do WhatsApp (adiciona +55 se necessário)
+    const phone = formatPhoneForWhatsApp(whatsappDialog.phone)
     const text = whatsappDialog.message.trim()
 
     if (!phone || !text) {
       return
     }
 
-    const link = `https://wa.me/${phone}?text=${encodeURIComponent(text)}`
+    // Constrói o link do WhatsApp com o número formatado e a mensagem codificada
+    const encodedText = encodeURIComponent(text)
+    const link = `https://wa.me/${phone}?text=${encodedText}`
     window.open(link, '_blank', 'noopener,noreferrer')
   }, [whatsappDialog])
 
