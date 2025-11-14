@@ -403,7 +403,6 @@ function HomePage({ navigation, onNavigate }: PageProps) {
 
         <section className="home-section home-trails" id="booking" aria-labelledby="trails-heading">
           <div className="section-header">
-            <span className="section-tag">{home.trails.tag}</span>
             <h2 id="trails-heading">{home.trails.title}</h2>
             <p>{home.trails.description}</p>
           </div>
