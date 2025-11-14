@@ -46,7 +46,6 @@ function HomePage({ navigation, onNavigate }: PageProps) {
   const helperDescriptionId = useId()
   const helperDialogId = useId()
   const testimonials = home.testimonials.items
-  const highlights = home.about.highlights
   const trails = trailCards
   const wildlife = wildlifeCards
   const stats = home.stats
@@ -383,23 +382,19 @@ function HomePage({ navigation, onNavigate }: PageProps) {
               <span>{home.about.title.highlight}</span>
             </h2>
             <p>{home.about.description}</p>
-            <div className="highlights" role="list">
-              {highlights.map((item) => (
-                <div key={item.title} className="highlight-card" role="listitem">
-                  <span className="highlight-icon" aria-hidden="true">
-                    {item.icon}
-                  </span>
-                  <div>
-                    <h3>{item.title}</h3>
-                    <p>{item.description}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="impact-card">
-              <span>{home.about.impactValue}</span>
-              <p>{home.about.impactDescription}</p>
-            </div>
+            <button
+              type="button"
+              className="btn solid"
+              onClick={() => {
+                const trailsSection = document.getElementById('booking')
+                if (trailsSection) {
+                  trailsSection.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                }
+              }}
+              aria-label="Conheça nossas trilhas - Navegar para seção de trilhas"
+            >
+              Conheça nossas trilhas
+            </button>
           </div>
           <div className="home-about__media">
             <div className="about-image" role="img" aria-label={home.about.mediaAriaLabel} />
