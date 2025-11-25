@@ -158,26 +158,41 @@ function HomePage({ navigation, onNavigate }: PageProps) {
   }, [])
 
   useEffect(() => {
-    const updateDocking = () => {
-      const element = heroRef.current
-      if (!element) {
-        return
-      }
+    const element = heroRef.current
+    if (!element) {
+      return undefined
+    }
 
+    let animationFrame = 0
+
+    const updateDocking = () => {
       const rect = element.getBoundingClientRect()
       const viewportHeight = window.innerHeight || document.documentElement.clientHeight
       const shouldDock = rect.top <= -32 || rect.bottom <= viewportHeight - 64
       setIsMascotDocked((previous) => (previous !== shouldDock ? shouldDock : previous))
     }
 
-    let frame = 0
+    if ('IntersectionObserver' in window) {
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          const shouldDock = entry.intersectionRatio < 0.35
+          setIsMascotDocked((previous) => (previous !== shouldDock ? shouldDock : previous))
+        },
+        { threshold: [0, 0.35, 1] },
+      )
+
+      observer.observe(element)
+      return () => observer.disconnect()
+    }
+
     const handleScroll = () => {
-      if (frame !== 0) {
+      if (animationFrame !== 0) {
         return
       }
-      frame = window.requestAnimationFrame(() => {
+
+      animationFrame = window.requestAnimationFrame(() => {
         updateDocking()
-        frame = 0
+        animationFrame = 0
       })
     }
 
@@ -186,8 +201,8 @@ function HomePage({ navigation, onNavigate }: PageProps) {
     window.addEventListener('resize', handleScroll)
 
     return () => {
-      if (frame !== 0) {
-        window.cancelAnimationFrame(frame)
+      if (animationFrame !== 0) {
+        window.cancelAnimationFrame(animationFrame)
       }
       window.removeEventListener('scroll', handleScroll)
       window.removeEventListener('resize', handleScroll)

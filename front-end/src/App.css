@@ -152,6 +152,7 @@ section {
   opacity: 1;
   filter: blur(0px);
   transform: translateY(0) scale(1);
+  animation: duninhoBlur 0.35s ease;
 }
 
 .hero-mascot__image img {
@@ -225,6 +226,24 @@ section {
   }
 }
 
+@keyframes duninhoBlur {
+  0% {
+    filter: blur(12px);
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+  55% {
+    filter: blur(5px);
+    opacity: 0.72;
+    transform: translateY(6px) scale(0.98);
+  }
+  100% {
+    filter: blur(0px);
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 @media (max-width: 1024px) {
   .hero-mascot:not(.is-docked) {
     display: none;
@@ -247,6 +266,12 @@ section {
 @media (prefers-reduced-motion: reduce) {
   .hero-mascot,
   .hero-mascot__button {
+    transition: none;
+    animation: none;
+  }
+
+  .hero-mascot__image,
+  .hero-mascot__image.is-active {
     transition: none;
     animation: none;
   }
