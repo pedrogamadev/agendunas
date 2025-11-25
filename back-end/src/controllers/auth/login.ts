@@ -12,6 +12,10 @@ const loginSchema = z.object({
 
 type LoginBody = z.infer<typeof loginSchema>
 
+function sanitizeCpf(value: string) {
+  return value.replace(/\D/g, '')
+}
+
 export async function login(
   request: Request<unknown, unknown, LoginBody>,
   response: Response,
@@ -19,9 +23,15 @@ export async function login(
 ): Promise<void> {
   try {
     const payload = loginSchema.parse(request.body)
+    const normalizedCpf = sanitizeCpf(payload.cpf)
+
+    if (normalizedCpf.length !== 11) {
+      response.status(400).json({ message: 'Informe um CPF válido com 11 dígitos.' })
+      return
+    }
 
     const usuario = await prisma.usuario.findUnique({
-      where: { cpf: payload.cpf },
+      where: { cpf: normalizedCpf },
       select: {
         ...usuarioAuthSelect,
         senhaHash: true,
