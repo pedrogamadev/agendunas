@@ -164,6 +164,7 @@ type BookingTranslation = {
         phoneLabel: string
         phoneFallback: string
         contactLabel: string
+        photoAlt: string
       }
       date: {
         title: string
@@ -870,16 +871,17 @@ const translations: Record<Language, TranslationContent> = {
           trail: {
             title: 'Escolha a trilha',
             description: 'Veja detalhes, guias responsáveis e vagas disponíveis antes de prosseguir.',
-            availability: '{spots} vagas totais na trilha',
+            availability: '{spots} vagas',
             guidesFallback: 'Os guias serão definidos pela equipe após a confirmação.',
             phoneLabel: 'Telefone:',
             phoneFallback: 'Contato indisponível no momento.',
             contactLabel: 'Central da trilha:',
+            photoAlt: 'Foto da trilha {trail}',
           },
           date: {
             title: 'Selecione a data',
             description: 'Escolha uma data com vagas disponíveis ou informe sua preferência.',
-            availability: '{spots} vagas publicadas na data',
+            availability: '{spots} vagas',
           },
           time: {
             title: 'Defina o horário',
@@ -1744,16 +1746,17 @@ const translations: Record<Language, TranslationContent> = {
           trail: {
             title: 'Choose your trail',
             description: 'Review highlights, guides and available spots before moving forward.',
-            availability: '{spots} total spots for this trail',
+            availability: '{spots} spots',
             guidesFallback: 'Guides will be assigned by our team during confirmation.',
             phoneLabel: 'Phone:',
             phoneFallback: 'Phone not available yet.',
             contactLabel: 'Trail contact:',
+            photoAlt: 'Photo of {trail} trail',
           },
           date: {
             title: 'Pick a date',
             description: 'Select one of the published dates or share your preferred day.',
-            availability: '{spots} published spots on this date',
+            availability: '{spots} spots',
           },
           time: {
             title: 'Choose a time',

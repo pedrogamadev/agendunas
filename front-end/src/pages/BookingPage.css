@@ -212,8 +212,8 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 1.1rem;
-  padding: 1.05rem 2rem 0.8rem;
+  gap: 0.9rem;
+  padding: 0.9rem 1.6rem 0.75rem;
   border-bottom: 1px solid rgba(18, 56, 36, 0.08);
 }
 
@@ -232,7 +232,7 @@
 
 .booking-wizard__title h2 {
   margin: 0;
-  font-size: 1.58rem;
+  font-size: 1.48rem;
   color: #123824;
 }
 
@@ -334,16 +334,16 @@
 }
 
 .booking-wizard__steps {
-  padding: 1rem 2.1rem 1.2rem;
+  padding: 0.85rem 1.6rem 1rem;
   flex: 1;
   overflow-y: auto;
   display: grid;
-  gap: 1rem;
+  gap: 0.9rem;
 }
 
 .booking-wizard__step {
   display: none;
-  gap: 1.5rem;
+  gap: 1.25rem;
   animation: booking-wizard-fade-in 0.2s ease;
 }
 
@@ -352,37 +352,37 @@
 }
 
 .booking-wizard__step-header h3 {
-  margin: 0 0 0.35rem;
-  font-size: 1.4rem;
+  margin: 0 0 0.25rem;
+  font-size: 1.28rem;
   color: #123824;
 }
 
 .booking-wizard__step-header p {
   margin: 0;
   color: rgba(20, 52, 40, 0.68);
-  max-width: 60ch;
+  max-width: 56ch;
 }
 
 .booking-wizard__trail-grid,
 .booking-wizard__date-grid,
 .booking-wizard__time-grid {
   display: grid;
-  gap: 0.75rem;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.65rem;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
 }
 
 .booking-wizard__trail-card,
 .booking-wizard__date-card,
 .booking-wizard__time-card {
   border: 1px solid rgba(18, 56, 36, 0.12);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.85);
-  padding: 0.9rem 1rem;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  padding: 0.75rem 0.85rem;
   text-align: left;
   cursor: pointer;
   transition: transform 0.16s ease, border 0.16s ease, box-shadow 0.16s ease;
   display: grid;
-  gap: 0.45rem;
+  gap: 0.35rem;
   position: relative;
 }
 
@@ -402,8 +402,8 @@
 .booking-wizard__date-card.is-selected,
 .booking-wizard__time-card.is-selected {
   border-color: rgba(26, 163, 97, 0.6);
-  box-shadow: 0 18px 36px rgba(26, 163, 97, 0.14);
-  background: rgba(236, 248, 242, 0.95);
+  box-shadow: 0 14px 28px rgba(26, 163, 97, 0.12);
+  background: rgba(236, 248, 242, 0.92);
 }
 
 .booking-wizard__time-card.is-disabled {
@@ -420,10 +420,23 @@
   color: #123824;
 }
 
-.booking-wizard__trail-card p {
-  margin: 0;
-  color: rgba(20, 52, 40, 0.68);
+.booking-wizard__trail-card-content {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.booking-wizard__trail-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.booking-wizard__trail-duration {
   font-size: 0.92rem;
+  color: rgba(20, 52, 40, 0.75);
+  white-space: nowrap;
 }
 
 .booking-wizard__trail-card-meta,
@@ -432,30 +445,54 @@
   color: rgba(20, 52, 40, 0.64);
 }
 
-.booking-wizard__trail-guides {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 0.35rem;
-  font-size: 0.88rem;
+.booking-wizard__trail-thumb {
+  width: 88px;
+  height: 64px;
+  border-radius: 10px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: rgba(18, 56, 36, 0.05);
 }
 
-.booking-wizard__trail-guides li {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
+.booking-wizard__trail-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
-.booking-wizard__trail-guides li strong {
+.booking-wizard__trail-card {
+  grid-template-columns: 1fr auto;
+  align-items: center;
+}
+
+.booking-wizard__trail-grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 260px));
+  justify-content: flex-start;
+}
+
+.booking-wizard__date-grid,
+.booking-wizard__time-grid {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 200px));
+  justify-content: flex-start;
+}
+
+.booking-wizard__date-card,
+.booking-wizard__time-card {
+  align-items: flex-start;
+  justify-content: flex-start;
+  min-height: unset;
+}
+
+.booking-wizard__date-card strong,
+.booking-wizard__time-card strong {
+  font-size: 1.02rem;
+}
+
+.booking-wizard__date-card span,
+.booking-wizard__time-card span {
   font-size: 0.9rem;
-  color: rgba(18, 56, 36, 0.9);
-}
-
-.booking-wizard__trail-guides-empty {
-  margin: 0;
-  font-size: 0.9rem;
-  color: rgba(20, 52, 40, 0.6);
+  color: rgba(20, 52, 40, 0.7);
 }
 
 .booking-wizard__input {
@@ -499,7 +536,7 @@
 
 .booking-wizard__participants {
   display: grid;
-  gap: 1.5rem;
+  gap: 1.25rem;
 }
 
 .booking-wizard__participants .participants-details__list {
@@ -509,15 +546,15 @@
 
 .booking-wizard__contact {
   display: grid;
-  gap: 1.5rem;
+  gap: 1.25rem;
 }
 
 .booking-wizard__footer {
   border-top: 1px solid rgba(18, 56, 36, 0.08);
-  padding: 1.15rem 1.9rem 1.55rem;
+  padding: 0.95rem 1.6rem 1.25rem;
   display: grid;
-  gap: 0.65rem;
-  background: rgba(255, 255, 255, 0.8);
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.82);
 }
 
 .booking-wizard__footer-actions {
@@ -534,13 +571,13 @@
 .booking-wizard__footer-note {
   margin: 0;
   color: rgba(20, 52, 40, 0.55);
-  font-size: 0.95rem;
+  font-size: 0.9rem;
 }
 
 .booking-wizard__empty {
   margin: 0;
-  padding: 1.2rem;
-  border-radius: 16px;
+  padding: 1rem;
+  border-radius: 14px;
   border: 1px dashed rgba(20, 52, 40, 0.25);
   background: rgba(230, 248, 238, 0.35);
   color: rgba(20, 52, 40, 0.65);
@@ -557,7 +594,7 @@
   .booking-wizard__header,
   .booking-wizard__steps,
   .booking-wizard__footer {
-    padding: 1.2rem 1.35rem;
+    padding: 1.05rem 1.25rem;
   }
 
   .booking-wizard__progress {
@@ -565,7 +602,7 @@
   }
 
   .booking-wizard__progress-item {
-    min-width: 120px;
+    min-width: 108px;
   }
 
   .booking-wizard-page__hero {
@@ -626,8 +663,8 @@
   }
 
   .booking-wizard__progress-item {
-    min-width: 112px;
-    padding: 0.5rem 0.7rem;
+    min-width: 104px;
+    padding: 0.45rem 0.65rem;
   }
 
   .booking-wizard-page__hero {
@@ -644,11 +681,11 @@
   }
 
   .booking-wizard__steps {
-    padding: 1.15rem;
+    padding: 0.95rem 1rem;
   }
 
   .booking-wizard__footer {
-    padding: 1.15rem;
+    padding: 0.95rem 1rem 1.05rem;
   }
 
   .booking-wizard__footer-actions {

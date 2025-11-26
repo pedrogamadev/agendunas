@@ -51,6 +51,7 @@ type TrailOption = {
   duration: string
   difficulty?: string
   availableSpots: number
+  imageUrl?: string | null
   databaseId?: string
   sessions: PublicTrailSessionGroup[]
   contactPhone?: string | null
@@ -111,6 +112,7 @@ function BookingPage({ navigation, onNavigate, searchParams, wizardMode = 'modal
     booking.trails.map((trail) => ({
       ...trail,
       databaseId: trail.id,
+      imageUrl: (trail as { imageUrl?: string | null }).imageUrl ?? null,
       sessions: Array.isArray((trail as { sessions?: PublicTrailSessionGroup[] }).sessions)
         ? ((trail as { sessions?: PublicTrailSessionGroup[] }).sessions as PublicTrailSessionGroup[])
         : [],
@@ -443,6 +445,7 @@ function BookingPage({ navigation, onNavigate, searchParams, wizardMode = 'modal
         availableSpots: Number.isFinite(trail.availableSpots)
           ? Math.max(1, trail.availableSpots)
           : Math.max(1, trail.maxGroupSize),
+        imageUrl: trail.imageUrl ?? null,
         sessions: trail.sessions ?? [],
         contactPhone: trail.contactPhone ?? null,
         guides: (trail.guides ?? []).map((guide) => ({
@@ -1616,43 +1619,28 @@ function BookingWizard({
                             onClick={() => onSelectTrail(trail.id)}
                             aria-pressed={isSelected}
                           >
-                            <div className="booking-wizard__trail-card-header">
-                              <strong>{trail.label}</strong>
-                              {trail.duration ? <span>{trail.duration}</span> : null}
-                            </div>
-                            <p>{trail.description}</p>
-                            <span className="booking-wizard__trail-card-meta">
-                              {booking.wizard.steps.trail.availability.replace(
-                                '{spots}',
-                                String(totalSpots),
-                              )}
-                            </span>
-                            {trail.guides.length > 0 ? (
-                              <ul className="booking-wizard__trail-guides">
-                                {trail.guides.map((guide) => (
-                                  <li key={`${trail.id}-${guide.name}`}>
-                                    <strong>{guide.name}</strong>
-                                    {guide.phone ? (
-                                      <span>
-                                        {booking.wizard.steps.trail.phoneLabel}{' '}
-                                        {formatPhoneForDisplay(guide.phone)}
-                                      </span>
-                                    ) : (
-                                      <span>{booking.wizard.steps.trail.phoneFallback}</span>
-                                    )}
-                                  </li>
-                                ))}
-                              </ul>
-                            ) : (
-                              <p className="booking-wizard__trail-guides-empty">
-                                {booking.wizard.steps.trail.guidesFallback}
-                              </p>
-                            )}
-                            {trail.contactPhone ? (
-                              <span className="booking-wizard__trail-contact">
-                                {booking.wizard.steps.trail.contactLabel}{' '}
-                                {formatPhoneForDisplay(trail.contactPhone)}
+                            <div className="booking-wizard__trail-card-content">
+                              <div className="booking-wizard__trail-card-header">
+                                <strong>{trail.label}</strong>
+                                {trail.duration ? (
+                                  <span className="booking-wizard__trail-duration">{trail.duration}</span>
+                                ) : null}
+                              </div>
+                              <span className="booking-wizard__trail-card-meta">
+                                {booking.wizard.steps.trail.availability.replace(
+                                  '{spots}',
+                                  String(totalSpots),
+                                )}
                               </span>
+                            </div>
+                            {trail.imageUrl ? (
+                              <div className="booking-wizard__trail-thumb">
+                                <img
+                                  src={trail.imageUrl}
+                                  alt={booking.wizard.steps.trail.photoAlt.replace('{trail}', trail.label)}
+                                  loading="lazy"
+                                />
+                              </div>
                             ) : null}
                           </button>
                         )
