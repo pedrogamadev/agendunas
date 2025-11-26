@@ -12,7 +12,7 @@ import { authenticate } from './middlewares/authenticate.js'
 import { authorizeAdmin } from './middlewares/authorize-admin.js'
 import { errorHandler } from './middlewares/error-handler.js'
 import { notFoundHandler } from './middlewares/not-found-handler.js'
-import { generalRateLimiter, authRateLimiter } from './middlewares/rate-limit.js'
+import { generalRateLimiter } from './middlewares/rate-limit.js'
 
 const app: Application = express()
 
@@ -107,7 +107,6 @@ app.get('/health', async (_request: Request, response: Response) => {
 
 // Rate limiting
 app.use(generalRateLimiter)
-app.use('/api/auth', authRateLimiter)
 
 app.use('/api/auth', authRouter)
 app.use('/api', publicRouter)

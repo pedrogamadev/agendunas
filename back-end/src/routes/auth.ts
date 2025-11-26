@@ -5,13 +5,14 @@ import { login } from '../controllers/auth/login.js'
 import { me } from '../controllers/auth/me.js'
 import { register } from '../controllers/auth/register.js'
 import { authenticate } from '../middlewares/authenticate.js'
+import { authRateLimiter } from '../middlewares/rate-limit.js'
 
 const router = Router()
 
-router.post('/login', login)
-router.post('/register', register)
-router.post('/customer/login', customerLogin)
-router.post('/customer/register', customerRegister)
+router.post('/login', authRateLimiter, login)
+router.post('/register', authRateLimiter, register)
+router.post('/customer/login', authRateLimiter, customerLogin)
+router.post('/customer/register', authRateLimiter, customerRegister)
 router.get('/me', authenticate, me)
 
 export default router
