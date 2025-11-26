@@ -1,29 +1,55 @@
 import type { CSSProperties, JSX } from 'react'
-import { useCallback, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import type { PageProps } from '../../App'
 import BookingPage from '../../pages/BookingPage'
 import { useAuth } from '../../context/AuthContext'
 import { useTranslation } from '../../i18n/TranslationProvider'
 
-function Agendamento({ navigation, onNavigate, searchParams }: PageProps): JSX.Element {
+function Agendamento({ navigation, onNavigate, searchParams, params }: PageProps): JSX.Element {
   const { account, isAuthenticating } = useAuth()
   const { content, language } = useTranslation()
   const booking = content.booking
+  const reservationIdFromParams = params.reservaId ?? ''
+  const fallbackReservationIdRef = useRef(
+    reservationIdFromParams ||
+      (typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : Date.now().toString(36)),
+  )
+  const reservationId = reservationIdFromParams || fallbackReservationIdRef.current
   const heroStyle = useMemo(
     () => ({ '--hero-background-image': `url(${booking.hero.photo})` }) as CSSProperties,
     [booking.hero.photo],
   )
 
   const handleNavigateToLogin = useCallback(() => {
-    onNavigate('/login-cliente', { search: 'redirect=/agendamento' })
-  }, [onNavigate])
+    onNavigate('/login-cliente', { search: `redirect=/agendamento/${reservationId}` })
+  }, [onNavigate, reservationId])
+
+  useEffect(() => {
+    if (!account || reservationIdFromParams) {
+      return
+    }
+
+    onNavigate(`/agendamento/${reservationId}`)
+  }, [account, onNavigate, reservationId, reservationIdFromParams])
 
   const authLoadingMessage = language === 'pt' ? 'Verificando sessão...' : 'Checking session...'
   const shouldShowAuthPrompt = !account && !isAuthenticating
   const shouldShowAuthLoading = !account && isAuthenticating
 
   if (account) {
-    return <BookingPage navigation={navigation} onNavigate={onNavigate} searchParams={searchParams} />
+    return (
+      <BookingPage
+        navigation={navigation}
+        onNavigate={onNavigate}
+        searchParams={searchParams}
+        wizardMode="page"
+        reservationId={reservationId}
+        path={`/agendamento/${reservationId}`}
+        params={{ reservaId: reservationId }}
+      />
+    )
   }
 
   return (

@@ -23,6 +23,11 @@ import { formatPhoneForDisplay, sanitizePhoneNumber } from '../utils/phone'
 
 type BookingContent = TranslationContent['booking']
 
+type BookingPageProps = PageProps & {
+  wizardMode?: 'modal' | 'page'
+  reservationId?: string
+}
+
 type GuideOption = {
   id: string
   name: string
@@ -94,14 +99,14 @@ type WeatherState =
 
 const DEFAULT_MAX_PARTICIPANTS = 10
 
-function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
+function BookingPage({ navigation, onNavigate, searchParams, wizardMode = 'modal' }: BookingPageProps) {
   const { content, language } = useTranslation()
   const booking = content.booking
   const guidesContent = content.guides
   const { account, isAuthenticating } = useAuth()
   const [guideOptions, setGuideOptions] = useState<GuideOption[]>(
     guidesContent.guides.map((guide) => ({ ...guide, databaseCpf: undefined })),
-  )
+  );
   const [trailOptions, setTrailOptions] = useState<TrailOption[]>(
     booking.trails.map((trail) => ({
       ...trail,
@@ -109,6 +114,7 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
       sessions: Array.isArray((trail as { sessions?: PublicTrailSessionGroup[] }).sessions)
         ? ((trail as { sessions?: PublicTrailSessionGroup[] }).sessions as PublicTrailSessionGroup[])
         : [],
+      guides: 'guides' in trail && Array.isArray(trail.guides) ? trail.guides : [],
     })),
   )
   const guideParam = searchParams.get('guide')
@@ -123,6 +129,7 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
   const [selectedDate, setSelectedDate] = useState('')
   const [selectedSessionId, setSelectedSessionId] = useState('')
   const [isWizardOpen, setIsWizardOpen] = useState(false)
+  const isPageWizard = wizardMode === 'page'
   const [weatherState, setWeatherState] = useState<WeatherState>({ status: 'idle' })
   const [showRainWarning, setShowRainWarning] = useState(false)
   const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false)
@@ -917,6 +924,150 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
     }
   }, [])
 
+  const rainWarningModal = showRainWarning ? (
+    <div className="rain-warning-modal" role="presentation">
+      <div className="rain-warning-modal__backdrop" aria-hidden="true" onClick={handleCloseRainWarning} />
+      <div
+        className="rain-warning-modal__dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="rain-warning-title"
+        aria-describedby="rain-warning-description"
+      >
+        <div className="rain-warning-modal__content">
+          <span className="rain-warning-modal__tag">{booking.rainWarningModal.tag}</span>
+          <h3 id="rain-warning-title">{booking.rainWarningModal.title}</h3>
+          <p id="rain-warning-description">{rainWarningDescription}</p>
+          {isHighRainProbability && (
+            <p className="rain-warning-modal__highlight">
+              {booking.rainWarningModal.highlight.replace(
+                '{percentage}',
+                `${weatherState.summary.precipitationProbability}%`,
+              )}
+            </p>
+          )}
+          <div className="rain-warning-modal__actions">
+            <button type="button" className="btn ghost" onClick={handleCloseRainWarning}>
+              {booking.rainWarningModal.changeDate}
+            </button>
+            <button type="button" className="btn solid" onClick={handleProceedWithRain}>
+              {booking.rainWarningModal.proceed}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  ) : null
+
+  const termsModal = showTermsModal ? (
+    <div className="terms-modal" role="presentation">
+      <div className="terms-modal__backdrop" aria-hidden="true" onClick={handleCloseTermsModal} />
+      <div className="terms-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="terms-modal-title">
+        <div className="terms-modal__content">
+          <h3 id="terms-modal-title">{booking.terms.modalTitle}</h3>
+          {booking.terms.modalIntro ? <p className="terms-modal__intro">{booking.terms.modalIntro}</p> : null}
+          <div className="terms-modal__body">
+            {booking.terms.sections.map((section, index) => (
+              <section
+                key={section.heading ? section.heading : `terms-section-${index}`}
+                className="terms-modal__section"
+              >
+                {section.heading ? <h4>{section.heading}</h4> : null}
+                {section.paragraphs.map((paragraph, paragraphIndex) => (
+                  <p key={`terms-paragraph-${index}-${paragraphIndex}`}>{paragraph}</p>
+                ))}
+                {section.list ? (
+                  <ul>
+                    {section.list.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                ) : null}
+              </section>
+            ))}
+          </div>
+          <div className="terms-modal__actions">
+            <button type="button" className="btn ghost" onClick={handleCloseTermsModal}>
+              {booking.terms.closeLabel}
+            </button>
+            <button type="button" className="btn solid" onClick={handleAcceptTerms}>
+              {booking.terms.acceptLabel}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  ) : null
+
+  const shouldRenderWizard = isPageWizard || isWizardOpen
+  const wizardElement = shouldRenderWizard ? (
+    <BookingWizard
+      mode={isPageWizard ? 'page' : 'modal'}
+      isOpen={shouldRenderWizard}
+      onClose={isPageWizard ? () => undefined : handleCloseWizard}
+      booking={booking}
+      formRef={formRef}
+      onSubmit={handleSubmit}
+      showCustomerSummary={showCustomerSummary}
+      customerSummaryItems={customerSummaryItems}
+      onManageProfile={handleNavigateToCustomerArea}
+      needsIdentityForm={needsIdentityForm}
+      isLoggedIn={isLoggedIn}
+      contactNameFromProfile={contactNameFromProfile}
+      contactEmailFromProfile={contactEmailFromProfile}
+      participantOptions={participantOptions}
+      participantsCount={participantsCount}
+      onParticipantsCountChange={handleParticipantsCountChange}
+      participants={participants}
+      onParticipantFieldChange={handleParticipantFieldChange}
+      formatCpfForInput={formatCpfForInput}
+      firstParticipantLocked={firstParticipantLocked}
+      hasAcceptedTerms={hasAcceptedTerms}
+      onTermsChange={handleTermsChange}
+      onOpenTermsModal={handleOpenTermsModal}
+      submissionResult={submissionResult}
+      isSubmitting={isSubmitting}
+      selectedTrailId={selectedTrailId}
+      onSelectTrail={handleTrailSelect}
+      trailOptions={trailOptions}
+      selectedDate={selectedDate}
+      onSelectDate={handleWizardDateSelect}
+      onManualDateChange={handleDateChange}
+      selectedSessionId={selectedSessionId}
+      selectedSession={selectedSession}
+      availableSessionGroups={availableSessionGroups}
+      onSelectSession={handleSelectSession}
+      hasPublishedSessions={hasPublishedSessions}
+      refreshCatalog={refreshPublicCatalog}
+    />
+  ) : null
+
+  if (isPageWizard) {
+    return (
+      <div className="booking-page booking-page--wizard">
+        <header className="booking-wizard-page__hero" style={heroStyle}>
+          {navigation}
+          <div className="booking-wizard-page__hero-content">
+            <span className="section-tag">{booking.hero.tag}</span>
+            <h1>
+              {booking.hero.title.prefix}
+              <span>{booking.hero.title.highlight}</span>
+              {booking.hero.title.suffix ?? ''}
+            </h1>
+            <p>{booking.hero.description}</p>
+            <p className="booking-wizard-page__notice">{booking.form.disclaimer}</p>
+          </div>
+        </header>
+
+        <main className="booking-wizard-page">
+          {wizardElement}
+          {rainWarningModal}
+          {termsModal}
+        </main>
+      </div>
+    )
+  }
+
   return (
     <div className="booking-page">
       <header className="page-hero booking-hero" style={heroStyle}>
@@ -1119,145 +1270,23 @@ function BookingPage({ navigation, onNavigate, searchParams }: PageProps) {
         </section>
       </main>
 
-      {isWizardOpen ? (
-        <BookingWizard
-          isOpen={isWizardOpen}
-          onClose={handleCloseWizard}
-          booking={booking}
-          formRef={formRef}
-          onSubmit={handleSubmit}
-          showCustomerSummary={showCustomerSummary}
-          customerSummaryItems={customerSummaryItems}
-          customerSummaryHint={booking.form.customerSummaryHint}
-          onManageProfile={handleNavigateToCustomerArea}
-          needsIdentityForm={needsIdentityForm}
-          isLoggedIn={isLoggedIn}
-          contactNameFromProfile={contactNameFromProfile}
-          contactEmailFromProfile={contactEmailFromProfile}
-          participantOptions={participantOptions}
-          participantsCount={participantsCount}
-          onParticipantsCountChange={handleParticipantsCountChange}
-          participants={participants}
-          onParticipantFieldChange={handleParticipantFieldChange}
-          formatCpfForInput={formatCpfForInput}
-          firstParticipantLocked={firstParticipantLocked}
-          hasAcceptedTerms={hasAcceptedTerms}
-          onTermsChange={handleTermsChange}
-          onOpenTermsModal={handleOpenTermsModal}
-          submissionResult={submissionResult}
-          isSubmitting={isSubmitting}
-          selectedTrailId={selectedTrailId}
-          onSelectTrail={handleTrailSelect}
-          trailOptions={trailOptions}
-          selectedDate={selectedDate}
-          onSelectDate={handleWizardDateSelect}
-          onManualDateChange={handleDateChange}
-          selectedSessionId={selectedSessionId}
-          selectedSession={selectedSession}
-          availableSessionGroups={availableSessionGroups}
-          onSelectSession={handleSelectSession}
-          hasPublishedSessions={hasPublishedSessions}
-          refreshCatalog={refreshPublicCatalog}
-        />
-      ) : null}
+      {wizardElement}
 
-      {showRainWarning && (
-        <div className="rain-warning-modal" role="presentation">
-          <div
-            className="rain-warning-modal__backdrop"
-            aria-hidden="true"
-            onClick={handleCloseRainWarning}
-          />
-          <div
-            className="rain-warning-modal__dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="rain-warning-title"
-            aria-describedby="rain-warning-description"
-          >
-            <div className="rain-warning-modal__content">
-              <span className="rain-warning-modal__tag">{booking.rainWarningModal.tag}</span>
-              <h3 id="rain-warning-title">{booking.rainWarningModal.title}</h3>
-              <p id="rain-warning-description">{rainWarningDescription}</p>
-              {isHighRainProbability && (
-                <p className="rain-warning-modal__highlight">
-                  {booking.rainWarningModal.highlight.replace(
-                    '{percentage}',
-                    `${weatherState.summary.precipitationProbability}%`,
-                  )}
-                </p>
-              )}
-              <div className="rain-warning-modal__actions">
-                <button type="button" className="btn ghost" onClick={handleCloseRainWarning}>
-                  {booking.rainWarningModal.changeDate}
-                </button>
-                <button type="button" className="btn solid" onClick={handleProceedWithRain}>
-                  {booking.rainWarningModal.proceed}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-      {showTermsModal && (
-        <div className="terms-modal" role="presentation">
-          <div className="terms-modal__backdrop" aria-hidden="true" onClick={handleCloseTermsModal} />
-          <div
-            className="terms-modal__dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="terms-modal-title"
-          >
-            <div className="terms-modal__content">
-              <h3 id="terms-modal-title">{booking.terms.modalTitle}</h3>
-              {booking.terms.modalIntro ? (
-                <p className="terms-modal__intro">{booking.terms.modalIntro}</p>
-              ) : null}
-              <div className="terms-modal__body">
-                {booking.terms.sections.map((section, index) => (
-                  <section
-                    key={section.heading ? section.heading : `terms-section-${index}`}
-                    className="terms-modal__section"
-                  >
-                    {section.heading ? <h4>{section.heading}</h4> : null}
-                    {section.paragraphs.map((paragraph, paragraphIndex) => (
-                      <p key={`terms-paragraph-${index}-${paragraphIndex}`}>{paragraph}</p>
-                    ))}
-                    {section.list ? (
-                      <ul>
-                        {section.list.map((item) => (
-                          <li key={item}>{item}</li>
-                        ))}
-                      </ul>
-                    ) : null}
-                  </section>
-                ))}
-              </div>
-              <div className="terms-modal__actions">
-                <button type="button" className="btn ghost" onClick={handleCloseTermsModal}>
-                  {booking.terms.closeLabel}
-                </button>
-                <button type="button" className="btn solid" onClick={handleAcceptTerms}>
-                  {booking.terms.acceptLabel}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {rainWarningModal}
+      {termsModal}
     </div>
   )
 }
 
 type BookingWizardProps = {
+  mode?: 'modal' | 'page'
   isOpen: boolean
   onClose: () => void
   booking: BookingContent
-  formRef: React.RefObject<HTMLFormElement>
+  formRef: React.RefObject<HTMLFormElement | null>
   onSubmit: (event: FormEvent<HTMLFormElement>) => void
   showCustomerSummary: boolean
   customerSummaryItems: { label: string; value: string }[]
-  customerSummaryHint?: string
   onManageProfile: () => void
   needsIdentityForm: boolean
   isLoggedIn: boolean
@@ -1290,6 +1319,7 @@ type BookingWizardProps = {
 }
 
 function BookingWizard({
+  mode = 'modal',
   isOpen,
   onClose,
   booking,
@@ -1297,7 +1327,6 @@ function BookingWizard({
   onSubmit,
   showCustomerSummary,
   customerSummaryItems,
-  customerSummaryHint,
   onManageProfile,
   needsIdentityForm,
   isLoggedIn,
@@ -1328,15 +1357,11 @@ function BookingWizard({
   hasPublishedSessions,
   refreshCatalog,
 }: BookingWizardProps) {
+  const isPageMode = mode === 'page'
   const [activeStep, setActiveStep] = useState(0)
   const [manualTime, setManualTime] = useState('')
   const dialogRef = useRef<HTMLDivElement | null>(null)
   const closeButtonRef = useRef<HTMLButtonElement | null>(null)
-
-  const selectedTrail = useMemo(
-    () => trailOptions.find((trail) => trail.id === selectedTrailId) ?? null,
-    [selectedTrailId, trailOptions],
-  )
 
   const sessionsForSelectedDate = useMemo(() => {
     if (!selectedDate) {
@@ -1358,27 +1383,35 @@ function BookingWizard({
     }, 30000)
 
     const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
+    if (!isPageMode) {
+      document.body.style.overflow = 'hidden'
+    }
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
+      if (event.key === 'Escape' && !isPageMode) {
         event.preventDefault()
         onClose()
       }
     }
 
-    document.addEventListener('keydown', handleKeyDown)
+    if (!isPageMode) {
+      document.addEventListener('keydown', handleKeyDown)
+    }
 
-    window.requestAnimationFrame(() => {
-      closeButtonRef.current?.focus()
-    })
+    if (!isPageMode) {
+      window.requestAnimationFrame(() => {
+        closeButtonRef.current?.focus()
+      })
+    }
 
     return () => {
       window.clearInterval(intervalId)
-      document.removeEventListener('keydown', handleKeyDown)
-      document.body.style.overflow = previousOverflow
+      if (!isPageMode) {
+        document.removeEventListener('keydown', handleKeyDown)
+        document.body.style.overflow = previousOverflow
+      }
     }
-  }, [isOpen, onClose, refreshCatalog])
+  }, [isOpen, isPageMode, onClose, refreshCatalog])
 
   useEffect(() => {
     if (!isOpen) {
@@ -1486,47 +1519,47 @@ function BookingWizard({
     setManualTime(event.target.value)
   }, [])
 
-  if (!isOpen) {
+  if (!isOpen && !isPageMode) {
     return null
   }
 
   const selectedDateGroup = availableSessionGroups.find((group) => group.date === selectedDate)
   const availableTimeSlots = sessionsForSelectedDate
 
-  return (
-    <div className="booking-wizard-modal" role="presentation">
-      <div className="booking-wizard-modal__backdrop" aria-hidden="true" onClick={onClose} />
-      <div
-        ref={dialogRef}
-        className="booking-wizard-modal__dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="booking-wizard-title"
-      >
-        <header className="booking-wizard__header">
-          <div className="booking-wizard__heading" role="presentation">
-            <nav
-              className="booking-wizard__progress"
-              aria-label={booking.wizard.progressLabel}
-            >
-              {steps.map((step, index) => (
-                <div
-                  key={step.key}
-                  className={`booking-wizard__progress-item${
-                    index === activeStep ? ' is-active' : ''
-                  }${index < activeStep ? ' is-complete' : ''}`}
-                >
-                  <span className="booking-wizard__progress-index">{index + 1}</span>
-                  <span className="booking-wizard__progress-title">{step.title}</span>
-                </div>
-              ))}
-            </nav>
+  const dialogClassName = isPageMode
+    ? 'booking-wizard-page__panel'
+    : 'booking-wizard-modal__dialog'
 
-            <div className="booking-wizard__title">
-              <h2 id="booking-wizard-title">{booking.wizard.modalTitle}</h2>
-              <p>{booking.wizard.refreshLabel}</p>
-            </div>
+  const content = (
+    <div
+      ref={dialogRef}
+      className={dialogClassName}
+      role={isPageMode ? undefined : 'dialog'}
+      aria-modal={isPageMode ? undefined : true}
+      aria-labelledby="booking-wizard-title"
+    >
+      <header className="booking-wizard__header">
+        <div className="booking-wizard__heading" role="presentation">
+          <nav className="booking-wizard__progress" aria-label={booking.wizard.progressLabel}>
+            {steps.map((step, index) => (
+              <div
+                key={step.key}
+                className={`booking-wizard__progress-item${
+                  index === activeStep ? ' is-active' : ''
+                }${index < activeStep ? ' is-complete' : ''}`}
+              >
+                <span className="booking-wizard__progress-index">{index + 1}</span>
+                <span className="booking-wizard__progress-title">{step.title}</span>
+              </div>
+            ))}
+          </nav>
+
+          <div className="booking-wizard__title">
+            <h2 id="booking-wizard-title">{booking.wizard.modalTitle}</h2>
+            <p>{booking.wizard.refreshLabel}</p>
           </div>
+        </div>
+        {isPageMode ? null : (
           <button
             ref={closeButtonRef}
             type="button"
@@ -1536,9 +1569,10 @@ function BookingWizard({
           >
             ×
           </button>
-        </header>
+        )}
+      </header>
 
-        <form ref={formRef} className="booking-wizard-form" onSubmit={onSubmit}>
+      <form ref={formRef} className="booking-wizard-form" onSubmit={onSubmit}>
           <input type="hidden" name="trail" value={selectedTrailId} />
           {hasPublishedSessions ? (
             <>
@@ -1940,7 +1974,17 @@ function BookingWizard({
             <p className="booking-wizard__footer-note">{booking.form.disclaimer}</p>
           </footer>
         </form>
-      </div>
+    </div>
+  );
+
+  if (isPageMode) {
+    return <div className="booking-wizard-page__container">{content}</div>
+  }
+
+  return (
+    <div className="booking-wizard-modal" role="presentation">
+      <div className="booking-wizard-modal__backdrop" aria-hidden="true" onClick={onClose} />
+      {content}
     </div>
   )
 }

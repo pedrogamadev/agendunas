@@ -117,6 +117,36 @@ describe('Public API integration', () => {
     expect(trailData.availableSpots).toBe(0)
   })
 
+  it('accepts bookings with sessionId even when scheduledDate is omitted', async () => {
+    const trail = createTrail({ id: 'trail-session-only', slug: 'trilha-com-sessao' })
+    const guide = createGuide({ cpf: '22233344455', slug: 'guia-3' })
+    const session = createSession({
+      id: 'session-no-date',
+      trailId: trail.id,
+      primaryGuideCpf: guide.cpf,
+      startsAt: new Date('2024-10-05T14:00:00.000Z'),
+    })
+
+    prismaMock.addTrail(trail)
+    prismaMock.addGuide(guide)
+    prismaMock.addSession(session)
+
+    const response = await request(app).post('/api/bookings').send({
+      trailId: trail.id,
+      sessionId: session.id,
+      contactName: 'Carlos Sessão',
+      contactEmail: 'carlos@example.com',
+      contactPhone: '11933334444',
+      participantsCount: 3,
+    })
+
+    expect(response.status).toBe(201)
+    expect(response.body.data.scheduledFor).toBe(session.startsAt.toISOString())
+
+    const savedBooking = Array.from(prismaMock.bookings.values()).find((booking) => booking.sessionId === session.id)
+    expect(savedBooking?.scheduledFor.toISOString()).toBe(session.startsAt.toISOString())
+  })
+
   it('prevents overbooking with transactional locking', async () => {
     const trail = createTrail({ id: 'trail-2', slug: 'trilha-2', name: 'Trilha 2' })
     const guide = createGuide({ cpf: '98765432100', slug: 'guia-2' })

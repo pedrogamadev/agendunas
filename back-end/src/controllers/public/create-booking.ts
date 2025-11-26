@@ -12,20 +12,26 @@ const participantSchema = z.object({
   phone: z.string().min(8).optional(),
 })
 
-const bookingSchema = z.object({
-  trailId: z.string().min(1),
-  sessionId: z.string().min(1).optional(),
-  guideCpf: z.string().min(11).optional(),
-  contactName: z.string().min(3),
-  contactEmail: z.string().email(),
-  contactPhone: z.string().min(8),
-  scheduledDate: z.string().min(4),
-  scheduledTime: z.string().optional(),
-  participantsCount: z.coerce.number().int().min(1).max(60),
-  notes: z.string().max(1000).optional(),
-  participants: z.array(participantSchema).max(60).optional(),
-  source: z.enum(['PUBLIC_PORTAL', 'ADMIN']).optional(),
-})
+const bookingSchema = z
+  .object({
+    trailId: z.string().min(1),
+    sessionId: z.string().min(1).optional(),
+    guideCpf: z.string().min(11).optional(),
+    contactName: z.string().min(3),
+    contactEmail: z.string().email(),
+    contactPhone: z.string().min(8),
+    scheduledDate: z.string().min(4).optional(),
+    scheduledTime: z.string().optional(),
+    participantsCount: z.coerce.number().int().min(1).max(60),
+    notes: z.string().max(1000).optional(),
+    participants: z.array(participantSchema).max(60).optional(),
+    source: z.enum(['PUBLIC_PORTAL', 'ADMIN']).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (!data.sessionId && !data.scheduledDate) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Informe a data ou uma sessão.' })
+    }
+  })
 
 type CreateBookingBody = z.infer<typeof bookingSchema>
 

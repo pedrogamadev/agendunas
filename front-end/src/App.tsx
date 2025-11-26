@@ -1,5 +1,5 @@
 import './App.css'
-import type { JSX, ReactNode } from 'react'
+import type { ComponentType, ReactNode } from 'react'
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import Footer from './components/Footer'
 import { useTranslation } from './i18n/TranslationProvider'
@@ -15,7 +15,7 @@ const LoginPage = lazy(() => import('./pages/LoginPage'))
 const RegisterPage = lazy(() => import('./pages/RegisterPage'))
 const Agendamento = lazy(() => import('./app/pages/Agendamento'))
 
-type RouteComponent = (props: PageProps) => JSX.Element
+type RouteComponent = ComponentType<PageProps>
 
 type RouteConfig = {
   path: string
@@ -32,12 +32,15 @@ type PageProps = {
   navigation: ReactNode
   onNavigate: (path: string, options?: NavigateOptions) => void
   searchParams: URLSearchParams
+  path: string
+  params: Record<string, string>
 }
 
 const routes: RouteConfig[] = [
   { path: '/', labelKey: 'home', component: HomePage },
   { path: '/guias', labelKey: 'guides', component: GuidesPage },
   { path: '/agendamento', labelKey: 'booking', component: Agendamento },
+  { path: '/agendamento/:reservaId', labelKey: 'booking', component: Agendamento },
   { path: '/fauna-e-flora', labelKey: 'faunaFlora', component: FaunaFloraPage },
   { path: '/admin', labelKey: 'admin', component: AdminPage, requireAdmin: true },
   { path: '/login', component: LoginPage },
@@ -45,6 +48,44 @@ const routes: RouteConfig[] = [
   { path: '/login-cliente', component: CustomerAuthPage },
   { path: '/area-cliente', component: CustomerAuthPage },
 ]
+
+const matchRoute = (
+  path: string,
+): { route: RouteConfig; params: Record<string, string> } | null => {
+  const normalizedPath = normalizePath(path)
+  const pathSegments = normalizedPath.split('/').filter(Boolean)
+
+  for (const route of routes) {
+    const routeSegments = route.path.split('/').filter(Boolean)
+    if (routeSegments.length !== pathSegments.length) {
+      continue
+    }
+
+    const params: Record<string, string> = {}
+    let isMatch = true
+
+    for (let index = 0; index < routeSegments.length; index += 1) {
+      const routeSegment = routeSegments[index]
+      const pathSegment = pathSegments[index]
+
+      if (routeSegment.startsWith(':')) {
+        params[routeSegment.slice(1)] = pathSegment
+        continue
+      }
+
+      if (routeSegment !== pathSegment) {
+        isMatch = false
+        break
+      }
+    }
+
+    if (isMatch) {
+      return { route, params }
+    }
+  }
+
+  return null
+}
 
 const normalizePath = (value: string) => {
   const [pathname] = value.split('?')
@@ -188,7 +229,8 @@ function App() {
   }, [])
 
   useEffect(() => {
-    if (!routes.some((route) => route.path === location.path)) {
+    const matchedRoute = matchRoute(location.path)
+    if (!matchedRoute) {
       navigate('/')
     }
   }, [location.path, navigate])
@@ -210,10 +252,9 @@ function App() {
     }
   }, [isAdmin, isAuthenticating, location.path, navigate, usuario])
 
-  const activeRoute = useMemo(
-    () => routes.find((route) => route.path === location.path) ?? routes[0],
-    [location.path],
-  )
+  const activeRoute = useMemo(() => matchRoute(location.path) ?? { route: routes[0], params: {} }, [
+    location.path,
+  ])
 
   const searchParams = useMemo(
     () => new URLSearchParams(location.search),
@@ -224,6 +265,9 @@ function App() {
     () =>
       routes.filter((route) => {
         if (!route.labelKey) {
+          return false
+        }
+        if (route.path.includes(':')) {
           return false
         }
         if (route.requireAdmin && !isAdmin) {
@@ -282,8 +326,18 @@ function App() {
                     setIsMenuOpen(false)
                     navigate(link.path)
                   }}
-                  className={`nav-link ${activeRoute.path === link.path ? 'active' : ''}`}
-                  aria-current={activeRoute.path === link.path ? 'page' : undefined}
+                  className={`nav-link ${
+                    activeRoute.route.path === link.path ||
+                    activeRoute.route.labelKey === link.labelKey
+                      ? 'active'
+                      : ''
+                  }`}
+                  aria-current={
+                    activeRoute.route.path === link.path ||
+                    activeRoute.route.labelKey === link.labelKey
+                      ? 'page'
+                      : undefined
+                  }
                 >
                   {link.labelKey ? content.navigation.links[link.labelKey]! : link.path}
                 </a>
@@ -347,7 +401,11 @@ function App() {
               className="btn primary"
               onClick={() => {
                 setIsMenuOpen(false)
-                navigate('/agendamento')
+                const reservationId =
+                  typeof crypto !== 'undefined' && 'randomUUID' in crypto
+                    ? crypto.randomUUID()
+                    : Date.now().toString(36)
+                navigate(`/agendamento/${reservationId}`)
               }}
               aria-label={`${content.navigation.scheduleButton} - Agendar trilha guiada`}
             >
@@ -364,10 +422,10 @@ function App() {
       <div className="top-nav__spacer" aria-hidden="true" style={{ height: navHeight || undefined }} />
     </>
   )
-  const Page = activeRoute.component
+  const Page = activeRoute.route.component
 
   return (
-    <div className={`app route-${activeRoute.path.replace('/', '') || 'home'}`}>
+    <div className={`app route-${activeRoute.route.path.replace(/[:/]+/g, '') || 'home'}`}>
       <Suspense
         fallback={
           <div
@@ -392,7 +450,13 @@ function App() {
           </div>
         }
       >
-        <Page navigation={navigation} onNavigate={navigate} searchParams={searchParams} />
+        <Page
+          navigation={navigation}
+          onNavigate={navigate}
+          searchParams={searchParams}
+          path={location.path}
+          params={activeRoute.params}
+        />
       </Suspense>
       <Footer onNavigate={navigate} />
     </div>

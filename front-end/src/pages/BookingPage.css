@@ -103,6 +103,79 @@
   font-size: 0.95rem;
 }
 
+.booking-page--wizard {
+  background: #f7fbf8;
+}
+
+.booking-wizard-page__hero {
+  position: relative;
+  padding: 2.5rem 1.5rem 3rem;
+  color: #fff;
+  background-image: linear-gradient(135deg, rgba(20, 52, 40, 0.8), rgba(16, 114, 89, 0.75)),
+    var(--hero-background-image);
+  background-size: cover;
+  background-position: center;
+  overflow: hidden;
+}
+
+.booking-wizard-page__hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.28) 100%);
+}
+
+.booking-wizard-page__hero-content {
+  position: relative;
+  max-width: 960px;
+  margin: 0 auto;
+  z-index: 1;
+}
+
+.booking-wizard-page__hero h1 {
+  margin: 0.25rem 0 0.5rem;
+  font-size: clamp(2rem, 3vw, 2.75rem);
+  line-height: 1.2;
+}
+
+.booking-wizard-page__hero h1 span {
+  color: #c2f0d6;
+  display: inline-block;
+  margin: 0 0.25rem;
+}
+
+.booking-wizard-page__hero p {
+  max-width: 640px;
+  margin: 0.25rem 0 0;
+}
+
+.booking-wizard-page__notice {
+  margin-top: 0.75rem;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.booking-wizard-page {
+  max-width: 1100px;
+  margin: -3rem auto 0;
+  padding: 0 1.5rem 3rem;
+  position: relative;
+  z-index: 2;
+}
+
+.booking-wizard-page__container {
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 20px 60px rgba(13, 49, 37, 0.15);
+  overflow: hidden;
+}
+
+.booking-wizard-page__panel {
+  width: 100%;
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 18px 50px rgba(20, 52, 40, 0.14);
+}
+
 .booking-wizard-modal {
   position: fixed;
   inset: 0;
@@ -494,6 +567,15 @@
   .booking-wizard__progress-item {
     min-width: 120px;
   }
+
+  .booking-wizard-page__hero {
+    padding: 2rem 1.25rem 2.5rem;
+  }
+
+  .booking-wizard-page {
+    margin: -2.5rem auto 0;
+    padding: 0 1.1rem 2.5rem;
+  }
 }
 
 @media (max-width: 720px) {
@@ -546,6 +628,19 @@
   .booking-wizard__progress-item {
     min-width: 112px;
     padding: 0.5rem 0.7rem;
+  }
+
+  .booking-wizard-page__hero {
+    padding: 1.75rem 1rem 2.25rem;
+  }
+
+  .booking-wizard-page__notice {
+    margin-top: 0.5rem;
+  }
+
+  .booking-wizard-page {
+    margin: -2rem auto 0;
+    padding: 0 1rem 2rem;
   }
 
   .booking-wizard__steps {
