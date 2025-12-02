@@ -695,20 +695,21 @@ const translations: Record<Language, TranslationContent> = {
           'Conheça alguns dos moradores mais carismáticos da nossa mata. Cada trilha é uma oportunidade de avistar essas criaturas em seu habitat natural.',
         items: [
           {
-            name: 'Tucano',
-            image: 'https://images.unsplash.com/photo-1518799175674-ef795e70e1f6?auto=format&fit=crop&w=900&q=80',
+            name: 'Tamanduá-mirim',
+            image: 'https://static.biologianet.com/2019/09/mirim.jpg',
           },
           {
-            name: 'Macaco Prego',
-            image: 'https://images.unsplash.com/photo-1526336024174-e58f5cdd8e13?auto=format&fit=crop&w=900&q=80',
+            name: 'Briba-de-rabo-grosso',
+            image:
+              'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEh7pPJvC0aM7OImMAAMXK9LJ_JVYolovg47EFZ4PVVKILFO3ktAW6y57hYPRt83RBxOsIHXcdrN9UN5n8X2cZKr3UF663vacS65VlbKIPGYO9mCrCs5bvB-gTym6_CM2vjN1GFokcluSjk/s1600/IMG_9506-s001.jpg',
           },
           {
-            name: 'Cutia',
-            image: 'https://images.unsplash.com/photo-1552728089-57bdde30beb3?auto=format&fit=crop&w=900&q=80',
+            name: 'Olho-de-pavão-diurno',
+            image: 'https://www.coisasdaroca.com/wp-content/uploads/2023/06/Borboleta-olho-de-pavao-diurno.jpg',
           },
           {
-            name: 'Tamanduá',
-            image: 'https://images.unsplash.com/photo-1574851459476-3eb3fb9d1357?auto=format&fit=crop&w=900&q=80',
+            name: 'Iguana',
+            image: 'https://f.i.uol.com.br/fotografia/2023/08/24/169290799664e7b9dce3ef3_1692907996_3x2_rt.jpg',
           },
         ],
         cta: 'Ver Galeria Completa',
@@ -1570,20 +1571,21 @@ const translations: Record<Language, TranslationContent> = {
           'Meet some of the most charismatic inhabitants of our forest. Every trail is an opportunity to spot them in their natural habitat.',
         items: [
           {
-            name: 'Toucan',
-            image: 'https://images.unsplash.com/photo-1518799175674-ef795e70e1f6?auto=format&fit=crop&w=900&q=80',
+            name: 'Southern Tamandua',
+            image: 'https://static.biologianet.com/2019/09/mirim.jpg',
           },
           {
-            name: 'Capuchin Monkey',
-            image: 'https://images.unsplash.com/photo-1526336024174-e58f5cdd8e13?auto=format&fit=crop&w=900&q=80',
+            name: 'Short-tailed Kingbird',
+            image:
+              'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEh7pPJvC0aM7OImMAAMXK9LJ_JVYolovg47EFZ4PVVKILFO3ktAW6y57hYPRt83RBxOsIHXcdrN9UN5n8X2cZKr3UF663vacS65VlbKIPGYO9mCrCs5bvB-gTym6_CM2vjN1GFokcluSjk/s1600/IMG_9506-s001.jpg',
           },
           {
-            name: 'Agouti',
-            image: 'https://images.unsplash.com/photo-1552728089-57bdde30beb3?auto=format&fit=crop&w=900&q=80',
+            name: 'Mangrove Peacock',
+            image: 'https://www.coisasdaroca.com/wp-content/uploads/2023/06/Borboleta-olho-de-pavao-diurno.jpg',
           },
           {
-            name: 'Anteater',
-            image: 'https://images.unsplash.com/photo-1574851459476-3eb3fb9d1357?auto=format&fit=crop&w=900&q=80',
+            name: 'Green Iguana',
+            image: 'https://f.i.uol.com.br/fotografia/2023/08/24/169290799664e7b9dce3ef3_1692907996_3x2_rt.jpg',
           },
         ],
         cta: 'View full gallery',
