@@ -1,8 +1,19 @@
 import type { Request, Response } from 'express'
-import rateLimit from 'express-rate-limit'
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit'
 
-const windowMs = Number.parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10) // 15 minutos padrão
-const maxRequests = Number.parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10) // 100 requisições padrão
+const isProduction = process.env.NODE_ENV === 'production'
+const isRateLimitEnabled = process.env.RATE_LIMIT_ENABLED?.toLowerCase() !== 'false'
+
+const windowMs = Number.parseInt(process.env.RATE_LIMIT_WINDOW_MS ?? '900000', 10) // 15 minutos padrão
+const defaultMaxRequests = isProduction ? '100' : '1000'
+const maxRequests = Number.parseInt(
+  process.env.RATE_LIMIT_MAX_REQUESTS ?? defaultMaxRequests,
+  10,
+)
+
+function shouldSkipRateLimit(): boolean {
+  return !isProduction || !isRateLimitEnabled
+}
 
 export const generalRateLimiter = rateLimit({
   windowMs,
@@ -10,14 +21,15 @@ export const generalRateLimiter = rateLimit({
   message: 'Muitas requisições deste IP, tente novamente mais tarde.',
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (request: Request) => {
-    // Pular rate limiting em ambiente de teste
-    return process.env.NODE_ENV === 'test'
-  },
+  skip: shouldSkipRateLimit,
 })
 
-const authWindowMs = Number.parseInt(process.env.RATE_LIMIT_AUTH_WINDOW_MS || '900000', 10) // 15 minutos
-const authMaxRequests = Number.parseInt(process.env.RATE_LIMIT_AUTH_MAX_REQUESTS || '10', 10) // limite mais alto para suportar verificações de sessão
+const authWindowMs = Number.parseInt(process.env.RATE_LIMIT_AUTH_WINDOW_MS ?? '900000', 10) // 15 minutos
+const defaultAuthMaxRequests = isProduction ? '10' : '100'
+const authMaxRequests = Number.parseInt(
+  process.env.RATE_LIMIT_AUTH_MAX_REQUESTS ?? defaultAuthMaxRequests,
+  10,
+)
 
 function sanitizeCpf(rawCpf: unknown): string | undefined {
   if (typeof rawCpf !== 'string') {
@@ -31,7 +43,7 @@ function sanitizeCpf(rawCpf: unknown): string | undefined {
 const authLimiterSkipPaths = new Set(['/me'])
 
 function shouldSkipAuthLimiter(request: Request): boolean {
-  if (process.env.NODE_ENV === 'test') {
+  if (shouldSkipRateLimit()) {
     return true
   }
 
@@ -53,9 +65,10 @@ export const authRateLimiter = rateLimit({
   skip: shouldSkipAuthLimiter,
   keyGenerator: (request: Request) => {
     const normalizedCpf = sanitizeCpf(request.body?.cpf)
-    
-    // Solução para o erro de TypeScript (undefined)
-    const ip = request.ip || ''
+    const normalizedIp = ipKeyGenerator(request)
+    return normalizedCpf ? `${normalizedIp}:${normalizedCpf}` : normalizedIp
+  },
+})
 
     // Retorna a chave composta ou apenas o IP
     return normalizedCpf ? `${ip}:${normalizedCpf}` : ip

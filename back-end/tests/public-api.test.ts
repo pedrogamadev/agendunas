@@ -1,7 +1,8 @@
 import request from 'supertest'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { BookingRecord, GuideData, TrailData, TrailSessionData } from './utils/prisma-mock.js'
 import { prismaMock } from './utils/prisma-mock.js'
+import { cache } from '../src/lib/cache.js'
 
 vi.mock('../src/lib/prisma.js', () => ({ default: prismaMock }))
 
@@ -77,6 +78,11 @@ function createBooking(overrides: Partial<BookingRecord> = {}): BookingRecord {
 }
 
 describe('Public API integration', () => {
+  beforeEach(() => {
+    prismaMock.reset()
+    cache.clear()
+  })
+
   it('exposes contact phone for upcoming sessions', async () => {
     const trail = createTrail()
     const guide = createGuide()
