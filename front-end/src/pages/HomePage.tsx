@@ -1,7 +1,7 @@
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { PageProps } from '../App'
 import { useTranslation } from '../i18n/TranslationProvider'
-import { fetchFaunaFloraRecords, fetchPublicTrails } from '../api/public'
+import { fetchPublicTrails } from '../api/public'
 import { SeoHead } from '../components/SeoHead'
 import { LazyImage } from '../components/LazyImage'
 
@@ -30,12 +30,12 @@ const duninhoImages = [
 function HomePage({ navigation, onNavigate }: PageProps) {
   const { content } = useTranslation()
   const home = content.home
+  const faunaFlora = content.faunaFlora
   const helper = home.helper
   const [activeTestimonial, setActiveTestimonial] = useState(0)
   const [activeHeroImage, setActiveHeroImage] = useState(0)
   const [activeDuninho, setActiveDuninho] = useState(0)
   const [trailCards, setTrailCards] = useState(home.trails.items)
-  const [wildlifeCards, setWildlifeCards] = useState(home.wildlife.items)
   const [isMascotDocked, setIsMascotDocked] = useState(false)
   const [isFaqOpen, setIsFaqOpen] = useState(false)
   const heroRef = useRef<HTMLElement | null>(null)
@@ -47,7 +47,19 @@ function HomePage({ navigation, onNavigate }: PageProps) {
   const helperDialogId = useId()
   const testimonials = home.testimonials.items
   const trails = trailCards
-  const wildlife = wildlifeCards
+  const wildlife = useMemo(() => {
+    const gallery = faunaFlora?.gallery ?? []
+    const desiredNames = home.wildlife.items.map((item) => item.name)
+
+    return desiredNames.map((name) => {
+      const galleryItem = gallery.find((item) => item.name === name)
+      if (galleryItem) {
+        return { name: galleryItem.name, image: galleryItem.image }
+      }
+
+      return home.wildlife.items.find((item) => item.name === name) ?? { name, image: '' }
+    })
+  }, [faunaFlora?.gallery, home.wildlife.items])
   const stats = home.stats
   const aboutTitleText = `${home.about.title.prefix}${home.about.title.highlight}${home.about.title.suffix ?? ''}`
   const normalizedAboutTitle = aboutTitleText.replace(/\s+/g, ' ').trim().toLowerCase()
@@ -101,29 +113,10 @@ function HomePage({ navigation, onNavigate }: PageProps) {
         /* ignora falhas de rede mantendo conteúdo estático */
       })
 
-    fetchFaunaFloraRecords()
-      .then((data) => {
-        if (!isMounted || data.length === 0) {
-          return
-        }
-
-        const mapped = data.slice(0, home.wildlife.items.length).map((item) => ({
-          name: item.name,
-          image: item.imageUrl ?? home.wildlife.items[0]?.image ?? '',
-        }))
-
-        if (mapped.length > 0) {
-          setWildlifeCards(mapped)
-        }
-      })
-      .catch(() => {
-        /* ignora falhas de rede mantendo conteúdo estático */
-      })
-
     return () => {
       isMounted = false
     }
-  }, [home.trails.items, home.wildlife.items])
+  }, [home.trails.items])
 
   useEffect(() => {
     if (testimonials.length === 0) {
