@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import type { PageProps } from '../App'
 import { useTranslation } from '../i18n/TranslationProvider'
-import { fetchFaunaFloraRecords } from '../api/public'
 
 function FaunaFloraPage({ navigation }: PageProps) {
   const { content } = useTranslation()
@@ -14,44 +13,7 @@ function FaunaFloraPage({ navigation }: PageProps) {
   } as CSSProperties
 
   useEffect(() => {
-    let isMounted = true
-
-    const statusLabels: Record<string, string> = {
-      NOT_EVALUATED: 'Não avaliado',
-      LEAST_CONCERN: 'Pouco preocupante',
-      NEAR_THREATENED: 'Quase ameaçado',
-      VULNERABLE: 'Vulnerável',
-      ENDANGERED: 'Em perigo',
-      CRITICALLY_ENDANGERED: 'Criticamente em perigo',
-    }
-
-    fetchFaunaFloraRecords()
-      .then((data) => {
-        if (!isMounted || data.length === 0) {
-          return
-        }
-
-        const mapped = data.map((item) => ({
-          id: item.slug,
-          name: item.name,
-          scientificName: item.scientificName,
-          type: (item.category === 'FAUNA' ? 'fauna' : 'flora') as 'fauna' | 'flora',
-          status: statusLabels[item.status] ?? item.status,
-          description: item.description ?? '',
-          image: item.imageUrl ?? faunaFlora.gallery[0]?.image ?? '',
-        }))
-
-        if (mapped.length > 0) {
-          setGalleryItems(mapped)
-        }
-      })
-      .catch(() => {
-        /* mantém o mural estático em caso de erro */
-      })
-
-    return () => {
-      isMounted = false
-    }
+    setGalleryItems(faunaFlora.gallery)
   }, [faunaFlora.gallery])
 
   const visibleItems = useMemo(() => {
