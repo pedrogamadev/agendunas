@@ -53,7 +53,12 @@ export const authRateLimiter = rateLimit({
   skip: shouldSkipAuthLimiter,
   keyGenerator: (request: Request) => {
     const normalizedCpf = sanitizeCpf(request.body?.cpf)
-    return normalizedCpf ? `${request.ip}:${normalizedCpf}` : request.ip
-  },
-})
+    
+    // Solução para o erro de TypeScript (undefined)
+    const ip = request.ip || ''
 
+    // Retorna a chave composta ou apenas o IP
+    return normalizedCpf ? `${ip}:${normalizedCpf}` : ip
+  },
+  validate:false,
+})

@@ -456,7 +456,7 @@ const formatWeatherHourKey = (isoDate: string): string => {
 type WeatherForecastEntry = {
   time: string
   hourLabel: string
-  temperature: number
+  temperature: number | null
   precipitationProbability: number | null
   condition: string
 }
@@ -873,72 +873,76 @@ const buildSection = ({
       }))
 
       const renderWeatherCard = () => {
-        if (weatherState.status === 'loading' || weatherState.status === 'idle') {
-          return <p className="admin-empty-state">Carregando condições do parque...</p>
-        }
+    // 1. Primeiro checa se é erro
+    if (weatherState.status === 'error') {
+      return <p className="admin-error-state">{weatherState.message}</p>
+    }
 
-        if (weatherState.status === 'error') {
-          return <p className="admin-error-state">{weatherState.message}</p>
-        }
+    // 2. Se NÃO for sucesso (ou seja, é loading ou idle), retorna o carregamento.
+    // O TypeScript entende: "Se o código passar daqui, o status SÓ PODE ser 'success'"
+    if (weatherState.status !== 'success') {
+      return <p className="admin-empty-state">Carregando condições do parque...</p>
+    }
 
-        const { current, forecast } = weatherState.data
-        const updatedLabel = timeFormatter.format(new Date(current.time))
+    // 3. Agora o erro some, pois o TS sabe que 'data' existe aqui
+    const { current, forecast } = weatherState.data
+    const updatedLabel = timeFormatter.format(new Date(current.time))
 
-        return (
-          <div className="admin-weather-card">
-            <div className="admin-weather__current">
-              <div className="admin-weather__temp">{Math.round(current.temperature)}°C</div>
-              <div className="admin-weather__details">
-                <strong>{current.condition}</strong>
-                <span>Atualizado às {updatedLabel}</span>
-                <span>
-                  Prob. de chuva:{' '}
-                  {typeof current.precipitationProbability === 'number'
-                    ? `${current.precipitationProbability}%`
-                    : '—'}
-                </span>
-                <span>
-                  Umidade:{' '}
-                  {typeof current.humidity === 'number' ? `${current.humidity}%` : '—'}
-                </span>
-                <span>
-                  Vento:{' '}
-                  {typeof current.windSpeed === 'number'
-                    ? `${Math.round(current.windSpeed)} km/h`
-                    : '—'}
-                </span>
-              </div>
-            </div>
-            <div className="admin-weather__forecast">
-              <h3>Previsão para hoje</h3>
-              {forecast.length === 0 ? (
-                <p className="admin-empty-state admin-empty-state--inline">
-                  Previsão indisponível para o restante do dia.
-                </p>
-              ) : (
-                <ul>
-                  {forecast.map((entry) => (
-                    <li key={entry.time}>
-                      <span>{entry.hourLabel}</span>
-                      <span>
-                        {typeof entry.temperature === 'number'
-                          ? `${Math.round(entry.temperature)}°C`
-                          : '—'}
-                      </span>
-                      <span>
-                        {typeof entry.precipitationProbability === 'number'
-                          ? `${entry.precipitationProbability}%`
-                          : '—'}
-                      </span>
-                      <span>{entry.condition}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+    return (
+      <div className="admin-weather-card">
+        <div className="admin-weather__current">
+          <div className="admin-weather__temp">{Math.round(current.temperature)}°C</div>
+          <div className="admin-weather__details">
+            <strong>{current.condition}</strong>
+            <span>Atualizado às {updatedLabel}</span>
+            <span>
+              Prob. de chuva:{' '}
+              {typeof current.precipitationProbability === 'number'
+                ? `${current.precipitationProbability}%`
+                : '—'}
+            </span>
+            <span>
+              Umidade:{' '}
+              {typeof current.humidity === 'number' ? `${current.humidity}%` : '—'}
+            </span>
+            <span>
+              Vento:{' '}
+              {typeof current.windSpeed === 'number'
+                ? `${Math.round(current.windSpeed)} km/h`
+                : '—'}
+            </span>
           </div>
-        )
-      }
+        </div>
+        <div className="admin-weather__forecast">
+          <h3>Previsão para hoje</h3>
+          {forecast.length === 0 ? (
+            <p className="admin-empty-state admin-empty-state--inline">
+              Previsão indisponível para o restante do dia.
+            </p>
+          ) : (
+            <ul>
+              {forecast.map((entry) => (
+                <li key={entry.time}>
+                  <span>{entry.hourLabel}</span>
+                  <span>
+                    {typeof entry.temperature === 'number'
+                      ? `${Math.round(entry.temperature)}°C`
+                      : '—'}
+                  </span>
+                  <span>
+                    {typeof entry.precipitationProbability === 'number'
+                      ? `${entry.precipitationProbability}%`
+                      : '—'}
+                  </span>
+                  <span>{entry.condition}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    )
+  }
 
       return {
         title: 'Dashboard',
