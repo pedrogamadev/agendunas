@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import { formatCpfForInput, sanitizeCpf } from '../utils/cpf'
 import { fetchBrazilianStates, fetchCitiesByState } from '../api/locations'
 import './AuthPortal.css'
+import { Eye, EyeOff } from 'lucide-react'
 
 type AuthMode = 'login' | 'register'
 
@@ -18,28 +19,11 @@ type CustomerPortalProps = PageProps & {
 }
 
 function EyeIcon({ hidden }: { hidden: boolean }) {
-  return (
-    <svg
-      className="auth-portal__eye-icon"
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <path
-        d="M12 5C6.5 5 2 9.5 2 12s4.5 7 10 7 10-4.5 10-7-4.5-7-10-7Zm0 12c-3.3 0-6.5-2.9-7.9-5 .8-1.3 2-2.5 3.4-3.4L6 7.1l1.1-1.1 12 12-1.1 1.1-1.7-1.7c-1.3.7-2.7 1.1-4.3 1.1Zm5.3-2.1-2.1-2.1a3.5 3.5 0 0 0-4.1-4.1L9 6.8c.9-.3 1.9-.5 3-.5 3.3 0 6.5 2.9 7.95-.6 1.1-1.6 2.2-2.6 3.1Z"
-        opacity={hidden ? 0.25 : 1}
-      />
-      {hidden && (
-        <path
-          d="m4 4 16 16"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-        />
-      )}
-    </svg>
-  )
+  if (hidden) {
+    return <EyeOff className="auth-portal__eye-icon" size={24} />
+  }
+
+  return <Eye className="auth-portal__eye-icon" size={24} />
 }
 
 function CustomerPortal({
@@ -75,7 +59,6 @@ function CustomerPortal({
   const [isLoadingStates, setIsLoadingStates] = useState(false)
   const [isLoadingCities, setIsLoadingCities] = useState(false)
   const [locationError, setLocationError] = useState<string | null>(null)
-
   const isRegisterFirstStep = registerStep === 0
 
   const overlayStyle = useMemo<OverlayStyle>(() => {
@@ -216,6 +199,8 @@ function CustomerPortal({
       const destination = response.usuario?.tipo === 'A' ? '/admin' : redirectTarget
       onNavigate(destination)
     } catch (err) {
+      // O ERRO ESTAVA AQUI: Antes você usava 'apiError' que não existia.
+      // Agora estamos pegando a mensagem corretamente da variável 'err'.
       const message = err instanceof Error ? err.message : 'Não foi possível entrar. Tente novamente.'
       setFormError(message)
     }
