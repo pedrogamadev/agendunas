@@ -4,6 +4,7 @@ import type { PageProps } from '../App'
 import { useAuth } from '../context/AuthContext'
 import { formatCpfForInput, sanitizeCpf } from '../utils/cpf'
 import './AuthPortal.css'
+import { Eye, EyeOff } from 'lucide-react'
 
 type AuthMode = 'login' | 'register'
 
@@ -15,31 +16,20 @@ type AuthPortalProps = PageProps & {
 }
 
 function EyeIcon({ hidden }: { hidden: boolean }) {
-  return (
-    <svg
-      className="auth-portal__eye-icon"
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <path
-        d="M12 5C6.5 5 2 9.5 2 12s4.5 7 10 7 10-4.5 10-7-4.5-7-10-7Zm0 12c-3.3 0-6.5-2.9-7.9-5 .8-1.3 2-2.5 3.4-3.4L6 7.1l1.1-1.1 12 12-1.1 1.1-1.7-1.7c-1.3.7-2.7 1.1-4.3 1.1Zm5.3-2.1-2.1-2.1a3.5 3.5 0 0 0-4.1-4.1L9 6.8c.9-.3 1.9-.5 3-.5 3.3 0 6.5 2.9 7.9 5-.6 1.1-1.6 2.2-2.6 3.1Z"
-        opacity={hidden ? 0.25 : 1}
-      />
-      {hidden && (
-        <path
-          d="m4 4 16 16"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-        />
-      )}
-    </svg>
-  )
+  if (hidden) {
+    return <EyeOff className="text-gray-500" size={20} />
+  }
+
+  return <Eye className="text-gray-500" size={20} />
 }
 
-function AuthPortal({ navigation, onNavigate, searchParams, initialMode, variant }: AuthPortalProps) {
+function AuthPortal({
+  navigation,
+  onNavigate,
+  searchParams,
+  initialMode,
+  variant,
+}: AuthPortalProps) {
   const { adminLogin, adminRegister, error, isAuthenticating, usuario, cliente } = useAuth()
   const [activeMode, setActiveMode] = useState<AuthMode>(initialMode)
   const [formError, setFormError] = useState<string | null>(null)
@@ -113,7 +103,8 @@ function AuthPortal({ navigation, onNavigate, searchParams, initialMode, variant
       const destination = response.usuario?.tipo === 'A' ? redirectTarget : '/'
       onNavigate(destination)
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Não foi possível entrar. Tente novamente.'
+      const message =
+        err instanceof Error ? err.message : 'Não foi possível entrar. Tente novamente.'
       setFormError(message)
     }
   }
@@ -187,13 +178,19 @@ function AuthPortal({ navigation, onNavigate, searchParams, initialMode, variant
       <div className="auth-portal__backdrop" aria-hidden="true" />
       <div className="auth-portal__card">
         <section
-          className={`auth-portal__pane auth-portal__pane--login ${activeMode === 'login' ? 'is-active' : ''}`}
+          className={`auth-portal__pane auth-portal__pane--login ${
+            activeMode === 'login' ? 'is-active' : ''
+          }`}
           aria-hidden={activeMode !== 'login'}
         >
           <div className="auth-portal__form-surface auth-portal__form-surface--login">
             <h2>Faça login</h2>
             <p>Entre com suas credenciais para continuar o trabalho.</p>
-            {displayedError && <div className="auth-portal__error" role="alert">{displayedError}</div>}
+            {displayedError && (
+              <div className="auth-portal__error" role="alert">
+                {displayedError}
+              </div>
+            )}
             <form className="auth-portal__form" onSubmit={handleLoginSubmit}>
               <div className="auth-portal__field">
                 <label htmlFor="login-cpf">CPF</label>
@@ -204,7 +201,7 @@ function AuthPortal({ navigation, onNavigate, searchParams, initialMode, variant
                   autoComplete="username"
                   placeholder="000.000.000-00"
                   value={formatCpfForInput(loginCpf)}
-                  onChange={(event) => setLoginCpf(sanitizeCpf(event.target.value))}
+                  onChange={event => setLoginCpf(sanitizeCpf(event.target.value))}
                   maxLength={14}
                   required
                 />
@@ -219,13 +216,13 @@ function AuthPortal({ navigation, onNavigate, searchParams, initialMode, variant
                     autoComplete="current-password"
                     placeholder="********"
                     value={loginSenha}
-                    onChange={(event) => setLoginSenha(event.target.value)}
+                    onChange={event => setLoginSenha(event.target.value)}
                     required
                   />
                   <button
                     type="button"
                     className="auth-portal__toggle-visibility"
-                    onClick={() => setIsLoginPasswordVisible((state) => !state)}
+                    onClick={() => setIsLoginPasswordVisible(state => !state)}
                     aria-label={isLoginPasswordVisible ? 'Ocultar senha' : 'Mostrar senha'}
                   >
                     <EyeIcon hidden={!isLoginPasswordVisible} />
@@ -254,17 +251,25 @@ function AuthPortal({ navigation, onNavigate, searchParams, initialMode, variant
           </div>
         </section>
         <section
-          className={`auth-portal__pane auth-portal__pane--register ${activeMode === 'register' ? 'is-active' : ''}`}
+          className={`auth-portal__pane auth-portal__pane--register ${
+            activeMode === 'register' ? 'is-active' : ''
+          }`}
           aria-hidden={activeMode !== 'register'}
         >
           <div className="auth-portal__form-surface auth-portal__form-surface--register">
             <h2>Crie sua conta fácil</h2>
-            <p>Preencha seus dados para liberar o acesso ao painel do AgenDunas de forma simples.</p>
+            <p>
+              Preencha seus dados para liberar o acesso ao painel do AgenDunas de forma simples.
+            </p>
             <div className="auth-portal__stepper" aria-live="polite">
               <span className={isRegisterFirstStep ? 'is-active' : ''}>1. Dados pessoais</span>
               <span className={!isRegisterFirstStep ? 'is-active' : ''}>2. Segurança</span>
             </div>
-            {displayedError && <div className="auth-portal__error" role="alert">{displayedError}</div>}
+            {displayedError && (
+              <div className="auth-portal__error" role="alert">
+                {displayedError}
+              </div>
+            )}
             <form className="auth-portal__form" onSubmit={handleRegisterSubmit}>
               <div className={`auth-portal__step ${isRegisterFirstStep ? 'is-active' : ''}`}>
                 <div className="auth-portal__field">
@@ -274,7 +279,7 @@ function AuthPortal({ navigation, onNavigate, searchParams, initialMode, variant
                     name="nome"
                     placeholder="Seu nome"
                     value={registerNome}
-                    onChange={(event) => setRegisterNome(event.target.value)}
+                    onChange={event => setRegisterNome(event.target.value)}
                     disabled={!isRegisterFirstStep}
                     required
                   />
@@ -287,7 +292,7 @@ function AuthPortal({ navigation, onNavigate, searchParams, initialMode, variant
                     inputMode="numeric"
                     placeholder="000.000.000-00"
                     value={formatCpfForInput(registerCpf)}
-                    onChange={(event) => setRegisterCpf(sanitizeCpf(event.target.value))}
+                    onChange={event => setRegisterCpf(sanitizeCpf(event.target.value))}
                     maxLength={14}
                     required
                     disabled={!isRegisterFirstStep}
@@ -304,14 +309,14 @@ function AuthPortal({ navigation, onNavigate, searchParams, initialMode, variant
                       type={isRegisterTokenVisible ? 'text' : 'password'}
                       placeholder="Cole o código recebido"
                       value={registerToken}
-                      onChange={(event) => setRegisterToken(event.target.value.trimStart())}
+                      onChange={event => setRegisterToken(event.target.value.trimStart())}
                       required
                       disabled={isRegisterFirstStep}
                     />
                     <button
                       type="button"
                       className="auth-portal__toggle-visibility"
-                      onClick={() => setIsRegisterTokenVisible((state) => !state)}
+                      onClick={() => setIsRegisterTokenVisible(state => !state)}
                       aria-label={isRegisterTokenVisible ? 'Ocultar token' : 'Mostrar token'}
                     >
                       <EyeIcon hidden={!isRegisterTokenVisible} />
@@ -327,14 +332,14 @@ function AuthPortal({ navigation, onNavigate, searchParams, initialMode, variant
                       type={isRegisterPasswordVisible ? 'text' : 'password'}
                       placeholder="Crie uma senha segura"
                       value={registerSenha}
-                      onChange={(event) => setRegisterSenha(event.target.value)}
+                      onChange={event => setRegisterSenha(event.target.value)}
                       required
                       disabled={isRegisterFirstStep}
                     />
                     <button
                       type="button"
                       className="auth-portal__toggle-visibility"
-                      onClick={() => setIsRegisterPasswordVisible((state) => !state)}
+                      onClick={() => setIsRegisterPasswordVisible(state => !state)}
                       aria-label={isRegisterPasswordVisible ? 'Ocultar senha' : 'Mostrar senha'}
                     >
                       <EyeIcon hidden={!isRegisterPasswordVisible} />
@@ -350,15 +355,19 @@ function AuthPortal({ navigation, onNavigate, searchParams, initialMode, variant
                       type={isRegisterConfirmVisible ? 'text' : 'password'}
                       placeholder="Repita a senha"
                       value={registerConfirmacao}
-                      onChange={(event) => setRegisterConfirmacao(event.target.value)}
+                      onChange={event => setRegisterConfirmacao(event.target.value)}
                       required
                       disabled={isRegisterFirstStep}
                     />
                     <button
                       type="button"
                       className="auth-portal__toggle-visibility"
-                      onClick={() => setIsRegisterConfirmVisible((state) => !state)}
-                      aria-label={isRegisterConfirmVisible ? 'Ocultar confirmação de senha' : 'Mostrar confirmação de senha'}
+                      onClick={() => setIsRegisterConfirmVisible(state => !state)}
+                      aria-label={
+                        isRegisterConfirmVisible
+                          ? 'Ocultar confirmação de senha'
+                          : 'Mostrar confirmação de senha'
+                      }
                     >
                       <EyeIcon hidden={!isRegisterConfirmVisible} />
                     </button>
@@ -382,8 +391,8 @@ function AuthPortal({ navigation, onNavigate, searchParams, initialMode, variant
                   {isRegisterFirstStep
                     ? 'Próximo'
                     : isAuthenticating && lastSubmission === 'register'
-                      ? 'Criando conta…'
-                      : 'Criar conta'}
+                    ? 'Criando conta…'
+                    : 'Criar conta'}
                 </button>
               </div>
               <p className="auth-portal__switch">

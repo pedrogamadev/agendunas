@@ -70,3 +70,8 @@ export const authRateLimiter = rateLimit({
   },
 })
 
+    // Retorna a chave composta ou apenas o IP
+    return normalizedCpf ? `${ip}:${normalizedCpf}` : ip
+  },
+  validate:false,
+})
