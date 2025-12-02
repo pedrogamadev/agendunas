@@ -96,6 +96,12 @@ Este documento lista todas as melhorias implementadas no projeto AgenDunas confo
 - ✅ Segurança e performance
 - **Arquivo**: `docs/ARCHITECTURE.md`
 
+#### Documentação Acadêmica
+- ✅ Objetivos SMART atualizados
+- ✅ Entregas alinhadas ao painel admin e portal público
+- ✅ Restrições e prazos revisados
+- **Arquivo**: `docs/DOCUMENTACAO_ACADEMICA.md`
+
 ## ✅ Média Prioridade - Implementado
 
 ### 4. Performance
@@ -196,6 +202,15 @@ Este documento lista todas as melhorias implementadas no projeto AgenDunas confo
 - [ ] Monitoramento avançado (Sentry, DataDog)
 - [ ] Documentação OpenAPI/Swagger
 - [ ] Cache com Redis (substituir cache em memória)
+- [ ] Automação de notificações (e-mail/SMS) para confirmações de agendamento
+- [ ] Exportação de relatórios (CSV/PDF) integrada aos botões existentes
+
+## 📚 Atualizações Recentes de Documentação
+- API: endpoints públicos e administrativos detalhados com payloads atualizados (`docs/API.md`).
+- Arquitetura: fluxos de segurança, auditoria e relacionamento do banco revisados (`docs/ARCHITECTURE.md`).
+- Prisma/HeidiSQL: orientações de `.env`, seed e visão geral do schema (`docs/DOCUMENTACAO_PRISMA_HEIDISQL.md`).
+- Requisitos: inclusão de convites, fauna/flora e logs de atividade (`docs/DOCUMENTACAO_REQUISITOS.md`).
+- Documentação acadêmica: objetivos, entregas e prazos ajustados (`docs/DOCUMENTACAO_ACADEMICA.md`).
 
 ## 📝 Notas
 

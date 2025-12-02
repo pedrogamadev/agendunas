@@ -69,6 +69,9 @@ arquivos.
 - RF-GUI-01: permitir cadastrar, editar e remover guias, vinculando-os às trilhas e controlando destaque/atividade.
 - RF-CON-01: gerenciar templates de comunicação e convites de acesso para perfis administrativos, com geração de tokens
 controlada.
+- RF-CON-02: permitir criação de convites (`/api/admin/convites`) e validação no fluxo de registro (`/api/auth/register`).
+- RF-FAU-01: listar registros de fauna e flora para consulta pública e uso em comunicação ambiental.
+- RF-EVE-05: manter logs de atividade para todas as ações de eventos e agendamentos associados.
 
 ## 3. Requisitos Não Funcionais
 
@@ -106,6 +109,7 @@ operação.
 funcionalidades principais.
 - RNF-OBS-03: o sistema deve manter estrutura para futuras integrações (ex.: geração de relatórios, promoções de eventos)
 utilizando botões e placeholders no front-end.
+- RNF-OBS-04: operações críticas de agenda (criar/alterar sessões, confirmar agendamento) devem registrar `ActivityLog` com timestamp e responsável.
 
 ### 3.6 Manutenibilidade
 - RNF-MAN-01: código front-end deve consumir APIs tipadas (`apiRequest`) evitando duplicação de modelos.
@@ -113,6 +117,7 @@ utilizando botões e placeholders no front-end.
 promovendo reutilização.
 - RNF-MAN-03: novas funcionalidades devem incluir testes ou validações manuais documentadas antes de serem liberadas para uso
 operacional.
+- RNF-MAN-04: banco de dados deve manter chaves naturais para usuários/guia (CPF) e chaves técnicas para recursos transacionais (protocolos e IDs cuid()).
 
 ---
 

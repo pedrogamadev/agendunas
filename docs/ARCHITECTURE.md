@@ -2,7 +2,7 @@
 
 ## Visão Geral
 
-O AgenDunas é uma aplicação full-stack dividida em front-end (React) e back-end (Node.js/Express), com comunicação via API REST.
+O AgenDunas é uma aplicação full-stack dividida em front-end (React + Vite) e back-end (Node.js/Express), com comunicação via API REST. O banco de dados PostgreSQL é acessado via Prisma e possui schema fortemente tipado para agendamentos, sessões, trilhas, eventos e registros de fauna/flora.
 
 ## Arquitetura de Alto Nível
 
@@ -17,10 +17,10 @@ O AgenDunas é uma aplicação full-stack dividida em front-end (React) e back-e
 │   Back-end      │
 │  (Express API)  │
 └────────┬────────┘
-         │
+         │ Prisma Client
 ┌────────▼────────┐
-│   PostgreSQL     │
-│   (via Prisma)   │
+│ PostgreSQL      │
+│ (schema público)│
 └──────────────────┘
 ```
 
@@ -44,12 +44,13 @@ back-end/
 │   │   ├── error-handler.ts
 │   │   ├── rate-limit.ts
 │   │   └── not-found-handler.ts
-│   ├── routes/             # Definição de rotas
+│   ├── routes/             # Definição de rotas (públicas, auth, admin)
+│   ├── controllers/        # Orquestram validação, regras e persistência
 │   ├── lib/                # Bibliotecas/configurações
 │   │   ├── prisma.ts       # Cliente Prisma
 │   │   ├── logger.ts       # Logger estruturado
-│   │   └── token.ts         # JWT
-│   └── utils/              # Utilitários
+│   │   └── token.ts        # JWT
+│   └── utils/              # Utilitários e formatadores
 └── prisma/
     ├── schema.prisma       # Schema do banco
     └── migrations/         # Migrations
@@ -58,32 +59,26 @@ back-end/
 ### Fluxo de Requisição
 
 1. **Request** → Express
-2. **Middleware Chain**:
-   - Helmet (segurança)
-   - Compression
-   - CORS
-   - Rate Limiting
-   - Body Parser
-   - Logging (Morgan)
-3. **Route Handler** → Controller
-4. **Controller** → Prisma (banco de dados)
-5. **Response** → Cliente
+2. **Middlewares globais**: Helmet, compression, CORS, parsers com limite de payload, logging (Morgan + Pino), rate limiting.
+3. **Autenticação/Autorização**: endpoints administrativos passam por `authenticate` (JWT) e `authorizeAdmin`.
+4. **Controllers**: validação com Zod, transações Prisma (ex.: criação de agendamento, criação de sessões), geração de protocolos.
+5. **Resposta**: payload padronizado com `data` e `message`; erros tratados pelo `errorHandler` com logs estruturados.
 
 ### Segurança
 
-- **Helmet**: Headers de segurança HTTP
-- **Rate Limiting**: Proteção contra DDoS/brute force
-- **CORS**: Configuração restritiva
-- **JWT**: Autenticação stateless
-- **Validação**: Zod para validação de dados
-- **Sanitização**: Validação de inputs
+- **Helmet**: headers de segurança HTTP e CSP flexível para o portal.
+- **Rate Limiting**: regras gerais e específicas de autenticação.
+- **CORS**: lista de origens configurável por ambiente.
+- **JWT**: autenticação stateless para painel administrativo e cliente.
+- **Validação**: Zod em todas as entradas sensíveis (auth, reservas, criação de sessões, guias, eventos).
+- **Auditoria**: registros de atividade (`ActivityLog`) para eventos críticos.
 
 ### Logging
 
 Sistema de logging estruturado com Pino:
 - Níveis: debug, info, warn, error
-- Formato JSON em produção
-- Pretty print em desenvolvimento
+- Formato JSON em produção; pretty print em desenvolvimento
+- Integração com Morgan para logs HTTP
 
 ## Front-end
 
@@ -122,57 +117,62 @@ Roteamento customizado baseado em hash/state:
 
 ### Estado
 
-- **Context API**: Autenticação global
-- **Local State**: Estado local de componentes
-- **LocalStorage**: Persistência de token
+- **Context API**: autenticação global e estado de sessão do usuário.
+- **Local State**: gerenciamento de formulários e filtros.
+- **LocalStorage**: persistência de token e preferências básicas.
 
 ### Tratamento de Erros
 
-- **Error Handler**: Utilitário centralizado
-- **Retry Logic**: Tentativas automáticas com exponential backoff
-- **Timeout**: Timeout configurável (30s padrão)
-- **Type Safety**: Tipos específicos para diferentes erros
+- **Error Handler**: utilitário centralizado para mensagens amigáveis.
+- **Retry Logic**: tentativas automáticas com exponential backoff para falhas transitórias.
+- **Timeout**: cancelamento de requisições com AbortController (30s padrão).
+- **Type Safety**: tipos específicos para diferentes erros e feedback no UI.
 
 ## Banco de Dados
 
 ### Schema Principal
 
-- **Usuario**: Usuários do sistema (admin, coordenador, guia)
-- **Cliente**: Clientes que fazem reservas
-- **Trail**: Trilhas disponíveis
-- **Guide**: Guias cadastrados
-- **TrailSession**: Sessões agendadas de trilhas
-- **Booking**: Reservas de clientes
-- **Event**: Eventos especiais
-- **FaunaFlora**: Espécies de fauna e flora
-- **ActivityLog**: Log de atividades
+- **Usuario**: contas administrativas e de guias (CPF como chave primária).
+- **Cliente**: contas de visitantes autenticados no portal.
+- **Convite**: tokens de convite para criação de usuários administrativos.
+- **Guide**: dados operacionais do guia (perfil, idiomas, certificações, destaque).
+- **Trail**: trilhas do parque (dificuldade, capacidade, preço base, status e destaque).
+- **TrailGuide**: relação many-to-many entre trilhas e guias.
+- **TrailSession**: sessões agendadas das trilhas (horário, guia primário, capacidade, contato).
+- **Booking**: agendamentos com protocolo e status, vinculados a trilha/sessão/guia.
+- **Participant**: participantes de cada agendamento com indicador de banimento.
+- **Event / EventRegistration**: eventos do parque e inscrições.
+- **FaunaFloraRecord**: catálogo de fauna e flora.
+- **ActivityLog**: registros de auditoria associados a trilhas, agendamentos ou eventos.
 
 ### Relacionamentos
 
-- Trail ↔ Guide (many-to-many)
-- Trail ↔ TrailSession (one-to-many)
-- TrailSession ↔ Booking (one-to-many)
-- Guide ↔ TrailSession (one-to-many)
+- Trail ↔ Guide: many-to-many via `TrailGuide`.
+- Trail ↔ TrailSession: one-to-many.
+- TrailSession ↔ Booking: one-to-many.
+- Booking ↔ Participant: one-to-many (cascade delete).
+- Event ↔ EventRegistration: one-to-many.
+- Trail/Booking/Event ↔ ActivityLog: associações opcionais para auditoria.
 
 ## Fluxos Principais
 
 ### 1. Agendamento de Trilha
 
 ```
-Cliente → Front-end → API POST /bookings
-  → Validação → Prisma Transaction
-  → Verificação de capacidade
-  → Criação de booking
-  → Retorno de protocolo
+Cliente → Front-end → POST /api/bookings
+  → Validação/Zod → Transação Prisma com lock de sessão
+  → Verificação de capacidade e guia ativo
+  → Criação de protocolo e ActivityLog
+  → Retorno do protocolo e horário formatado
 ```
 
 ### 2. Autenticação
 
 ```
-Login → POST /api/auth/login
-  → Validação de credenciais
-  → Geração de JWT
-  → Retorno de token
+Login (admin ou cliente) → POST /api/auth/login|/customer/login
+  → Validação de credenciais (hash)
+  → Geração de JWT com perfil
+  → Retorno de token e dados do usuário
   → Armazenamento no front-end
 ```
 
@@ -180,9 +180,9 @@ Login → POST /api/auth/login
 
 ```
 Admin → GET /api/admin/overview
-  → Agregação de dados
-  → Estatísticas
-  → Retorno de dados formatados
+  → Agregação de métricas, destaques e atividades
+  → Cálculo de ocupação e próximos eventos
+  → Retorno de dados formatados para cards e gráficos
 ```
 
 ## Performance
@@ -191,7 +191,7 @@ Admin → GET /api/admin/overview
 
 - **Compression**: Gzip para respostas
 - **Rate Limiting**: Proteção de recursos
-- **Query Optimization**: Prisma com includes seletivos
+- **Query Optimization**: Prisma com includes/seleções seletivas e locks de sessão para consistência.
 - **Connection Pooling**: Prisma gerencia pool
 
 ### Front-end

@@ -2,8 +2,10 @@
 
 ## Base URL
 
-- Desenvolvimento: `http://localhost:3001/api`
-- Produção: Configurado via `VITE_API_BASE_URL`
+- **Desenvolvimento**: `http://localhost:3001/api`
+- **Produção**: configurado via `VITE_API_BASE_URL` no front-end
+
+> Os exemplos abaixo utilizam o prefixo `/api`. Endpoints administrativos requerem token JWT de usuário com perfil **A** (administrador) ou **C** (colaborador autorizado).
 
 ## Autenticação
 
@@ -17,9 +19,9 @@ Authorization: Bearer <token>
 
 ### GET /api/trails
 
-Lista todas as trilhas disponíveis.
+Lista todas as trilhas ativas com resumo, guias em destaque e sessões futuras.
 
-**Resposta:**
+**Resposta (200):**
 ```json
 {
   "data": [
@@ -31,8 +33,21 @@ Lista todas as trilhas disponíveis.
       "durationMinutes": 120,
       "difficulty": "EASY" | "MODERATE" | "HARD",
       "maxGroupSize": 10,
+      "badgeLabel": "Destaque" | null,
       "imageUrl": "string | null",
-      "status": "ACTIVE" | "INACTIVE" | "MAINTENANCE"
+      "status": "ACTIVE" | "INACTIVE" | "MAINTENANCE",
+      "guides": [
+        { "cpf": "string", "name": "string", "isFeatured": true }
+      ],
+      "nextSessions": [
+        {
+          "id": "string",
+          "startsAt": "2024-01-01T10:00:00Z",
+          "capacity": 10,
+          "availableSlots": 5,
+          "primaryGuideCpf": "string | null"
+        }
+      ]
     }
   ]
 }
@@ -40,7 +55,7 @@ Lista todas as trilhas disponíveis.
 
 ### GET /api/guides
 
-Lista todos os guias cadastrados.
+Lista todos os guias públicos e ativos.
 
 **Resposta:**
 ```json
@@ -62,7 +77,7 @@ Lista todos os guias cadastrados.
 
 ### GET /api/fauna-flora
 
-Lista espécies de fauna e flora.
+Lista registros de fauna e flora para consulta pública.
 
 **Resposta:**
 ```json
@@ -83,7 +98,7 @@ Lista espécies de fauna e flora.
 
 ### GET /api/sessions/:trailId/availability
 
-Verifica disponibilidade de sessões para uma trilha.
+Verifica disponibilidade de sessões confirmadas para uma trilha específica.
 
 **Parâmetros:**
 - `trailId` (path): ID da trilha
@@ -112,7 +127,7 @@ Verifica disponibilidade de sessões para uma trilha.
 
 ### POST /api/bookings
 
-Cria uma nova reserva.
+Cria uma nova solicitação de agendamento (pública ou via painel) validando capacidade da trilha/sessão.
 
 **Body:**
 ```json
@@ -121,12 +136,16 @@ Cria uma nova reserva.
   "sessionId": "string | null",
   "guideCpf": "string | null",
   "scheduledDate": "2024-01-01",
+  "scheduledTime": "08:00",
   "contactName": "string",
   "contactEmail": "string",
   "contactPhone": "string",
   "participantsCount": 2,
+  "participants": [
+    { "fullName": "string", "cpf": "string", "email": "string", "phone": "string" }
+  ],
   "notes": "string | null",
-  "source": "PUBLIC_PORTAL"
+  "source": "PUBLIC_PORTAL" | "ADMIN"
 }
 ```
 
@@ -135,11 +154,14 @@ Cria uma nova reserva.
 {
   "data": {
     "id": "string",
-    "protocol": "ACD-0001",
-    "status": "CONFIRMED",
-    "scheduledFor": "2024-01-01T10:00:00Z"
+    "protocol": "ACD-202401-0001",
+    "status": "PENDING",
+    "scheduledFor": "2024-01-01T10:00:00Z",
+    "scheduledForLabel": "01/01/2024 10:00",
+    "trailName": "Trilha Principal",
+    "guideName": "Nome do Guia | null"
   },
-  "message": "Reserva criada com sucesso."
+  "message": "Solicitação de agendamento registrada com sucesso. Entraremos em contato para confirmação."
 }
 ```
 
@@ -236,78 +258,44 @@ Authorization: Bearer <token>
 
 ## Endpoints Administrativos
 
-Todos os endpoints administrativos requerem autenticação de administrador.
+Todos os endpoints administrativos requerem autenticação via `Authorization: Bearer <token>` e perfil autorizado.
 
-### GET /api/admin/overview
+### Dashboard e Relatórios
+- **GET /api/admin/overview**: métricas consolidadas de agendamentos, destaques e logs recentes.
+- **GET /api/admin/calendar**: agenda mensal com sessões e eventos do parque.
+- **GET /api/admin/reports**: indicadores agregados usados nos gráficos de relatórios.
 
-Visão geral do dashboard administrativo.
+### Agendamentos
+- **GET /api/admin/bookings**: lista paginada de agendamentos com filtros de status/data.
+- **GET /api/admin/bookings/:id**: detalhe do agendamento (participantes, contatos, sessão, guia).
+- **PATCH /api/admin/bookings/:id/status**: atualiza status (`CONFIRMED`, `CANCELLED`, `COMPLETED`, `RESCHEDULED`) registrando log.
 
-### GET /api/admin/trails
+### Participantes
+- **GET /api/admin/participants**: lista participantes recentes, incluindo indicador de banimento e agendamento associado.
+- **GET /api/admin/participants/:id**: detalhe de contato e histórico do participante.
+- **PATCH /api/admin/participants/:id**: atualiza banimento ou dados de contato.
 
-Lista todas as trilhas (admin).
+### Trilhas e Sessões
+- **GET /api/admin/trails**: lista trilhas com guias atribuídos, sessões, status e indicadores de destaque.
+- **POST /api/admin/trails**: cria trilha (nome, slug, descrição, dificuldade, capacidade, preço base, destaque, ponto de encontro).
+- **PUT /api/admin/trails/:id**: atualiza trilha existente.
+- **DELETE /api/admin/trails/:id**: remove trilha e vinculações associadas.
+- **GET /api/admin/trails/:trailId/sessions**: lista sessões de uma trilha.
+- **POST /api/admin/trails/:trailId/sessions**: cria sessão com capacidade, horário e guia primário.
+- **PATCH /api/admin/sessions/:id**: atualiza sessão (status, horário, guia, capacidade, telefone de contato, notas).
+- **DELETE /api/admin/sessions/:id**: remove sessão.
+- **GET /api/admin/sessions/:id/participants**: lista participantes confirmados por sessão.
 
-### POST /api/admin/trails
+### Guias
+- **GET /api/admin/guides**: lista guias com detalhes completos.
+- **POST /api/admin/guides**: cadastra guia vinculando a um usuário existente.
+- **PUT /api/admin/guides/:cpf**: atualiza dados, idiomas, certificações, trilha em destaque e status de atividade.
+- **DELETE /api/admin/guides/:cpf**: remove guia e vínculos.
+- **POST /api/admin/convites**: gera token de convite para novos usuários administrativos.
 
-Cria uma nova trilha.
-
-### PUT /api/admin/trails/:id
-
-Atualiza uma trilha.
-
-### DELETE /api/admin/trails/:id
-
-Remove uma trilha.
-
-### GET /api/admin/bookings
-
-Lista todas as reservas.
-
-### GET /api/admin/bookings/:id
-
-Obtém detalhes de uma reserva.
-
-### PUT /api/admin/bookings/:id/status
-
-Atualiza status de uma reserva.
-
-**Body:**
-```json
-{
-  "status": "CONFIRMED" | "CANCELLED" | "COMPLETED" | "RESCHEDULED"
-}
-```
-
-### GET /api/admin/guides
-
-Lista todos os guias (admin).
-
-### POST /api/admin/guides
-
-Cria um novo guia.
-
-### PUT /api/admin/guides/:cpf
-
-Atualiza um guia.
-
-### DELETE /api/admin/guides/:cpf
-
-Remove um guia.
-
-### GET /api/admin/sessions
-
-Lista todas as sessões.
-
-### POST /api/admin/sessions
-
-Cria uma nova sessão.
-
-### PUT /api/admin/sessions/:id
-
-Atualiza uma sessão.
-
-### DELETE /api/admin/sessions/:id
-
-Remove uma sessão.
+### Eventos do Parque
+- **GET /api/admin/events**: lista eventos cadastrados com filtros de status/destaque.
+- **POST /api/admin/events**: cria evento com título, slug, período, capacidade e status (`DRAFT`, `PUBLISHED`, etc.).
 
 ## Códigos de Status HTTP
 

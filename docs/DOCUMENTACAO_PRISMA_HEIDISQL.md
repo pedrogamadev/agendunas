@@ -31,17 +31,14 @@ Este roteiro explica como preparar o ambiente para que a API do AgenDunas utiliz
    ```bash
    npm install
    ```
-3. Crie um arquivo `.env` a partir do modelo disponível (`.env.example`) e configure a URL de conexão:
-   ```bash
-   cp .env.example .env
-   ```
-   O arquivo resultante deve conter algo como:
+3. Crie um arquivo `.env` e configure a URL de conexão (ajuste usuário/senha conforme seu ambiente):
    ```env
-   DATABASE_URL="postgresql://postgres:6562@localhost:5432/agendunas?schema=public"
+   DATABASE_URL="postgresql://postgres:postgres@localhost:5432/agendunas?schema=public"
    ALLOWED_ORIGINS="http://localhost:5173,http://localhost:3000"
    PORT=3001
+   JWT_SECRET="sua-chave-super-secreta"
    ```
-   Ajuste os valores conforme necessário.
+   > Caso utilize porta ou credenciais diferentes, apenas atualize a `DATABASE_URL`.
 
 ## 3. Gerar o cliente Prisma e aplicar o schema
 
@@ -91,7 +88,7 @@ A API ficará disponível em `http://localhost:3001/api`. Teste alguns endpoints
 1. **Editar modelos**: atualize o arquivo `prisma/schema.prisma` conforme necessário (novas tabelas, campos, enums, relacionamentos).
 2. **Gerar migração**: execute `npm run migrate -- --name <descricao>` para criar a migração e aplicá-la no banco.
 3. **Atualizar o cliente**: rode `npm run generate` para atualizar o Prisma Client com os novos tipos.
-4. **Repopular dados (opcional)**: caso queira dados frescos de demonstração, use `npm run seed`.
+4. **Repopular dados (opcional)**: caso queira dados frescos de demonstração, use `npm run seed` (popula trilhas, guias, eventos, fauna/flora e agendamentos de exemplo).
 5. **Validar via API**: faça requisições para os endpoints REST e confira os dados no front-end.
 6. **Inspecionar no HeidiSQL**: use o HeidiSQL para verificar registros, executar consultas SQL, ajustar dados pontuais ou exportar relatórios.
 
@@ -100,6 +97,15 @@ A API ficará disponível em `http://localhost:3001/api`. Teste alguns endpoints
 - Sempre que editar o schema do Prisma, gere uma nova migração para manter o histórico (`npm run migrate`).
 - Use `npx prisma studio` se quiser manipular dados via interface web; o Studio e o HeidiSQL podem ser usados em paralelo.
 - Para trazer alterações feitas manualmente no banco para o schema Prisma, utilize `npx prisma db pull` (isso atualiza o `schema.prisma` com a estrutura atual do banco).
+
+## 9. Visão geral do schema e relacionamentos
+
+- **Trail** possui sessões (`TrailSession`) e agendamentos (`Booking`).
+- **TrailSession** associa-se opcionalmente a um guia primário e bloqueia capacidade com verificação transacional.
+- **Booking** gera protocolo automático e possui participantes (`Participant`), guia (opcional) e logs de atividade.
+- **Guide** está ligado a `Usuario` (CPF é chave) e pode ser destacado em trilhas (`TrailGuide`).
+- **Event** permite inscrições (`EventRegistration`) e também gera logs de atividade para rastreabilidade.
+- **FaunaFloraRecord** mantém o catálogo público de espécies.
 
 ## 8. Dicas adicionais
 
